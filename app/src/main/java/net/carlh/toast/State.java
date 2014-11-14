@@ -13,10 +13,10 @@ public class State {
     private boolean enabled;
 
     public State() {
-        this.temperature = 0;
-        this.target = 0;
-        this.on = false;
-        this.enabled = false;
+        temperature = 0;
+        target = 0;
+        on = false;
+        enabled = false;
     }
 
     public synchronized JSONObject json() {
@@ -65,5 +65,9 @@ public class State {
 
     public synchronized void setEnabled(boolean e) {
         enabled = e;
+    }
+
+    public synchronized boolean getOn() {
+        return on;
     }
 }

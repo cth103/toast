@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.lang.Runnable;
+import java.net.ConnectException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -34,6 +35,7 @@ import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 
@@ -56,15 +58,18 @@ public class MainActivity extends ActionBarActivity {
     private final Condition putCondition = lock.newCondition();
     private AtomicInteger pendingPuts = new AtomicInteger(0);
 
+    private AtomicBoolean connected = new AtomicBoolean(false);
+
     private Handler handler;
 
     private HttpClient client = new DefaultHttpClient();
 
     private TextView temperature;
     private TextView target;
-    private Button onOff;
-    private Button colder;
+    private Button enabled;
     private Button warmer;
+    private Button colder;
+    private TextView on;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,9 +78,10 @@ public class MainActivity extends ActionBarActivity {
 
         temperature = (TextView) findViewById(R.id.temperature);
         target = (TextView) findViewById(R.id.target);
-        onOff = (Button) findViewById(R.id.onOff);
+        enabled = (Button) findViewById(R.id.enabled);
         colder = (Button) findViewById(R.id.colder);
         warmer = (Button) findViewById(R.id.warmer);
+        on = (TextView) findViewById(R.id.on);
 
         colder.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -96,7 +102,7 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
-        onOff.setOnClickListener(new View.OnClickListener() {
+        enabled.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 pendingPuts.incrementAndGet();
                 state.setEnabled(!state.getEnabled());
@@ -172,23 +178,28 @@ public class MainActivity extends ActionBarActivity {
             HttpResponse response = client.execute(new HttpGet("http://192.168.1.1/state"));
             StatusLine statusLine = response.getStatusLine();
             if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
+                connected.set(true);
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 response.getEntity().writeTo(out);
                 out.close();
                 
                 if (pendingPuts.get() == 0) {
                     state.readJSON(new JSONObject(out.toString()));
-                    handler.sendEmptyMessage(0);
                 }
             } else {
-                Log.e("Toast", "Request failed");
+                connected.set(false);
                 response.getEntity().getContent().close();
                 throw new IOException(statusLine.getReasonPhrase());
             }
+        } catch (HttpHostConnectException e) {
+            connected.set(false);
+            Log.e("Toast", "Exception", e);
         } catch (IOException e) {
             Log.e("Toast", "Exception", e);
         } catch (JSONException e) {
             Log.e("Toast", "Exception", e);
+        } finally {
+            handler.sendEmptyMessage(0);
         }
     }
 
@@ -215,15 +226,33 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void update() {
-        temperature.setText(String.format("%.1f°", state.getTemperature()));
-        target.setText(String.format("%.1f°", state.getTarget()));
-        target.setEnabled(state.getEnabled());
-        warmer.setEnabled(state.getEnabled());
-        colder.setEnabled(state.getEnabled());
-        if (state.getEnabled()) {
-            onOff.setText("Switch heating off");
+
+        temperature.setEnabled(connected.get());
+        target.setEnabled(connected.get());
+        target.setEnabled(connected.get() && state.getEnabled());
+        warmer.setEnabled(connected.get() && state.getEnabled());
+        colder.setEnabled(connected.get() && state.getEnabled());
+
+        if (connected.get()) {
+            temperature.setText(String.format("%.1f°", state.getTemperature()));
+            target.setText(String.format("%.1f°", state.getTarget()));
+            if (state.getEnabled()) {
+                enabled.setText("Switch heating off");
+            } else {
+                enabled.setText("Switch heating on");
+            }
         } else {
-            onOff.setText("Switch heating on");
+            temperature.setText("...");
+            target.setText("...");
+            enabled.setText("");
+        }
+        
+        if (connected.get() && state.getOn()) {
+            on.setText("Boiler is on");
+        } else if (connected.get() && !state.getOn()) {
+            on.setText("Boiler is off");
+        } else {
+            on.setText("Not connected");
         }
     }
 

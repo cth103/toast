@@ -13,7 +13,7 @@
         <Button
             android:layout_width="fill_parent"
             android:text="Switch heating on"
-            android:id="@+id/onOff">
+            android:id="@+id/enabled">
         </Button>
 
     <TableRow
@@ -82,10 +82,11 @@
             android:layout_width="0dp"
 	    android:paddingTop="24dp"
             android:gravity="center_vertical"
-            android:id="@+id/boilerState"
+            android:id="@+id/on"
             android:textSize="10pt"
             android:paddingLeft="16dp"
-            android:text="Boiler is on" />
+            android:text="..."
+	    android:layout_span="2" />
     </TableRow>
 
 </TableLayout>
