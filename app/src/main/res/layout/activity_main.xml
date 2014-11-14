@@ -76,6 +76,18 @@
             android:id="@+id/colder"/>
     </TableRow>
 
+    <TableRow>
+        <TextView
+            android:layout_height="fill_parent"
+            android:layout_width="0dp"
+	    android:paddingTop="24dp"
+            android:gravity="center_vertical"
+            android:id="@+id/boilerState"
+            android:textSize="10pt"
+            android:paddingLeft="16dp"
+            android:text="Boiler is on" />
+    </TableRow>
+
 </TableLayout>
 
 
