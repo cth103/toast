@@ -52,9 +52,13 @@ public class MainActivity extends ActionBarActivity {
     /* Lock and condition to tell the comms thread when
        it needs to PUT our state to the server.
     */
-    final Lock lock = new ReentrantLock();
-    final Condition putCondition = lock.newCondition();
-    AtomicInteger pendingPuts = new AtomicInteger(0);
+    private final Lock lock = new ReentrantLock();
+    private final Condition putCondition = lock.newCondition();
+    private AtomicInteger pendingPuts = new AtomicInteger(0);
+
+    private Handler handler;
+
+    private HttpClient client = new DefaultHttpClient();
 
     private TextView temperature;
     private TextView target;
@@ -104,7 +108,7 @@ public class MainActivity extends ActionBarActivity {
         /* Handler to update the UI when the comms thread has
            done a GET.
         */
-        final Handler handler = new Handler() {
+        handler = new Handler() {
             public void handleMessage(Message message) {
                 update();
             }
@@ -113,7 +117,9 @@ public class MainActivity extends ActionBarActivity {
         Thread thread = new Thread(new Runnable() {
             public void run() {
 
-                HttpClient client = new DefaultHttpClient();
+                /* Initial get to start things off */
+                get();
+
                 while (true) {
 
                     try {
@@ -121,17 +127,16 @@ public class MainActivity extends ActionBarActivity {
 			/* PUT if there is already a need, or if we are
                            woken during a short sleep.
                         */
-                        boolean needPut = pendingPuts.get() > 0;
-                        if (!needPut) {
+                        if (pendingPuts.get() == 0) {
                             lock.lock();
                             try {
-                                needPut = putCondition.await(10, TimeUnit.SECONDS);
+                                putCondition.await(10, TimeUnit.SECONDS);
                             } finally {
                                 lock.unlock();
                             }
                         }
 
-                        if (needPut) {
+                        if (pendingPuts.get() > 0) {
                             HttpPut put = new HttpPut("http://192.168.1.1/state");
                             StringEntity entity = new StringEntity(state.json().toString());
                             entity.setContentType("text/json");
@@ -144,29 +149,12 @@ public class MainActivity extends ActionBarActivity {
                            are any pending PUTs so that we can "safely" update our
                            local thread ahead of hearing about it from the server.
                         */
-                        HttpResponse response = client.execute(new HttpGet("http://192.168.1.1/state"));
-                        StatusLine statusLine = response.getStatusLine();
-                        if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-                            ByteArrayOutputStream out = new ByteArrayOutputStream();
-                            response.getEntity().writeTo(out);
-                            out.close();
-
-                            if (pendingPuts.get() == 0) {
-                                state.readJSON(new JSONObject(out.toString()));
-                                handler.sendEmptyMessage(0);
-                            }
-                        } else {
-                            Log.e("Toast", "Request failed");
-                            response.getEntity().getContent().close();
-                            throw new IOException(statusLine.getReasonPhrase());
-                        }
-
-                    } catch (InterruptedException e) {
+                        get();
 
                     } catch (IOException e) {
                         Log.e("Toast", "Exception", e);
-                    } catch (JSONException e) {
-                        Log.e("Toast", "Exception", e);
+                    } catch (InterruptedException e) {
+
                     }
                 }
             }
@@ -176,6 +164,32 @@ public class MainActivity extends ActionBarActivity {
         );
 
         thread.start();
+    }
+
+    private void get()
+    {
+        try {
+            HttpResponse response = client.execute(new HttpGet("http://192.168.1.1/state"));
+            StatusLine statusLine = response.getStatusLine();
+            if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                response.getEntity().writeTo(out);
+                out.close();
+                
+                if (pendingPuts.get() == 0) {
+                    state.readJSON(new JSONObject(out.toString()));
+                    handler.sendEmptyMessage(0);
+                }
+            } else {
+                Log.e("Toast", "Request failed");
+                response.getEntity().getContent().close();
+                throw new IOException(statusLine.getReasonPhrase());
+            }
+        } catch (IOException e) {
+            Log.e("Toast", "Exception", e);
+        } catch (JSONException e) {
+            Log.e("Toast", "Exception", e);
+        }
     }
 
     @Override
