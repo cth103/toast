@@ -16,6 +16,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="net.carlh.toast.SettingsActivity"
+            android:label="Settings"
+            android:theme="@android:style/Theme.Black">
+        </activity>
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

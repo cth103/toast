@@ -8,6 +8,7 @@ import java.io.PrintStream;
 import java.lang.Runnable;
 import java.net.ConnectException;
 import java.net.MalformedURLException;
+import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.concurrent.Semaphore;
@@ -18,8 +19,11 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Message;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -123,6 +127,8 @@ public class MainActivity extends ActionBarActivity {
         Thread thread = new Thread(new Runnable() {
             public void run() {
 
+
+
                 /* Initial get to start things off */
                 get();
 
@@ -130,7 +136,7 @@ public class MainActivity extends ActionBarActivity {
 
                     try {
 
-			/* PUT if there is already a need, or if we are
+			            /* PUT if there is already a need, or if we are
                            woken during a short sleep.
                         */
                         if (pendingPuts.get() == 0) {
@@ -143,7 +149,7 @@ public class MainActivity extends ActionBarActivity {
                         }
 
                         if (pendingPuts.get() > 0) {
-                            HttpPut put = new HttpPut("http://192.168.1.1/state");
+                            HttpPut put = new HttpPut(url("state"));
                             StringEntity entity = new StringEntity(state.json().toString());
                             entity.setContentType("text/json");
                             put.setEntity(entity);
@@ -175,7 +181,7 @@ public class MainActivity extends ActionBarActivity {
     private void get()
     {
         try {
-            HttpResponse response = client.execute(new HttpGet("http://192.168.1.1/state"));
+            HttpResponse response = client.execute(new HttpGet(url("state")));
             StatusLine statusLine = response.getStatusLine();
             if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
                 connected.set(true);
@@ -192,6 +198,9 @@ public class MainActivity extends ActionBarActivity {
                 throw new IOException(statusLine.getReasonPhrase());
             }
         } catch (HttpHostConnectException e) {
+            connected.set(false);
+            Log.e("Toast", "Exception", e);
+        } catch (SocketException e) {
             connected.set(false);
             Log.e("Toast", "Exception", e);
         } catch (IOException e) {
@@ -219,6 +228,8 @@ public class MainActivity extends ActionBarActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
             return true;
         }
 
@@ -263,5 +274,10 @@ public class MainActivity extends ActionBarActivity {
         } finally {
             lock.unlock();
         }
+    }
+
+    private String url(String request) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        return "http://" + prefs.getString("hostname", "192.168.1.1") + "/" + request;
     }
 }
