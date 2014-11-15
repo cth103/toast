@@ -1,0 +1,5 @@
+#!/bin/bash
+inkscape -z -f icon.svg --export-png ../app/src/main/res/drawable-mdpi/ic_launcher.png --export-width=48 --export-height=48 --export-area-page
+inkscape -z -f icon.svg --export-png ../app/src/main/res/drawable-hdpi/ic_launcher.png --export-width=72 --export-height=72 --export-area-page
+inkscape -z -f icon.svg --export-png ../app/src/main/res/drawable-xhdpi/ic_launcher.png --export-width=96 --export-height=96 --export-area-page
+inkscape -z -f icon.svg --export-png ../app/src/main/res/drawable-xxhdpi/ic_launcher.png --export-width=144 --export-height=144 --export-area-page
