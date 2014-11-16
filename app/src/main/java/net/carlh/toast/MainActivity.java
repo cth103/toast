@@ -127,16 +127,14 @@ public class MainActivity extends ActionBarActivity {
         Thread thread = new Thread(new Runnable() {
             public void run() {
 
-
-
                 /* Initial get to start things off */
                 get();
 
                 while (true) {
 
                     try {
-
-			            /* PUT if there is already a need, or if we are
+                        
+                        /* PUT if there is already a need, or if we are
                            woken during a short sleep.
                         */
                         if (pendingPuts.get() == 0) {
@@ -226,9 +224,12 @@ public class MainActivity extends ActionBarActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
+        } else if (id == R.id.action_timer) {
+            Intent intent = new Intent(MainActivity.this, TimerActivity.class);
             startActivity(intent);
             return true;
         }
