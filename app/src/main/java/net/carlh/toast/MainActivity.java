@@ -136,8 +136,6 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void update() {
-        Log.e("Toast", "update()");
-
         temperature.setEnabled(state.getConnected());
         target.setEnabled(state.getConnected());
         target.setEnabled(state.getConnected() && state.getEnabled());
