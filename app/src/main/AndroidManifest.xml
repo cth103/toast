@@ -25,6 +25,10 @@
             android:name="net.carlh.toast.TimerActivity"
             android:label="Timer">
         </activity>
+        <activity
+            android:name="net.carlh.toast.RuleActivity"
+            android:label="Timer">
+        </activity>
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

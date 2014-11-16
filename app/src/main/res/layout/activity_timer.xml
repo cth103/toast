@@ -11,9 +11,26 @@
     tools:context=".TimerActivity">
 
     <TableRow>
+        <TextView
+            android:layout_height="fill_parent"
+            android:layout_width="0dp"
+            android:gravity="center_vertical"
+            android:id="@+id/on"
+            android:textSize="10pt"
+            android:text="Heating on:"
+            android:layout_span="2" />
+    </TableRow>
+
+    <TableRow>
         <ListView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/rulesList"/>
+    </TableRow>
+
+    <TableRow>
+        <Button android:text="Add time"
+            android:layout_width="0dp"
+            android:id="@+id/addRule"/>
     </TableRow>
 </TableLayout>

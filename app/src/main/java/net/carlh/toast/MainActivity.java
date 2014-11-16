@@ -147,7 +147,7 @@ public class MainActivity extends ActionBarActivity {
                         }
 
                         if (pendingPuts.get() > 0) {
-                            HttpPut put = new HttpPut(url("state"));
+                            HttpPut put = new HttpPut(Util.url(MainActivity.this, "state"));
                             StringEntity entity = new StringEntity(state.json().toString());
                             entity.setContentType("text/json");
                             put.setEntity(entity);
@@ -179,7 +179,7 @@ public class MainActivity extends ActionBarActivity {
     private void get()
     {
         try {
-            HttpResponse response = client.execute(new HttpGet(url("state")));
+            HttpResponse response = client.execute(new HttpGet(Util.url(this, "state")));
             StatusLine statusLine = response.getStatusLine();
             if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
                 connected.set(true);
@@ -225,12 +225,10 @@ public class MainActivity extends ActionBarActivity {
         int id = item.getItemId();
 
         if (id == R.id.action_settings) {
-            Intent intent = new Intent(this, SettingsActivity.class);
-            startActivity(intent);
+            startActivity(new Intent(this, SettingsActivity.class));
             return true;
         } else if (id == R.id.action_timer) {
-            Intent intent = new Intent(MainActivity.this, TimerActivity.class);
-            startActivity(intent);
+            startActivity(new Intent(this, TimerActivity.class));
             return true;
         }
 
@@ -275,10 +273,5 @@ public class MainActivity extends ActionBarActivity {
         } finally {
             lock.unlock();
         }
-    }
-
-    private String url(String request) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        return "http://" + prefs.getString("hostname", "192.168.1.1") + "/" + request;
     }
 }
