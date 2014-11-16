@@ -38,7 +38,7 @@ public class State {
     private ArrayList<Handler> handlers;
     private final Lock lock = new ReentrantLock();
     private final Condition putCondition = lock.newCondition();
-    private AtomicInteger pendingPuts = new AtomicInteger(0);
+    private AtomicBoolean pendingPut = new AtomicBoolean(false);
     private HttpClient client;
     private AtomicBoolean connected = new AtomicBoolean(false);
 
@@ -59,8 +59,8 @@ public class State {
         this.rules = new ArrayList<Rule>();
 
         HttpParams params = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(params, 1000);
-        HttpConnectionParams.setSoTimeout(params, 1000);
+        HttpConnectionParams.setConnectionTimeout(params, 3000);
+        HttpConnectionParams.setSoTimeout(params, 3000);
         client = new DefaultHttpClient(params);
         
         Thread thread = new Thread(new Runnable() {
@@ -76,7 +76,7 @@ public class State {
                         /* PUT if there is already a need, or if we are
                            woken with one during a short sleep.
                         */
-                        if (pendingPuts.get() == 0) {
+                        if (!pendingPut.get()) {
                             lock.lock();
                             try {
                                 putCondition.await(10, TimeUnit.SECONDS);
@@ -85,13 +85,20 @@ public class State {
                             }
                         }
 
-                        if (pendingPuts.get() > 0) {
+                        if (pendingPut.get()) {
                             HttpPut put = new HttpPut(Util.url(State.this.context, "state"));
+
+                            /* We must take the state from json() and set pendingPut to
+                               false atomically (XXX and it isn't atomic!).  Then if
+                               pendingPut is set back to true (and a new state set up)
+                               we will PUT again.  If we wait until completion to reset
+                               pendingPut we might have missed changes to state.
+                            */
                             StringEntity entity = new StringEntity(json().toString());
+                            pendingPut.set(false);
                             entity.setContentType("text/json");
                             put.setEntity(entity);
                             client.execute(put);
-                            pendingPuts.decrementAndGet();
                         }
 
                         /* GET current state from the server, but ignore it if there
@@ -123,7 +130,7 @@ public class State {
                 response.getEntity().writeTo(out);
                 out.close();
                 
-                if (pendingPuts.get() == 0) {
+                if (!pendingPut.get()) {
                     readJSON(new JSONObject(out.toString()));
                 }
             } else {
@@ -153,7 +160,7 @@ public class State {
     }
 
     private void beginUpdate() {
-        pendingPuts.incrementAndGet();
+        pendingPut.set(true);
     }
 
     private void endUpdate() {
