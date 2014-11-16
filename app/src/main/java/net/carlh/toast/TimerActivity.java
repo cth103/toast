@@ -58,7 +58,7 @@ public class TimerActivity extends Activity {
         Button addRule = (Button) findViewById(R.id.addRule);
         addRule.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Rule rule = new Rule(0, 8, 0, 18, 0, 20);
+                Rule rule = new Rule(0, 8, 0, 18, 0);
                 Intent intent = new Intent(TimerActivity.this, RuleActivity.class);
                 intent.putExtra("rule", rule);
                 startActivityForResult(intent, 0);

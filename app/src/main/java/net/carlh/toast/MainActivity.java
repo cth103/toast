@@ -32,6 +32,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -56,7 +57,7 @@ public class MainActivity extends ActionBarActivity {
 
     private TextView temperature;
     private TextView target;
-    private Button enabled;
+    private ToggleButton enabled;
     private Button warmer;
     private Button colder;
     private TextView on;
@@ -74,7 +75,7 @@ public class MainActivity extends ActionBarActivity {
 
         temperature = (TextView) findViewById(R.id.temperature);
         target = (TextView) findViewById(R.id.target);
-        enabled = (Button) findViewById(R.id.enabled);
+        enabled = (ToggleButton) findViewById(R.id.enabled);
         colder = (Button) findViewById(R.id.colder);
         warmer = (Button) findViewById(R.id.warmer);
         on = (TextView) findViewById(R.id.on);
@@ -143,11 +144,7 @@ public class MainActivity extends ActionBarActivity {
         if (state.getConnected()) {
             temperature.setText(String.format("%.1f°", state.getTemperature()));
             target.setText(String.format("%.1f°", state.getTarget()));
-            if (state.getEnabled()) {
-                enabled.setText("ON");
-            } else {
-                enabled.setText("OFF");
-            }
+            enabled.setChecked(state.getEnabled());
         } else {
             temperature.setText("...");
             target.setText("...");

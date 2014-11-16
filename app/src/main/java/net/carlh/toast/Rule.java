@@ -18,15 +18,13 @@ public class Rule implements Serializable {
     private int onMinute;
     private int offHour;
     private int offMinute;
-    private double target;
 
-    public Rule(int days, int onHour, int onMinute, int offHour, int offMinute, double target) {
+    public Rule(int days, int onHour, int onMinute, int offHour, int offMinute) {
         this.days = days;
         this.onHour = onHour;
         this.onMinute = onMinute;
         this.offHour = offHour;
         this.offMinute = offMinute;
-        this.target = target;
     }
 
     public Rule(JSONObject json) {
@@ -37,7 +35,6 @@ public class Rule implements Serializable {
             onMinute = json.getInt("on_minute");
             offHour = json.getInt("off_hour");
             offMinute = json.getInt("off_minute");
-            target = json.getDouble("target");
         } catch (JSONException e) {
             Log.e("Toast", "Exception", e);
         }
@@ -54,7 +51,6 @@ public class Rule implements Serializable {
         onMinute = r.onMinute;
         offHour = r.offHour;
         offMinute = r.offMinute;
-        target = r.target;
     }
 
     JSONObject json() {
@@ -68,7 +64,6 @@ public class Rule implements Serializable {
             json.put("on_minute", onMinute);
             json.put("off_hour", offHour);
             json.put("off_minute", offMinute);
-            json.put("target", target);
         } catch (JSONException e) {
             Log.e("Toast", "Exception", e);
         }
