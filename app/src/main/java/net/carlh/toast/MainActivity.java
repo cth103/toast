@@ -61,6 +61,7 @@ public class MainActivity extends ActionBarActivity {
     private Button warmer;
     private Button colder;
     private TextView on;
+    private TextView explanation;
 
     static State getState() {
         return state;
@@ -79,6 +80,7 @@ public class MainActivity extends ActionBarActivity {
         colder = (Button) findViewById(R.id.colder);
         warmer = (Button) findViewById(R.id.warmer);
         on = (TextView) findViewById(R.id.on);
+        explanation = (TextView) findViewById(R.id.explanation);
 
         colder.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -134,6 +136,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void update() {
+        Log.e("Toast", "update()");
 
         temperature.setEnabled(state.getConnected());
         target.setEnabled(state.getConnected());
@@ -153,10 +156,17 @@ public class MainActivity extends ActionBarActivity {
         
         if (state.getConnected() && state.getOn()) {
             on.setText("Boiler is on");
+            explanation.setText("");
         } else if (state.getConnected() && !state.getOn()) {
             on.setText("Boiler is off");
+            if (state.getEnabled()) {
+                explanation.setText("Target temperature reached");
+            } else {
+                explanation.setText("Heating is switched off");
+            }
         } else {
             on.setText("Not connected");
+            explanation.setText("Check that you have a WiFi connection");
         }
     }
 

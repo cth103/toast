@@ -13,6 +13,9 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -36,7 +39,7 @@ public class State {
     private final Lock lock = new ReentrantLock();
     private final Condition putCondition = lock.newCondition();
     private AtomicInteger pendingPuts = new AtomicInteger(0);
-    private HttpClient client = new DefaultHttpClient();
+    private HttpClient client;
     private AtomicBoolean connected = new AtomicBoolean(false);
 
     private double temperature;
@@ -54,6 +57,11 @@ public class State {
         this.on = false;
         this.enabled = false;
         this.rules = new ArrayList<Rule>();
+
+        HttpParams params = new BasicHttpParams();
+        HttpConnectionParams.setConnectionTimeout(params, 1000);
+        HttpConnectionParams.setSoTimeout(params, 1000);
+        client = new DefaultHttpClient(params);
         
         Thread thread = new Thread(new Runnable() {
             public void run() {
@@ -64,7 +72,7 @@ public class State {
                 while (true) {
 
                     try {
-                        
+
                         /* PUT if there is already a need, or if we are
                            woken with one during a short sleep.
                         */
@@ -125,10 +133,10 @@ public class State {
             }
         } catch (HttpHostConnectException e) {
             connected.set(false);
-            Log.e("Toast", "Exception", e);
+            Log.e("Toast", "HttpHostConnectException in get()");
         } catch (SocketException e) {
             connected.set(false);
-            Log.e("Toast", "Exception", e);
+            Log.e("Toast", "SocketException in get()");
         } catch (IOException e) {
             Log.e("Toast", "Exception", e);
         } catch (JSONException e) {
