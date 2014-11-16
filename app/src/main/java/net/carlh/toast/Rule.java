@@ -11,7 +11,7 @@ import java.util.ArrayList;
 
 public class Rule implements Serializable {
 
-    private int id;
+    private int id = -1;
     /* Days as a bitfield; 1 is Monday, 2 is Tuesday etc. */
     private int days;
     private int onHour;
@@ -19,6 +19,15 @@ public class Rule implements Serializable {
     private int offHour;
     private int offMinute;
     private double target;
+
+    public Rule(int days, int onHour, int onMinute, int offHour, int offMinute, double target) {
+        this.days = days;
+        this.onHour = onHour;
+        this.onMinute = onMinute;
+        this.offHour = offHour;
+        this.offMinute = offMinute;
+        this.target = target;
+    }
 
     public Rule(JSONObject json) {
         try {
@@ -34,10 +43,26 @@ public class Rule implements Serializable {
         }
     }
 
+    public Rule(Rule r) {
+        copyFrom(r);
+    }
+
+    public void copyFrom(Rule r) {
+        id = r.id;
+        days = r.days;
+        onHour = r.onHour;
+        onMinute = r.onMinute;
+        offHour = r.offHour;
+        offMinute = r.offMinute;
+        target = r.target;
+    }
+
     JSONObject json() {
         JSONObject json = new JSONObject();
         try {
-            json.put("id", id);
+            if (id != -1) {
+                json.put("id", id);
+            }
             json.put("days", days);
             json.put("on_hour", onHour);
             json.put("on_minute", onMinute);
@@ -72,10 +97,12 @@ public class Rule implements Serializable {
     }
 
     private static String twelveHour(int h, int m) {
-        if (h > 12) {
-            return Integer.toString(h - 12) + ":" + Integer.toString(m) + "pm";
+        if (h > 13) {
+            return String.format("%d:%02dpm", h - 12, m);
+        } else if (h == 12) {
+            return String.format("%d:%02dpm", h, m);
         } else {
-            return Integer.toString(h) + ":" + Integer.toString(m) + "am";
+            return String.format("%d:%02dam", h, m);
         }
     }
 
@@ -118,10 +145,6 @@ public class Rule implements Serializable {
         return s;
     }
 
-    int getId() {
-        return id;
-    }
-
     boolean getDayActive(int d) {
         return (days & (1 << d)) != 0;
     }
@@ -161,11 +184,14 @@ public class Rule implements Serializable {
     }
 
     void setDay(int day, boolean active) {
-        Log.e("Toast", "Set " + day + " " + active);
         if (active) {
             days |= (1 << day);
         } else {
             days &= ~(1 << day);
         }
+    }
+
+    int getId() {
+        return id;
     }
 };

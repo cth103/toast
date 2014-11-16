@@ -49,24 +49,10 @@ import org.json.JSONObject;
 
 public class MainActivity extends ActionBarActivity {
 
-    /* State of the system as we see it.  This variable's
-       reference should not be changed (i.e. do not
-       do "state = new State();"
+    /* This variable's reference should not be changed (i.e. do not do
+       "state = new State());"
     */
-    private State state = new State();
-
-    /* Lock and condition to tell the comms thread when
-       it needs to PUT our state to the server.
-    */
-    private final Lock lock = new ReentrantLock();
-    private final Condition putCondition = lock.newCondition();
-    private AtomicInteger pendingPuts = new AtomicInteger(0);
-
-    private AtomicBoolean connected = new AtomicBoolean(false);
-
-    private Handler handler;
-
-    private HttpClient client = new DefaultHttpClient();
+    private static State state;
 
     private TextView temperature;
     private TextView target;
@@ -75,10 +61,16 @@ public class MainActivity extends ActionBarActivity {
     private Button colder;
     private TextView on;
 
+    static State getState() {
+        return state;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        state = new State(this);
 
         temperature = (TextView) findViewById(R.id.temperature);
         target = (TextView) findViewById(R.id.target);
@@ -89,125 +81,30 @@ public class MainActivity extends ActionBarActivity {
 
         colder.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                pendingPuts.incrementAndGet();
                 state.colder();
                 update();
-                requestPut();
-
             }
         });
 
         warmer.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                pendingPuts.incrementAndGet();
                 state.warmer();
                 update();
-                requestPut();
             }
         });
 
         enabled.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                pendingPuts.incrementAndGet();
                 state.setEnabled(!state.getEnabled());
                 update();
-                requestPut();
             }
         });
 
-        /* Handler to update the UI when the comms thread has
-           done a GET.
-        */
-        handler = new Handler() {
+        state.addHandler(new Handler() {
             public void handleMessage(Message message) {
                 update();
             }
-        };
-
-        Thread thread = new Thread(new Runnable() {
-            public void run() {
-
-                /* Initial get to start things off */
-                get();
-
-                while (true) {
-
-                    try {
-                        
-                        /* PUT if there is already a need, or if we are
-                           woken during a short sleep.
-                        */
-                        if (pendingPuts.get() == 0) {
-                            lock.lock();
-                            try {
-                                putCondition.await(10, TimeUnit.SECONDS);
-                            } finally {
-                                lock.unlock();
-                            }
-                        }
-
-                        if (pendingPuts.get() > 0) {
-                            HttpPut put = new HttpPut(Util.url(MainActivity.this, "state"));
-                            StringEntity entity = new StringEntity(state.json().toString());
-                            entity.setContentType("text/json");
-                            put.setEntity(entity);
-                            client.execute(put);
-                            pendingPuts.decrementAndGet();
-                        }
-
-                        /* GET current state from the server, but ignore it if there
-                           are any pending PUTs so that we can "safely" update our
-                           local thread ahead of hearing about it from the server.
-                        */
-                        get();
-
-                    } catch (IOException e) {
-                        Log.e("Toast", "Exception", e);
-                    } catch (InterruptedException e) {
-
-                    }
-                }
-            }
-
-        }
-
-        );
-
-        thread.start();
-    }
-
-    private void get()
-    {
-        try {
-            HttpResponse response = client.execute(new HttpGet(Util.url(this, "state")));
-            StatusLine statusLine = response.getStatusLine();
-            if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-                connected.set(true);
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                response.getEntity().writeTo(out);
-                out.close();
-                
-                if (pendingPuts.get() == 0) {
-                    state.readJSON(new JSONObject(out.toString()));
-                }
-            } else {
-                connected.set(false);
-                response.getEntity().getContent().close();
-                throw new IOException(statusLine.getReasonPhrase());
-            }
-        } catch (HttpHostConnectException e) {
-            connected.set(false);
-            Log.e("Toast", "Exception", e);
-        } catch (SocketException e) {
-            connected.set(false);
-            Log.e("Toast", "Exception", e);
-        } catch (IOException e) {
-            Log.e("Toast", "Exception", e);
-        } catch (JSONException e) {
-            Log.e("Toast", "Exception", e);
-        } finally {
-            handler.sendEmptyMessage(0);
-        }
+        });
     }
 
     @Override
@@ -237,13 +134,13 @@ public class MainActivity extends ActionBarActivity {
 
     private void update() {
 
-        temperature.setEnabled(connected.get());
-        target.setEnabled(connected.get());
-        target.setEnabled(connected.get() && state.getEnabled());
-        warmer.setEnabled(connected.get() && state.getEnabled());
-        colder.setEnabled(connected.get() && state.getEnabled());
+        temperature.setEnabled(state.getConnected());
+        target.setEnabled(state.getConnected());
+        target.setEnabled(state.getConnected() && state.getEnabled());
+        warmer.setEnabled(state.getConnected() && state.getEnabled());
+        colder.setEnabled(state.getConnected() && state.getEnabled());
 
-        if (connected.get()) {
+        if (state.getConnected()) {
             temperature.setText(String.format("%.1f°", state.getTemperature()));
             target.setText(String.format("%.1f°", state.getTarget()));
             if (state.getEnabled()) {
@@ -257,21 +154,13 @@ public class MainActivity extends ActionBarActivity {
             enabled.setText("");
         }
         
-        if (connected.get() && state.getOn()) {
+        if (state.getConnected() && state.getOn()) {
             on.setText("Boiler is on");
-        } else if (connected.get() && !state.getOn()) {
+        } else if (state.getConnected() && !state.getOn()) {
             on.setText("Boiler is off");
         } else {
             on.setText("Not connected");
         }
     }
 
-    private void requestPut() {
-        try {
-            lock.lock();
-            putCondition.signal();
-        } finally {
-            lock.unlock();
-        }
-    }
 }

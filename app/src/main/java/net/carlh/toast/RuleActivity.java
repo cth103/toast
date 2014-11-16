@@ -78,7 +78,7 @@ public class RuleActivity extends Activity {
         ok.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                new RuleSender(RuleActivity.this).execute(rule);
+                MainActivity.getState().addOrReplace(rule);
                 RuleActivity.this.finish();
             }
         });

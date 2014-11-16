@@ -25,7 +25,8 @@
     <TableRow>
         <CheckBox android:id="@+id/day3" android:text="Thursday"/>
     </TableRow>
-    <TableRow>
+
+    <TableRow android:paddingTop="6pt">
         <TextView android:text="On" android:id="@+id/onLabel" android:textSize="10pt"/>
         <Button android:id="@+id/on"/>
     </TableRow>
@@ -34,7 +35,8 @@
         <Button android:id="@+id/off"/>
     </TableRow>
 
-    <TableRow>
+    <TableRow
+	android:paddingTop="10pt">
       <Button android:id="@+id/cancel" android:text="Cancel"/>
       <Button android:id="@+id/ok" android:text="OK"/>
     </TableRow>

@@ -28,7 +28,7 @@
             android:id="@+id/rulesList"/>
     </TableRow>
 
-    <TableRow>
+    <TableRow android:paddingTop="10pt">
         <Button android:text="Add time"
             android:layout_width="0dp"
             android:id="@+id/addRule"/>
