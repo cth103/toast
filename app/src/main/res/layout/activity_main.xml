@@ -10,11 +10,26 @@
     android:stretchColumns="*"
     tools:context=".MainActivity">
 
-        <Button
-            android:layout_width="fill_parent"
-            android:text="Switch heating on"
-            android:id="@+id/enabled">
-        </Button>
+    <TableRow
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
+
+      <TextView
+          android:layout_height="fill_parent"
+          android:layout_width="0dp"
+	  android:gravity="center_vertical"
+          android:textSize="10pt"
+          android:paddingLeft="16dp"
+	  android:text="Heating"/>
+
+      <ToggleButton
+          android:layout_height="fill_parent"
+          android:layout_width="0dp"
+          android:text="On"
+          android:id="@+id/enabled">
+      </ToggleButton>
+
+    </TableRow>
 
     <TableRow
         android:layout_width="fill_parent"

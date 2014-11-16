@@ -248,9 +248,9 @@ public class MainActivity extends ActionBarActivity {
             temperature.setText(String.format("%.1f°", state.getTemperature()));
             target.setText(String.format("%.1f°", state.getTarget()));
             if (state.getEnabled()) {
-                enabled.setText("Switch heating off");
+                enabled.setText("ON");
             } else {
-                enabled.setText("Switch heating on");
+                enabled.setText("OFF");
             }
         } else {
             temperature.setText("...");
