@@ -2,7 +2,6 @@ package net.carlh.toast;
 
 import android.app.Activity;
 import android.app.TimePickerDialog;
-import android.content.res.Resources;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
