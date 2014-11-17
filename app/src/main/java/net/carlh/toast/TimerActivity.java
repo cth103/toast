@@ -35,11 +35,15 @@ import android.widget.ListView;
 
 import java.util.ArrayList;
 
+/** Activity to see all `timer' rules, edit them and add new ones */
 public class TimerActivity extends Activity {
 
     private ListView rulesList;
     private ArrayAdapter<Rule> adapter;
     private ArrayList<Rule> rules = new ArrayList<Rule>();
+    /** Possibly unnecessary hack so that we know what rule we are
+        talking about when handling context menus opened by long-click.
+    */
     private Rule lastClickRule = null;
     
     @Override
@@ -54,6 +58,7 @@ public class TimerActivity extends Activity {
 
         registerForContextMenu(rulesList);
 
+        /* Edit rules on click */
         rulesList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Rule rule = (Rule) parent.getItemAtPosition(position);
@@ -63,6 +68,7 @@ public class TimerActivity extends Activity {
             }
         });
 
+        /* See lastClickRule... */
         rulesList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
                 lastClickRule = (Rule) parent.getItemAtPosition(position);

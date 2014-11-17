@@ -65,6 +65,12 @@ public class MainActivity extends ActionBarActivity {
         on = (TextView) findViewById(R.id.on);
         explanation = (TextView) findViewById(R.id.explanation);
 
+        /* Any changes to these widgets are reflected instantly
+           in the UI by update().  State handles pushing of the
+           new values to the server and suspending UI updates
+           until the corresponding pull comes back.
+        */
+
         colder.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 state.colder();
@@ -86,6 +92,7 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
+        /* Update the UI when state changes */
         state.addHandler(new Handler() {
             public void handleMessage(Message message) {
                 update();
@@ -95,16 +102,12 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
         if (id == R.id.action_settings) {
@@ -118,6 +121,7 @@ public class MainActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    /** Update the UI from state */
     private void update() {
         temperature.setEnabled(state.getConnected());
         target.setEnabled(state.getConnected());

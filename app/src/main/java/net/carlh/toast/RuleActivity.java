@@ -28,6 +28,9 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TimePicker;
 
+/** Activity to edit a single `rule', i.e. a specification of a time period
+ *  on one or more days when the heating should be on.
+ */
 public class RuleActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

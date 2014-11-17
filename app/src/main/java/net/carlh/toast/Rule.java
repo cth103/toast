@@ -159,6 +159,10 @@ public class Rule implements Serializable {
         return s;
     }
 
+    int getId() {
+        return id;
+    }
+
     boolean getDayActive(int d) {
         return (days & (1 << d)) != 0;
     }
@@ -203,9 +207,5 @@ public class Rule implements Serializable {
         } else {
             days &= ~(1 << day);
         }
-    }
-
-    int getId() {
-        return id;
     }
 };

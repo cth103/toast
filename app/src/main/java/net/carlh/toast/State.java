@@ -52,13 +52,18 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class State {
 
+    /* Stuff to manage the state */
+
     private Context context;
+    /** Handlers that will be notified when there is a change in state */
     private ArrayList<Handler> handlers;
     private final Lock lock = new ReentrantLock();
     private final Condition putCondition = lock.newCondition();
     private AtomicBoolean pendingPut = new AtomicBoolean(false);
     private HttpClient client;
     private AtomicBoolean connected = new AtomicBoolean(false);
+
+    /* The actual state */
 
     private double temperature;
     private double target;
@@ -80,7 +85,8 @@ public class State {
         HttpConnectionParams.setConnectionTimeout(params, 3000);
         HttpConnectionParams.setSoTimeout(params, 3000);
         client = new DefaultHttpClient(params);
-        
+
+        /* Thread to handle get/put of our state to the server */
         Thread thread = new Thread(new Runnable() {
             public void run() {
                 
@@ -119,7 +125,7 @@ public class State {
                             client.execute(put);
                         }
 
-                        /* GET current state from the server, but ignore it if there
+                        /* GET current state from the server; get() will ignore it if there
                            are any pending PUTs so that we can "safely" update our
                            local data ahead of hearing about the change from the server.
                         */
@@ -136,7 +142,10 @@ public class State {
 
         thread.start();
     }
-            
+
+    /** Get state from the server and write it to our variables
+     *  if pendingPut is false.
+     */
     private void get()
     {
         try {
@@ -181,6 +190,7 @@ public class State {
         pendingPut.set(true);
     }
 
+    /** Wake the get/put thread if it is asleep */
     private void endUpdate() {
         try {
             lock.lock();
