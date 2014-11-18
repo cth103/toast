@@ -24,10 +24,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
@@ -92,6 +95,9 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
+        TableLayout mainTable = (TableLayout) findViewById(R.id.mainTable);
+        mainTable.setOnTouchListener(new OnSwipeTouchListener(this, null, new Intent(MainActivity.this, TimerActivity.class)));
+
         /* Update the UI when state changes */
         state.addHandler(new Handler() {
             public void handleMessage(Message message) {
@@ -123,6 +129,7 @@ public class MainActivity extends ActionBarActivity {
 
     /** Update the UI from state */
     private void update() {
+        enabled.setEnabled(state.getConnected());
         temperature.setEnabled(state.getConnected());
         target.setEnabled(state.getConnected());
         target.setEnabled(state.getConnected() && state.getEnabled());

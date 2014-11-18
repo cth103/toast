@@ -32,6 +32,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TableLayout;
 
 import java.util.ArrayList;
 
@@ -85,6 +86,11 @@ public class TimerActivity extends Activity {
                 startActivityForResult(intent, 0);
             }
         });
+
+        TableLayout mainTable = (TableLayout) findViewById(R.id.timerTable);
+        Intent intent = new Intent(TimerActivity.this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        mainTable.setOnTouchListener(new OnSwipeTouchListener(this, intent, null));
 
         MainActivity.getState().addHandler(new Handler() {
             public void handleMessage(Message message) {
