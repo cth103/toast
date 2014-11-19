@@ -52,6 +52,7 @@ public class MainActivity extends ActionBarActivity {
     private Button colder;
     private TextView on;
     private TextView explanation;
+    private MenuItem menuTimer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,6 +110,7 @@ public class MainActivity extends ActionBarActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        menuTimer = menu.getItem(1);
         return true;
     }
 
@@ -135,6 +137,7 @@ public class MainActivity extends ActionBarActivity {
         target.setEnabled(state.getConnected() && state.getEnabled());
         warmer.setEnabled(state.getConnected() && state.getEnabled());
         colder.setEnabled(state.getConnected() && state.getEnabled());
+        menuTimer.setEnabled(state.getConnected());
 
         if (state.getConnected()) {
             temperature.setText(String.format("%.1f°", state.getTemperature()));
