@@ -59,15 +59,22 @@ public class ControlFragment extends Fragment {
                 update();
             }
         });
-        
+
+        update();
         return view;
     }
 
     /** Update the UI from state */
     public void update() {
-        Log.e("Toast", "ControlFragment.update()");
+        if (temperature == null) {
+            /* temperature is the first variable to be set in onCreateView
+               so if it's null we'll assume onCreateView hasn't been called
+               yet
+             */
+            return;
+        }
+
         State state = MainActivity.getState();
-        Log.e("Toast", "connected=" + state.getConnected());
 
         enabled.setEnabled(state.getConnected());
         temperature.setEnabled(state.getConnected());

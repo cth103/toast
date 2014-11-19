@@ -105,6 +105,7 @@ public class MainActivity extends ActionBarActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         menuTimer = menu.getItem(1);
+        update();
         return true;
     }
 
@@ -128,8 +129,9 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void update() {
-        Log.e("Toast", "MainActivity.update");
-        menuTimer.setEnabled(state.getConnected());
+        if (menuTimer != null) {
+            menuTimer.setEnabled(state.getConnected());
+        }
         adapter.getControlFragment().update();
         adapter.getTimerFragment().update();
     }

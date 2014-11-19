@@ -95,6 +95,13 @@ public class TimerFragment extends Fragment {
     }
 
     public void update() {
+        if (addRule == null) {
+            /* addRule is the first variable to be set in onCreateView
+               so if it's null we'll assume onCreateView hasn't been called
+               yet
+             */
+            return;
+        }
 
         State state = MainActivity.getState();
 
