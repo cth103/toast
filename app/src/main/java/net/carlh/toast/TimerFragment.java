@@ -24,10 +24,13 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.Fragment;
 import android.view.ContextMenu;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -36,10 +39,12 @@ import android.widget.TableLayout;
 
 import java.util.ArrayList;
 
-/** Activity to see all `timer' rules, edit them and add new ones */
-public class TimerActivity extends Activity {
+/** Fragment to see all `timer' rules, edit them and add new ones */
+public class TimerFragment extends Fragment {
 
     private ListView rulesList;
+    private Button addRule;
+
     private ArrayAdapter<Rule> adapter;
     private ArrayList<Rule> rules = new ArrayList<Rule>();
     /** Possibly unnecessary hack so that we know what rule we are
@@ -48,14 +53,12 @@ public class TimerActivity extends Activity {
     private Rule lastClickRule = null;
     
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_timer);
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_timer, container, false);
 
-        rulesList = (ListView) findViewById(R.id.rulesList);
-        adapter = new ArrayAdapter<Rule>(this, android.R.layout.simple_list_item_1, android.R.id.text1, rules);
+        rulesList = (ListView) view.findViewById(R.id.rulesList);
+        adapter = new ArrayAdapter<Rule>(getActivity(), android.R.layout.simple_list_item_1, android.R.id.text1, rules);
         rulesList.setAdapter(adapter);
-        update();
 
         registerForContextMenu(rulesList);
 
@@ -63,7 +66,7 @@ public class TimerActivity extends Activity {
         rulesList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Rule rule = (Rule) parent.getItemAtPosition(position);
-                Intent intent = new Intent(TimerActivity.this, RuleActivity.class);
+                Intent intent = new Intent(getActivity(), RuleActivity.class);
                 intent.putExtra("rule", rule);
                 startActivityForResult(intent, 0);
             }
@@ -77,36 +80,28 @@ public class TimerActivity extends Activity {
             }
         });
         
-        Button addRule = (Button) findViewById(R.id.addRule);
+        addRule = (Button) view.findViewById(R.id.addRule);
         addRule.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Rule rule = new Rule(0, 8, 0, 18, 0);
-                Intent intent = new Intent(TimerActivity.this, RuleActivity.class);
+                Intent intent = new Intent(getActivity(), RuleActivity.class);
                 intent.putExtra("rule", rule);
                 startActivityForResult(intent, 0);
             }
         });
 
-        TableLayout mainTable = (TableLayout) findViewById(R.id.timerTable);
-        Intent intent = new Intent(TimerActivity.this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        mainTable.setOnTouchListener(new OnSwipeTouchListener(this, intent, null));
-
-        MainActivity.getState().addHandler(new Handler() {
-            public void handleMessage(Message message) {
-               update();
-            }
-        });
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         update();
+        return view;
     }
 
-    private void update() {
+    public void update() {
+
+        State state = MainActivity.getState();
+
+        addRule.setEnabled(state.getConnected());
+
         /* State.rules is modified by other threads, so we can't use it in an ArrayAdapter */
-        ArrayList<Rule> stateRules = MainActivity.getState().getRules();
+        ArrayList<Rule> stateRules = state.getRules();
         rules.clear();
         for (Rule r: stateRules) {
             rules.add(new Rule(r));

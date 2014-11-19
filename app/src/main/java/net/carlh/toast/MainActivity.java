@@ -23,6 +23,10 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -45,14 +49,9 @@ public class MainActivity extends ActionBarActivity {
         return state;
     }
 
-    private TextView temperature;
-    private TextView target;
-    private ToggleButton enabled;
-    private Button warmer;
-    private Button colder;
-    private TextView on;
-    private TextView explanation;
     private MenuItem menuTimer;
+    private ViewPager pager;
+    private Adapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,52 +60,47 @@ public class MainActivity extends ActionBarActivity {
 
         state = new State(this);
 
-        temperature = (TextView) findViewById(R.id.temperature);
-        target = (TextView) findViewById(R.id.target);
-        enabled = (ToggleButton) findViewById(R.id.enabled);
-        colder = (Button) findViewById(R.id.colder);
-        warmer = (Button) findViewById(R.id.warmer);
-        on = (TextView) findViewById(R.id.on);
-        explanation = (TextView) findViewById(R.id.explanation);
+        pager = (ViewPager) findViewById(R.id.pager);
+        adapter = new Adapter(getSupportFragmentManager());
+        pager.setAdapter(adapter);
 
-        /* Any changes to these widgets are reflected instantly
-           in the UI by update().  State handles pushing of the
-           new values to the server and suspending UI updates
-           until the corresponding pull comes back.
-        */
-
-        colder.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                state.colder();
-                update();
-            }
-        });
-
-        warmer.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                state.warmer();
-                update();
-            }
-        });
-
-        enabled.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                state.setEnabled(!state.getEnabled());
-                update();
-            }
-        });
-
-        TableLayout mainTable = (TableLayout) findViewById(R.id.mainTable);
-        mainTable.setOnTouchListener(new OnSwipeTouchListener(this, null, new Intent(MainActivity.this, TimerActivity.class)));
-
-        /* Update the UI when state changes */
-        state.addHandler(new Handler() {
+        MainActivity.getState().addHandler(new Handler() {
             public void handleMessage(Message message) {
-                update();
+               update();
             }
         });
     }
 
+    public static class Adapter extends FragmentPagerAdapter {
+
+        private ControlFragment controlFragment = new ControlFragment();
+        private TimerFragment timerFragment = new TimerFragment();
+
+        public Adapter(FragmentManager fm) {
+            super(fm);
+        }
+
+        public int getCount() {
+            return 2;
+        }
+
+        public Fragment getItem(int position) {
+            if (position == 0) {
+                return controlFragment;
+            } else {
+                return timerFragment;
+            }
+        }
+
+        public ControlFragment getControlFragment() {
+            return controlFragment;
+        }
+
+        public TimerFragment getTimerFragment() {
+            return timerFragment;
+        }
+    }
+        
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -122,47 +116,21 @@ public class MainActivity extends ActionBarActivity {
             startActivity(new Intent(this, SettingsActivity.class));
             return true;
         } else if (id == R.id.action_timer) {
-            startActivity(new Intent(this, TimerActivity.class));
+            pager.setCurrentItem(1);
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    /** Update the UI from state */
-    private void update() {
-        enabled.setEnabled(state.getConnected());
-        temperature.setEnabled(state.getConnected());
-        target.setEnabled(state.getConnected());
-        target.setEnabled(state.getConnected() && state.getEnabled());
-        warmer.setEnabled(state.getConnected() && state.getEnabled());
-        colder.setEnabled(state.getConnected() && state.getEnabled());
-        menuTimer.setEnabled(state.getConnected());
-
-        if (state.getConnected()) {
-            temperature.setText(String.format("%.1f°", state.getTemperature()));
-            target.setText(String.format("%.1f°", state.getTarget()));
-            enabled.setChecked(state.getEnabled());
-        } else {
-            temperature.setText("...");
-            target.setText("...");
-            enabled.setText("");
-        }
-        
-        if (state.getConnected() && state.getOn()) {
-            on.setText("Boiler is on");
-            explanation.setText("");
-        } else if (state.getConnected() && !state.getOn()) {
-            on.setText("Boiler is off");
-            if (state.getEnabled()) {
-                explanation.setText("Target temperature reached");
-            } else {
-                explanation.setText("Heating is switched off");
-            }
-        } else {
-            on.setText("Not connected");
-            explanation.setText("Check that you have a WiFi connection");
-        }
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        update();
     }
 
+    private void update() {
+        Log.e("Toast", "MainActivity.update");
+        menuTimer.setEnabled(state.getConnected());
+        adapter.getControlFragment().update();
+        adapter.getTimerFragment().update();
+    }
 }

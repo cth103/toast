@@ -29,6 +29,7 @@ import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -42,6 +43,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
@@ -168,9 +170,15 @@ public class State {
         } catch (HttpHostConnectException e) {
             connected.set(false);
             Log.e("Toast", "HttpHostConnectException in get()");
+        } catch (ConnectTimeoutException e) {
+            connected.set(false);
+            Log.e("Toast", "ConnectTimeoutException in get()");
         } catch (SocketException e) {
             connected.set(false);
             Log.e("Toast", "SocketException in get()");
+        } catch (SocketTimeoutException e) {
+            connected.set(false);
+            Log.e("Toast", "SocketTimeoutException in get()");
         } catch (IOException e) {
             Log.e("Toast", "Exception", e);
         } catch (JSONException e) {
