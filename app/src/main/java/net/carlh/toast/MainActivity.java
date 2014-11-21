@@ -40,15 +40,6 @@ import android.widget.ToggleButton;
 
 public class MainActivity extends ActionBarActivity {
 
-    /* This variable's reference should not be changed (i.e. do not do
-       "state = new State());"
-    */
-    private static State state;
-
-    static State getState() {
-        return state;
-    }
-
     private MenuItem menuTimer;
     private ViewPager pager;
     private Adapter adapter;
@@ -58,13 +49,11 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        state = new State(this);
-
         pager = (ViewPager) findViewById(R.id.pager);
         adapter = new Adapter(getSupportFragmentManager());
         pager.setAdapter(adapter);
 
-        MainActivity.getState().addHandler(new Handler() {
+        State.instance(MainActivity.this).addHandler(new Handler() {
             public void handleMessage(Message message) {
                update();
             }
@@ -130,7 +119,7 @@ public class MainActivity extends ActionBarActivity {
 
     private void update() {
         if (menuTimer != null) {
-            menuTimer.setEnabled(state.getConnected());
+            menuTimer.setEnabled(State.instance(this).getConnected());
         }
         adapter.getControlFragment().update();
         adapter.getTimerFragment().update();

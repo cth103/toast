@@ -40,21 +40,21 @@ public class ControlFragment extends Fragment {
 
         colder.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                MainActivity.getState().colder();
+                State.instance(getActivity()).colder();
                 update();
             }
         });
 
         warmer.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                MainActivity.getState().warmer();
+                State.instance(getActivity()).warmer();
                 update();
             }
         });
 
         enabled.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                State s = MainActivity.getState();
+                State s = State.instance(getActivity());
                 s.setEnabled(!s.getEnabled());
                 update();
             }
@@ -74,7 +74,7 @@ public class ControlFragment extends Fragment {
             return;
         }
 
-        State state = MainActivity.getState();
+        State state = State.instance(getActivity());
 
         enabled.setEnabled(state.getConnected());
         temperature.setEnabled(state.getConnected());

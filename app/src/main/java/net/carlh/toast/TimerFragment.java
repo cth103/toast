@@ -103,7 +103,7 @@ public class TimerFragment extends Fragment {
             return;
         }
 
-        State state = MainActivity.getState();
+        State state = State.instance(getActivity());
 
         addRule.setEnabled(state.getConnected());
         rulesList.setEnabled(state.getConnected());
@@ -133,7 +133,7 @@ public class TimerFragment extends Fragment {
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
         switch (item.getItemId()) {
         case 0:
-            MainActivity.getState().remove(lastClickRule);
+            State.instance(getActivity()).remove(lastClickRule);
             break;
         }
         return true;

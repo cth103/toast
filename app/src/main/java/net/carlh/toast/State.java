@@ -310,4 +310,14 @@ public class State {
         }
         endUpdate();
     }
+
+    public static State instance(Context context) {
+        if (instanceVariable == null) {
+            instanceVariable = new State(context);
+        }
+
+        return instanceVariable;
+    }
+
+    private static State instanceVariable;
 }

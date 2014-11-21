@@ -99,7 +99,7 @@ public class RuleActivity extends Activity {
         ok.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MainActivity.getState().addOrReplace(rule);
+                State.instance(RuleActivity.this).addOrReplace(rule);
                 RuleActivity.this.finish();
             }
         });
