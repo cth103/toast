@@ -71,20 +71,23 @@ public class MainActivity extends ActionBarActivity {
 
         private ControlFragment controlFragment = new ControlFragment();
         private TimerFragment timerFragment = new TimerFragment();
+        private GraphFragment graphFragment = new GraphFragment();
 
         public Adapter(FragmentManager fm) {
             super(fm);
         }
 
         public int getCount() {
-            return 2;
+            return 3;
         }
 
         public Fragment getItem(int position) {
             if (position == 0) {
                 return controlFragment;
-            } else {
+            } else if (position == 1) {
                 return timerFragment;
+            } else {
+                return graphFragment;
             }
         }
 

@@ -112,7 +112,7 @@ public class State {
                         }
 
                         if (pendingPut.get()) {
-                            HttpPut put = new HttpPut(Util.url(State.this.context));
+                            HttpPut put = new HttpPut(Util.url(State.this.context, "state"));
 
                             /* We must take the state from json() and set pendingPut to
                                false atomically (XXX and it isn't atomic!).  Then if
@@ -151,7 +151,7 @@ public class State {
     private void get()
     {
         try {
-            HttpResponse response = client.execute(new HttpGet(Util.url(context)));
+            HttpResponse response = client.execute(new HttpGet(Util.url(context, "state")));
             StatusLine statusLine = response.getStatusLine();
             if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
                 connected.set(true);
