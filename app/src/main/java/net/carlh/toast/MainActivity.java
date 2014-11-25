@@ -98,6 +98,10 @@ public class MainActivity extends ActionBarActivity {
         public TimerFragment getTimerFragment() {
             return timerFragment;
         }
+
+        public GraphFragment getGraphFragment() {
+            return graphFragment;
+        }
     }
         
     @Override
@@ -136,5 +140,6 @@ public class MainActivity extends ActionBarActivity {
         }
         adapter.getControlFragment().update();
         adapter.getTimerFragment().update();
+        adapter.getGraphFragment().update();
     }
 }

@@ -24,12 +24,13 @@ public class GraphFragment extends Fragment {
 
     TemperatureFetcher fetcher;
     int minutes = 60;
+    Spinner period;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_graph, container, false);
 
-        Spinner period = (Spinner) view.findViewById(R.id.graphPeriod);
+        period = (Spinner) view.findViewById(R.id.graphPeriod);
         String periods[] = {"Last hour", "Last day", "Last week"};
         period.setAdapter(new ArrayAdapter(getActivity(), android.R.layout.simple_spinner_item, periods));
         period.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -47,7 +48,6 @@ public class GraphFragment extends Fragment {
                         break;
                 }
 
-                Log.e("Test", "Set period " + minutes);
                 fetcher.setPeriod(minutes);
                 fetcher.fetchNow();
             }
@@ -58,10 +58,12 @@ public class GraphFragment extends Fragment {
         });
 
         final GraphView graphView = new LineGraphView(getActivity(), "Temperature");
+        graphView.setVisibility(View.GONE);
+
         graphView.setCustomLabelFormatter(new CustomLabelFormatter() {
             @Override
             public String formatLabel(double value, boolean isValueX) {
-                if (!isValueX) {
+                if (!isValueX || fetcher.getData() == null) {
                     return null;
                 }
 
@@ -85,11 +87,24 @@ public class GraphFragment extends Fragment {
         fetcher = new TemperatureFetcher(getActivity(), graphView);
         fetcher.addHandler(new Handler() {
             public void handleMessage(Message message) {
-                graphView.removeAllSeries();
-                graphView.addSeries(new GraphViewSeries(fetcher.getData()));
+                if (fetcher.getData() != null) {
+                    graphView.setVisibility(View.VISIBLE);
+                    graphView.removeAllSeries();
+                    graphView.addSeries(new GraphViewSeries(fetcher.getData()));
+                } else {
+                    graphView.setVisibility(View.GONE);
+                }
             }
         });
 
         return view;
+    }
+
+    void update() {
+        if (period == null || getState() == null) {
+            return;
+        }
+
+        period.setEnabled(getState().getConnected());
     }
 }
