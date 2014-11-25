@@ -39,9 +39,9 @@ class TemperatureFetcher {
     private HttpClient client;
     private final Lock lock = new ReentrantLock();
     private final Condition fetchCondition = lock.newCondition();
-    private boolean fetch = true;
-    /** Handlers that will be notified when there is a change in state */
+    /* Handlers that will be notified when there is a change in state */
     private ArrayList<Handler> handlers = new ArrayList<Handler>();
+    private int minutes = 60;
 
     TemperatureFetcher(final Context context, GraphView graphView) {
 
@@ -53,57 +53,56 @@ class TemperatureFetcher {
         Thread thread = new Thread(new Runnable() {
             public void run() {
 
-                try {
-
+                while (true) {
                     try {
-                        lock.lock();
-                        while (fetch == false) {
-                            fetchCondition.await(10, TimeUnit.SECONDS);
-                        }
-                    } catch (InterruptedException e) {
 
-                    } finally {
-                        lock.unlock();
-                    }
-
-                    HttpResponse response = client.execute(new HttpGet(Util.url(context, "temperatures?minutes=60")));
-                    StatusLine statusLine = response.getStatusLine();
-                    if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-                        response.getEntity().writeTo(out);
-                        out.close();
-
-                        JSONArray json = new JSONArray(out.toString());
                         try {
                             lock.lock();
-                            data = new GraphView.GraphViewData[json.length()];
-                            for (int i = 0; i < json.length(); i++) {
-                                data[i] = new GraphView.GraphViewData(i, json.getDouble(i));
-                            }
+                            fetchCondition.await(10, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+
                         } finally {
                             lock.unlock();
                         }
 
-                    } else {
-                        response.getEntity().getContent().close();
-                        throw new IOException(statusLine.getReasonPhrase());
-                    }
-                } catch (HttpHostConnectException e) {
-                    Log.e("Toast", "HttpHostConnectException in get()");
-                } catch (ConnectTimeoutException e) {
-                    Log.e("Toast", "ConnectTimeoutException in get()");
-                } catch (SocketException e) {
-                    Log.e("Toast", "SocketException in get()");
-                } catch (SocketTimeoutException e) {
-                    Log.e("Toast", "SocketTimeoutException in get()");
-                } catch (IOException e) {
-                    Log.e("Toast", "Exception", e);
-                } catch (JSONException e) {
-                    Log.e("Toast", "Exception", e);
-                } finally {
-                    Log.e("Fetch", "Done it");
-                    for (Handler h : handlers) {
-                        h.sendEmptyMessage(0);
+                        HttpResponse response = client.execute(new HttpGet(Util.url(context, "temperatures?minutes=" + minutes)));
+                        StatusLine statusLine = response.getStatusLine();
+                        if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
+                            ByteArrayOutputStream out = new ByteArrayOutputStream();
+                            response.getEntity().writeTo(out);
+                            out.close();
+
+                            JSONArray json = new JSONArray(out.toString());
+                            try {
+                                lock.lock();
+                                data = new GraphView.GraphViewData[json.length()];
+                                for (int i = 0; i < json.length(); i++) {
+                                    data[i] = new GraphView.GraphViewData(i, json.getDouble(i));
+                                }
+                            } finally {
+                                lock.unlock();
+                            }
+
+                        } else {
+                            response.getEntity().getContent().close();
+                            throw new IOException(statusLine.getReasonPhrase());
+                        }
+                    } catch (HttpHostConnectException e) {
+                        Log.e("Toast", "HttpHostConnectException in get()");
+                    } catch (ConnectTimeoutException e) {
+                        Log.e("Toast", "ConnectTimeoutException in get()");
+                    } catch (SocketException e) {
+                        Log.e("Toast", "SocketException in get()");
+                    } catch (SocketTimeoutException e) {
+                        Log.e("Toast", "SocketTimeoutException in get()");
+                    } catch (IOException e) {
+                        Log.e("Toast", "Exception", e);
+                    } catch (JSONException e) {
+                        Log.e("Toast", "Exception", e);
+                    } finally {
+                        for (Handler h : handlers) {
+                            h.sendEmptyMessage(0);
+                        }
                     }
                 }
             }
@@ -111,23 +110,20 @@ class TemperatureFetcher {
 
         thread.start();
     }
-            
-    public void fetch(boolean f) {
+
+    public void fetchNow() {
         try {
             lock.lock();
-            fetch = f;
-            if (fetch) {
-                fetchCondition.signal();
-            }
+            fetchCondition.signal();
         } finally {
             lock.unlock();
         }
     }
-            
+
     public void addHandler(Handler h) {
         handlers.add(h);
     }
-    
+
     public GraphView.GraphViewData[] getData() {
         GraphView.GraphViewData[] r;
         try {
@@ -137,5 +133,9 @@ class TemperatureFetcher {
             lock.unlock();
         }
         return r;
+    }
+
+    public void setPeriod(int minutes) {
+        this.minutes = minutes;
     }
 }
