@@ -2,7 +2,13 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
     <EditTextPreference
         android:key="hostname"
-        android:title="Heating controller host"
+        android:title="Controller host"
         android:dialogTitle="Hostname or IP address"
         android:defaultValue="192.168.1.1" />
+    <EditTextPreference
+        android:key="port"
+        android:title="Controller port"
+        android:dialogTitle="Port"
+	android:inputType="number"
+        android:defaultValue="80" />
 </PreferenceScreen>
