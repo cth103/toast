@@ -243,7 +243,7 @@ public class State {
     }
 
     public boolean getConnected() {
-        return true || connected.get();
+        return connected.get();
     }
 
     public synchronized double getTemperature() {
