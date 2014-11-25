@@ -24,7 +24,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
@@ -41,7 +40,7 @@ import android.widget.TableLayout;
 import java.util.ArrayList;
 
 /** Fragment to see all `timer' rules, edit them and add new ones */
-public class TimerFragment extends ToastFragment {
+public class TimerFragment extends Fragment {
 
     private ListView rulesList;
     private Button addRule;
