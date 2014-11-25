@@ -11,7 +11,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
-public class ControlFragment extends Fragment {
+public class ControlFragment extends ToastFragment {
 
     private TextView temperature;
     private TextView target;
@@ -38,24 +38,25 @@ public class ControlFragment extends Fragment {
            until the corresponding pull comes back.
         */
 
+        final State state = getState();
+
         colder.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                State.instance(getActivity()).colder();
+                state.colder();
                 update();
             }
         });
 
         warmer.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                State.instance(getActivity()).warmer();
+                state.warmer();
                 update();
             }
         });
 
         enabled.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                State s = State.instance(getActivity());
-                s.setEnabled(!s.getEnabled());
+                state.setEnabled(!getState().getEnabled());
                 update();
             }
         });
@@ -69,12 +70,15 @@ public class ControlFragment extends Fragment {
         if (temperature == null) {
             /* temperature is the first variable to be set in onCreateView
                so if it's null we'll assume onCreateView hasn't been called
-               yet
+               yet.
              */
             return;
         }
 
-        State state = State.instance(getActivity());
+        State state = getState();
+        if (state == null) {
+            return;
+        }
 
         enabled.setEnabled(state.getConnected());
         temperature.setEnabled(state.getConnected());

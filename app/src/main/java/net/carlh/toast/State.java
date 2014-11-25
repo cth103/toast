@@ -243,7 +243,7 @@ public class State {
     }
 
     public boolean getConnected() {
-        return connected.get();
+        return true || connected.get();
     }
 
     public synchronized double getTemperature() {
@@ -310,14 +310,4 @@ public class State {
         }
         endUpdate();
     }
-
-    public static State instance(Context context) {
-        if (instanceVariable == null) {
-            instanceVariable = new State(context);
-        }
-
-        return instanceVariable;
-    }
-
-    private static State instanceVariable;
 }

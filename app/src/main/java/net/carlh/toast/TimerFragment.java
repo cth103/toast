@@ -25,6 +25,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -40,7 +41,7 @@ import android.widget.TableLayout;
 import java.util.ArrayList;
 
 /** Fragment to see all `timer' rules, edit them and add new ones */
-public class TimerFragment extends Fragment {
+public class TimerFragment extends ToastFragment {
 
     private ListView rulesList;
     private Button addRule;
@@ -51,6 +52,8 @@ public class TimerFragment extends Fragment {
         talking about when handling context menus opened by long-click.
     */
     private Rule lastClickRule = null;
+
+    public static final int ADD_OR_UPDATE_RULE = 0;
     
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -68,7 +71,7 @@ public class TimerFragment extends Fragment {
                 Rule rule = (Rule) parent.getItemAtPosition(position);
                 Intent intent = new Intent(getActivity(), RuleActivity.class);
                 intent.putExtra("rule", rule);
-                startActivityForResult(intent, 0);
+                getActivity().startActivityForResult(intent, ADD_OR_UPDATE_RULE);
             }
         });
 
@@ -86,7 +89,7 @@ public class TimerFragment extends Fragment {
                 Rule rule = new Rule(0, 8, 0, 18, 0);
                 Intent intent = new Intent(getActivity(), RuleActivity.class);
                 intent.putExtra("rule", rule);
-                startActivityForResult(intent, 0);
+                getActivity().startActivityForResult(intent, ADD_OR_UPDATE_RULE);
             }
         });
 
@@ -103,7 +106,10 @@ public class TimerFragment extends Fragment {
             return;
         }
 
-        State state = State.instance(getActivity());
+        State state = getState();
+        if (state == null) {
+            return;
+        }
 
         addRule.setEnabled(state.getConnected());
         rulesList.setEnabled(state.getConnected());
@@ -133,7 +139,7 @@ public class TimerFragment extends Fragment {
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
         switch (item.getItemId()) {
         case 0:
-            State.instance(getActivity()).remove(lastClickRule);
+            getState().remove(lastClickRule);
             break;
         }
         return true;

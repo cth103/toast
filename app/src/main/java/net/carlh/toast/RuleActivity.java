@@ -21,7 +21,9 @@ package net.carlh.toast;
 
 import android.app.Activity;
 import android.app.TimePickerDialog;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -32,6 +34,7 @@ import android.widget.TimePicker;
  *  on one or more days when the heating should be on.
  */
 public class RuleActivity extends Activity {
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_rule);
@@ -99,7 +102,11 @@ public class RuleActivity extends Activity {
         ok.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                State.instance(RuleActivity.this).addOrReplace(rule);
+                Bundle b = new Bundle();
+                b.putSerializable("rule", rule);
+                Intent i = new Intent();
+                i.putExtras(b);
+                setResult(RESULT_OK, i);
                 RuleActivity.this.finish();
             }
         });
