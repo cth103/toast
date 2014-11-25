@@ -169,16 +169,16 @@ public class State {
             }
         } catch (HttpHostConnectException e) {
             connected.set(false);
-            Log.e("Toast", "HttpHostConnectException in get()");
+            Log.e("Toast", "HttpHostConnectException in State.get()");
         } catch (ConnectTimeoutException e) {
             connected.set(false);
-            Log.e("Toast", "ConnectTimeoutException in get()");
+            Log.e("Toast", "ConnectTimeoutException in State.get()");
         } catch (SocketException e) {
             connected.set(false);
-            Log.e("Toast", "SocketException in get()");
+            Log.e("Toast", "SocketException in State.get()");
         } catch (SocketTimeoutException e) {
             connected.set(false);
-            Log.e("Toast", "SocketTimeoutException in get()");
+            Log.e("Toast", "SocketTimeoutException in State.get()", e);
         } catch (IOException e) {
             Log.e("Toast", "Exception", e);
         } catch (JSONException e) {

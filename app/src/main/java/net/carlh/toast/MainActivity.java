@@ -128,7 +128,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == TimerFragment.ADD_OR_UPDATE_RULE) {
+        if (requestCode == TimerFragment.ADD_OR_UPDATE_RULE && data.getExtras() != null) {
             state.addOrReplace((Rule) data.getExtras().getSerializable("rule"));
         }
         update();
