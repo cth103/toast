@@ -76,42 +76,36 @@ public class ControlFragment extends Fragment {
             return;
         }
 
-        State state = getState();
-        if (state == null) {
-            return;
-        }
+        enabled.setEnabled(getConnected());
+        temperature.setEnabled(getConnected());
+        target.setEnabled(getConnected());
+        target.setEnabled(getConnected() && getEnabled());
+        warmer.setEnabled(getConnected() && getEnabled());
+        colder.setEnabled(getConnected() && getEnabled());
 
-        enabled.setEnabled(state.getConnected());
-        temperature.setEnabled(state.getConnected());
-        target.setEnabled(state.getConnected());
-        target.setEnabled(state.getConnected() && state.getEnabled());
-        warmer.setEnabled(state.getConnected() && state.getEnabled());
-        colder.setEnabled(state.getConnected() && state.getEnabled());
-
-        if (state.getConnected()) {
+        if (getConnected()) {
+            State state = getState();
             ArrayList<Double> temperatures = state.getTemperatures();
             if (temperatures != null && temperatures.size() > 0) {
                 temperature.setText(String.format("%.1f°", temperatures.get(temperatures.size() - 1)));
             }
             target.setText(String.format("%.1f°", state.getTarget()));
-            enabled.setChecked(state.getEnabled());
-        } else {
-            temperature.setText("...");
-            target.setText("...");
-            enabled.setText("");
-        }
-        
-        if (state.getConnected() && state.getOn()) {
-            on.setText("Boiler is on");
-            explanation.setText("");
-        } else if (state.getConnected() && !state.getOn()) {
-            on.setText("Boiler is off");
-            if (state.getEnabled()) {
-                explanation.setText("Target temperature reached");
-            } else {
-                explanation.setText("Heating is switched off");
+            enabled.setChecked(getEnabled());
+            if (state.getOn()) {
+                on.setText("Boiler is on");
+                explanation.setText("");
+            } else { 
+                on.setText("Boiler is off");
+                if (getEnabled()) {
+                    explanation.setText("Target temperature reached");
+                } else {
+                    explanation.setText("Heating is switched off");
+                }
             }
         } else {
+            temperature.setText("");
+            target.setText("");
+            enabled.setText("");
             on.setText("Not connected");
             explanation.setText("Check that you have a WiFi connection");
         }

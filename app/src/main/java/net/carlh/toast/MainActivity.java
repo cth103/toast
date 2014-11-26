@@ -19,15 +19,16 @@
 
 package net.carlh.toast;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -38,7 +39,7 @@ import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends FragmentActivity {
 
     private State state;
 
@@ -68,6 +69,8 @@ public class MainActivity extends ActionBarActivity {
                update();
             }
         });
+
+        update();
     }
 
     @Override
@@ -145,6 +148,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void update() {
+        Log.e("Toast", "MainActivity.update()");
         if (menuTimer != null && state != null) {
             menuTimer.setEnabled(state.getConnected());
         }

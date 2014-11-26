@@ -160,7 +160,7 @@ public class State {
             HttpResponse response = client.execute(new HttpGet(Util.url(context, "state")));
             StatusLine statusLine = response.getStatusLine();
             if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-                connected.set(true);
+                setConnected(true);
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 response.getEntity().writeTo(out);
                 out.close();
@@ -169,21 +169,21 @@ public class State {
                     readJSON(new JSONObject(out.toString()));
                 }
             } else {
-                connected.set(false);
+                setConnected(false);
                 response.getEntity().getContent().close();
                 throw new IOException(statusLine.getReasonPhrase());
             }
         } catch (HttpHostConnectException e) {
-            connected.set(false);
+            setConnected(false);
             Log.e("Toast", "HttpHostConnectException in State.get()");
         } catch (ConnectTimeoutException e) {
-            connected.set(false);
+            setConnected(false);
             Log.e("Toast", "ConnectTimeoutException in State.get()");
         } catch (SocketException e) {
-            connected.set(false);
+            setConnected(false);
             Log.e("Toast", "SocketException in State.get()");
         } catch (SocketTimeoutException e) {
-            connected.set(false);
+            setConnected(false);
             Log.e("Toast", "SocketTimeoutException in State.get()", e);
         } catch (IOException e) {
             Log.e("Toast", "Exception", e);
@@ -227,7 +227,7 @@ public class State {
 
             }
         }
-        Log.e("Toast", "State stopped");
+        Log.e("Toast", "State.stop() this=" + hashCode());
     }
 
     /** @return Current read/write state as JSON */
@@ -266,6 +266,8 @@ public class State {
             for (int i = 0; i < rulesArray.length(); i++) {
                 rules.add(new Rule(rulesArray.getJSONObject(i)));
             }
+
+            Log.e("Toast", "State.readJSON() read " + rules.size() + " rules and " + temperatures.size() + " temperatures.");
             
         } catch (JSONException e) {
             Log.e("Toast", "Exception", e);
@@ -339,5 +341,14 @@ public class State {
             }
         }
         endUpdate();
+    }
+
+    private synchronized void setConnected(boolean c) {
+        connected.set(c);
+        if (!c) {
+            /* If we are not connected our rules and temperature data are not trustworthy */
+            rules.clear();
+            temperatures.clear();
+        }
     }
 }

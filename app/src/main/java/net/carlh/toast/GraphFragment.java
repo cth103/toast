@@ -24,6 +24,7 @@ import java.util.Calendar;
 public class GraphFragment extends Fragment {
 
     int minutes = 60;
+    int dataLength = 0;
     Spinner period;
     GraphView graphView;
 
@@ -33,7 +34,9 @@ public class GraphFragment extends Fragment {
 
         period = (Spinner) view.findViewById(R.id.graphPeriod);
         String periods[] = {"Last hour", "Last day", "Last week"};
-        period.setAdapter(new ArrayAdapter(getActivity(), android.R.layout.simple_spinner_item, periods));
+        ArrayAdapter adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_spinner_item, periods);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        period.setAdapter(adapter);
         period.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
@@ -48,6 +51,7 @@ public class GraphFragment extends Fragment {
                         minutes = 7 * 24 * 60;
                         break;
                 }
+                update();
             }
 
             public void onNothingSelected(AdapterView<?> parentView) {
@@ -56,6 +60,7 @@ public class GraphFragment extends Fragment {
         });
 
         graphView = new LineGraphView(getActivity(), "Temperature");
+        graphView.getGraphViewStyle().setTextSize(getResources().getDimension(R.dimen.abc_text_size_small_material));
 
         graphView.setCustomLabelFormatter(new CustomLabelFormatter() {
             @Override
@@ -73,7 +78,7 @@ public class GraphFragment extends Fragment {
                     f = new SimpleDateFormat("E K:mm a");
                 }
 
-                c.add(Calendar.MINUTE, (int) (- getState().getTemperatures().size() + value));
+                c.add(Calendar.MINUTE, (int) (value - dataLength));
                 return f.format(c.getTime());
             }
         });
@@ -82,26 +87,41 @@ public class GraphFragment extends Fragment {
         layout.addView(graphView);
 
         update();
-
         return view;
     }
 
     void update() {
-        if (period == null || getState() == null) {
+        Log.e("Toast", "GraphFragment.update()");
+        if (period == null) {
+            Log.e("Toast", "not doing it as period is null");
             return;
         }
 
-        period.setEnabled(getState().getConnected());
-        graphView.setVisibility(View.VISIBLE);
-        graphView.removeAllSeries();
+        State state = getState();
 
-        ArrayList<Double> temperatures = getState().getTemperatures();
-        final int N = Math.min(temperatures.size(), minutes);
-        GraphView.GraphViewData[] d = new GraphView.GraphViewData[N];
-        for (int i = 0; i < N; i++) {
-            d[i] = new GraphView.GraphViewData(i, temperatures.get(temperatures.size() - N + i));
+        if (state != null) {
+            ArrayList<Double> temperatures = state.getTemperatures();
+            Log.e("Toast", temperatures.size() + " temperatures in state.");
+            if (temperatures.size() > 0) {
+                period.setEnabled(true);
+                graphView.setVisibility(View.VISIBLE);
+                graphView.removeAllSeries();
+                
+                dataLength = Math.min(temperatures.size(), minutes);
+                GraphView.GraphViewData[] d = new GraphView.GraphViewData[dataLength];
+                for (int i = 0; i < dataLength; i++) {
+                    d[i] = new GraphView.GraphViewData(i, temperatures.get(temperatures.size() - dataLength + i));
+                }
+                
+                graphView.addSeries(new GraphViewSeries(d));
+            } else {
+                period.setEnabled(false);
+                graphView.setVisibility(View.INVISIBLE);
+            }
+        } else {
+            Log.e("Toast", "state is null");
+            period.setEnabled(false);
+            graphView.setVisibility(View.INVISIBLE);
         }
-        
-        graphView.addSeries(new GraphViewSeries(d));
     }
 }

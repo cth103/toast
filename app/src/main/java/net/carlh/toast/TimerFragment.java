@@ -105,20 +105,18 @@ public class TimerFragment extends Fragment {
             return;
         }
 
-        State state = getState();
-        if (state == null) {
-            return;
-        }
-
-        addRule.setEnabled(state.getConnected());
-        rulesList.setEnabled(state.getConnected());
-
+        addRule.setEnabled(getConnected());
+        rulesList.setEnabled(getConnected());
+            
         /* State.rules is modified by other threads, so we can't use it in an ArrayAdapter */
-        ArrayList<Rule> stateRules = state.getRules();
         rules.clear();
-        for (Rule r: stateRules) {
-            rules.add(new Rule(r));
+        if (getState() != null) {
+            ArrayList<Rule> stateRules = getState().getRules();
+            for (Rule r: stateRules) {
+                rules.add(new Rule(r));
+            }
         }
+        
         adapter.notifyDataSetChanged();
     }
 

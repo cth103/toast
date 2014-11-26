@@ -10,5 +10,13 @@ public class Fragment extends android.support.v4.app.Fragment {
         
         return activity.getState();
     }
+
+    protected boolean getConnected() {
+        return getState() != null && getState().getConnected();
+    }
+
+    protected boolean getEnabled() {
+        return getState() != null && getState().getEnabled();
+    }
 }
                     
