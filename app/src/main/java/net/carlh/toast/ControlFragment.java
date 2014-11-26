@@ -10,6 +10,8 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import java.util.ArrayList;
+
 public class ControlFragment extends Fragment {
 
     private TextView temperature;
@@ -87,7 +89,10 @@ public class ControlFragment extends Fragment {
         colder.setEnabled(state.getConnected() && state.getEnabled());
 
         if (state.getConnected()) {
-            temperature.setText(String.format("%.1f°", state.getTemperature()));
+            ArrayList<Double> temperatures = state.getTemperatures();
+            if (temperatures != null && temperatures.size() > 0) {
+                temperature.setText(String.format("%.1f°", temperatures.get(temperatures.size() - 1)));
+            }
             target.setText(String.format("%.1f°", state.getTarget()));
             enabled.setChecked(state.getEnabled());
         } else {

@@ -18,13 +18,14 @@ import com.jjoe64.graphview.GraphViewSeries;
 import com.jjoe64.graphview.LineGraphView;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 
 public class GraphFragment extends Fragment {
 
-    TemperatureFetcher fetcher;
     int minutes = 60;
     Spinner period;
+    GraphView graphView;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -47,9 +48,6 @@ public class GraphFragment extends Fragment {
                         minutes = 7 * 24 * 60;
                         break;
                 }
-
-                fetcher.setPeriod(minutes);
-                fetcher.fetchNow();
             }
 
             public void onNothingSelected(AdapterView<?> parentView) {
@@ -57,13 +55,13 @@ public class GraphFragment extends Fragment {
             }
         });
 
-        final GraphView graphView = new LineGraphView(getActivity(), "Temperature");
+        graphView = new LineGraphView(getActivity(), "Temperature");
         graphView.setVisibility(View.GONE);
 
         graphView.setCustomLabelFormatter(new CustomLabelFormatter() {
             @Override
             public String formatLabel(double value, boolean isValueX) {
-                if (!isValueX || fetcher.getData() == null) {
+                if (!isValueX) {
                     return null;
                 }
 
@@ -76,26 +74,13 @@ public class GraphFragment extends Fragment {
                     f = new SimpleDateFormat("E K:mm a");
                 }
 
-                c.add(Calendar.MINUTE, (int) (- fetcher.getData().length + value));
+                c.add(Calendar.MINUTE, (int) (- getState().getTemperatures().size() + value));
                 return f.format(c.getTime());
             }
         });
 
         LinearLayout layout = (LinearLayout) view.findViewById(R.id.graph);
         layout.addView(graphView);
-
-        fetcher = new TemperatureFetcher(getActivity(), graphView);
-        fetcher.addHandler(new Handler() {
-            public void handleMessage(Message message) {
-                if (fetcher.getData() != null) {
-                    graphView.setVisibility(View.VISIBLE);
-                    graphView.removeAllSeries();
-                    graphView.addSeries(new GraphViewSeries(fetcher.getData()));
-                } else {
-                    graphView.setVisibility(View.GONE);
-                }
-            }
-        });
 
         return view;
     }
@@ -106,5 +91,16 @@ public class GraphFragment extends Fragment {
         }
 
         period.setEnabled(getState().getConnected());
+        graphView.setVisibility(View.VISIBLE);
+        graphView.removeAllSeries();
+
+        ArrayList<Double> temperatures = getState().getTemperatures();
+        final int N = Math.min(temperatures.size(), minutes);
+        GraphView.GraphViewData[] d = new GraphView.GraphViewData[N];
+        for (int i = 0; i < N; i++) {
+            d[i] = new GraphView.GraphViewData(i, temperatures.get(temperatures.size() - N + i));
+        }
+        
+        graphView.addSeries(new GraphViewSeries(d));
     }
 }

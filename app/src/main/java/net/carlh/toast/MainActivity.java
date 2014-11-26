@@ -67,6 +67,13 @@ public class MainActivity extends ActionBarActivity {
         });
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        state.stop();
+        state = null;
+    }
+
     public static class Adapter extends FragmentPagerAdapter {
 
         private ControlFragment controlFragment = new ControlFragment();
@@ -135,7 +142,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void update() {
-        if (menuTimer != null) {
+        if (menuTimer != null && state != null) {
             menuTimer.setEnabled(state.getConnected());
         }
         adapter.getControlFragment().update();

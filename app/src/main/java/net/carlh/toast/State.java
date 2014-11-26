@@ -64,24 +64,29 @@ public class State {
     private AtomicBoolean pendingPut = new AtomicBoolean(false);
     private HttpClient client;
     private AtomicBoolean connected = new AtomicBoolean(false);
+    private boolean stop = false;
+    private Thread thread;
 
-    /* The actual state */
+    /* State that the client can read/write */
 
-    private double temperature;
     private double target;
     private boolean on;
     private boolean enabled;
     private ArrayList<Rule> rules;
 
+    /* State that the client only reads */
+    
+    private ArrayList<Double> temperatures;
+
     public State(Context context) {
         this.context = context;
         this.handlers = new ArrayList<Handler>();
 
-        this.temperature = 0;
         this.target = 0;
         this.on = false;
         this.enabled = false;
         this.rules = new ArrayList<Rule>();
+        this.temperatures = new ArrayList<Double>();
 
         HttpParams params = new BasicHttpParams();
         HttpConnectionParams.setConnectionTimeout(params, 3000);
@@ -89,13 +94,13 @@ public class State {
         client = new DefaultHttpClient(params);
 
         /* Thread to handle get/put of our state to the server */
-        Thread thread = new Thread(new Runnable() {
+        thread = new Thread(new Runnable() {
             public void run() {
                 
                 /* Initial get to start things off */
                 get();
                 
-                while (true) {
+                while (stop == false) {
 
                     try {
 
@@ -105,7 +110,7 @@ public class State {
                         if (!pendingPut.get()) {
                             lock.lock();
                             try {
-                                putCondition.await(10, TimeUnit.SECONDS);
+                                putCondition.await(1, TimeUnit.SECONDS);
                             } finally {
                                 lock.unlock();
                             }
@@ -145,11 +150,12 @@ public class State {
         thread.start();
     }
 
-    /** Get state from the server and write it to our variables
-     *  if pendingPut is false.
+    /** Get read/write and read-only state from the server and write
+     *  it to our variables if pendingPut is false.
      */
     private void get()
     {
+        Log.e("Toast", "State.get() this=" + hashCode());
         try {
             HttpResponse response = client.execute(new HttpGet(Util.url(context, "state")));
             StatusLine statusLine = response.getStatusLine();
@@ -208,10 +214,20 @@ public class State {
         }
     }
 
+    public void stop() {
+        stop = true;
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+
+        }
+        Log.e("Toast", "State stopped");
+    }
+
+    /** @return Current read/write state as JSON */
     public synchronized JSONObject json() {
         JSONObject json = new JSONObject();
         try {
-            json.put("temperature", temperature);
             json.put("target", target);
             json.put("on", on);
             json.put("enabled", enabled);
@@ -226,17 +242,25 @@ public class State {
         return json;
     }
 
+    /** @param json Read/write and read-only state as JSON */
     public synchronized void readJSON(JSONObject json) {
         try {
-            temperature = json.getDouble("temperature");
+            JSONArray temperaturesArray = json.getJSONArray("temperatures");
+            temperatures.clear();
+            for (int i = 0; i < temperaturesArray.length(); i++) {
+                temperatures.add(temperaturesArray.getDouble(i));
+            }
+
             target = json.getDouble("target");
             on = json.getBoolean("on");
             enabled = json.getBoolean("enabled");
+
             JSONArray rulesArray = json.getJSONArray("rules");
             rules.clear();
             for (int i = 0; i < rulesArray.length(); i++) {
                 rules.add(new Rule(rulesArray.getJSONObject(i)));
             }
+            
         } catch (JSONException e) {
             Log.e("Toast", "Exception", e);
         }
@@ -244,10 +268,6 @@ public class State {
 
     public boolean getConnected() {
         return connected.get();
-    }
-
-    public synchronized double getTemperature() {
-        return temperature;
     }
 
     public synchronized double getTarget() {
@@ -264,6 +284,10 @@ public class State {
 
     public synchronized ArrayList<Rule> getRules() {
         return rules;
+    }
+
+    public synchronized ArrayList<Double> getTemperatures() {
+        return temperatures;
     }
 
     public synchronized void colder() {
