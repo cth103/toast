@@ -55,11 +55,14 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Log.e("Toast", "Create pager.");
         pager = (ViewPager) findViewById(R.id.pager);
         adapter = new Adapter(getSupportFragmentManager());
         pager.setAdapter(adapter);
 
+        Log.e("Toast", "Create state.");
         state = new State(this);
+        Log.e("Toast", "State created.");
         state.addHandler(new Handler() {
             public void handleMessage(Message message) {
                update();

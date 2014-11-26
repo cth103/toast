@@ -219,11 +219,13 @@ public class State {
         try {
             lock.lock();
             putCondition.signal();
-        } catch (InterruptedException e) {
-
         } finally {
             lock.unlock();
-            thread.join();
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+
+            }
         }
         Log.e("Toast", "State stopped");
     }
