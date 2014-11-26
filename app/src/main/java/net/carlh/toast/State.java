@@ -217,9 +217,13 @@ public class State {
     public void stop() {
         stop = true;
         try {
-            thread.join();
+            lock.lock();
+            putCondition.signal();
         } catch (InterruptedException e) {
 
+        } finally {
+            lock.unlock();
+            thread.join();
         }
         Log.e("Toast", "State stopped");
     }
