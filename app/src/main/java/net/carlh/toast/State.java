@@ -110,7 +110,7 @@ public class State {
                         if (!pendingPut.get()) {
                             lock.lock();
                             try {
-                                putCondition.await(1, TimeUnit.SECONDS);
+                                putCondition.await(60, TimeUnit.SECONDS);
                             } finally {
                                 lock.unlock();
                             }

@@ -56,7 +56,6 @@ public class GraphFragment extends Fragment {
         });
 
         graphView = new LineGraphView(getActivity(), "Temperature");
-        graphView.setVisibility(View.GONE);
 
         graphView.setCustomLabelFormatter(new CustomLabelFormatter() {
             @Override
@@ -81,6 +80,8 @@ public class GraphFragment extends Fragment {
 
         LinearLayout layout = (LinearLayout) view.findViewById(R.id.graph);
         layout.addView(graphView);
+
+        update();
 
         return view;
     }
