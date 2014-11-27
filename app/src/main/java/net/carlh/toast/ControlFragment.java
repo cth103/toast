@@ -85,6 +85,7 @@ public class ControlFragment extends Fragment {
 
         if (getConnected()) {
             State state = getState();
+
             ArrayList<Double> temperatures = state.getTemperatures();
             if (temperatures != null && temperatures.size() > 0) {
                 temperature.setText(String.format("%.1f°", temperatures.get(temperatures.size() - 1)));

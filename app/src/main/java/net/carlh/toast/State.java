@@ -20,62 +20,35 @@
 package net.carlh.toast;
 
 import android.content.Context;
+import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
+import android.os.Message;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.StatusLine;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.conn.ConnectTimeoutException;
-import org.apache.http.conn.HttpHostConnectException;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class State {
+
+    /* State identifiers */
+
+    public final int TARGET = 0;
+    public final int ON = 1;
+    public final int ENABLED = 2;
+    public final int RULES = 3;
+    public final int TEMPERATURES = 4;
 
     /* Stuff to manage the state */
 
     private Context context;
     /** Handlers that will be notified when there is a change in state */
     private ArrayList<Handler> handlers;
-    private final Lock lock = new ReentrantLock();
-    private final Condition putCondition = lock.newCondition();
-    private AtomicBoolean pendingPut = new AtomicBoolean(false);
-    private HttpClient client;
-    private AtomicBoolean connected = new AtomicBoolean(false);
-    private boolean stop = false;
-    private Thread thread;
 
-    /* State that the client can read/write */
+    /* State */
 
     private double target;
     private boolean on;
     private boolean enabled;
     private ArrayList<Rule> rules;
-
-    /* State that the client only reads */
-    
     private ArrayList<Double> temperatures;
 
     public State(Context context) {
@@ -87,207 +60,22 @@ public class State {
         this.enabled = false;
         this.rules = new ArrayList<Rule>();
         this.temperatures = new ArrayList<Double>();
-
-        HttpParams params = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(params, 3000);
-        HttpConnectionParams.setSoTimeout(params, 3000);
-        client = new DefaultHttpClient(params);
-
-        /* Thread to handle get/put of our state to the server */
-        thread = new Thread(new Runnable() {
-            public void run() {
-                
-                /* Initial get to start things off */
-                get();
-                
-                while (stop == false) {
-
-                    try {
-
-                        /* PUT if there is already a need, or if we are
-                           woken with one during a short sleep.
-                        */
-                        if (!pendingPut.get()) {
-                            lock.lock();
-                            try {
-                                putCondition.await(60, TimeUnit.SECONDS);
-                            } finally {
-                                lock.unlock();
-                            }
-                        }
-
-                        if (pendingPut.get()) {
-                            HttpPut put = new HttpPut(Util.url(State.this.context, "state"));
-
-                            /* We must take the state from json() and set pendingPut to
-                               false atomically (XXX and it isn't atomic!).  Then if
-                               pendingPut is set back to true (and a new state set up)
-                               we will PUT again.  If we wait until completion to reset
-                               pendingPut we might have missed changes to state.
-                            */
-                            StringEntity entity = new StringEntity(json().toString());
-                            pendingPut.set(false);
-                            entity.setContentType("text/json");
-                            put.setEntity(entity);
-                            client.execute(put);
-                        }
-
-                        /* GET current state from the server; get() will ignore it if there
-                           are any pending PUTs so that we can "safely" update our
-                           local data ahead of hearing about the change from the server.
-                        */
-                        get();
-
-                    } catch (IOException e) {
-                        Log.e("Toast", "Exception", e);
-                    } catch (InterruptedException e) {
-
-                    }
-                }
-            }
-        });
-
-        thread.start();
-    }
-
-    /** Get read/write and read-only state from the server and write
-     *  it to our variables if pendingPut is false.
-     */
-    private void get()
-    {
-        Log.e("Toast", "State.get() this=" + hashCode());
-        try {
-            HttpResponse response = client.execute(new HttpGet(Util.url(context, "state")));
-            StatusLine statusLine = response.getStatusLine();
-            if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-                setConnected(true);
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                response.getEntity().writeTo(out);
-                out.close();
-                
-                if (!pendingPut.get()) {
-                    readJSON(new JSONObject(out.toString()));
-                }
-            } else {
-                setConnected(false);
-                response.getEntity().getContent().close();
-                throw new IOException(statusLine.getReasonPhrase());
-            }
-        } catch (HttpHostConnectException e) {
-            setConnected(false);
-            Log.e("Toast", "HttpHostConnectException in State.get()");
-        } catch (ConnectTimeoutException e) {
-            setConnected(false);
-            Log.e("Toast", "ConnectTimeoutException in State.get()");
-        } catch (SocketException e) {
-            setConnected(false);
-            Log.e("Toast", "SocketException in State.get()");
-        } catch (SocketTimeoutException e) {
-            setConnected(false);
-            Log.e("Toast", "SocketTimeoutException in State.get()", e);
-        } catch (IOException e) {
-            Log.e("Toast", "Exception", e);
-        } catch (JSONException e) {
-            Log.e("Toast", "Exception", e);
-        } finally {
-            for (Handler h: handlers) {
-                h.sendEmptyMessage(0);
-            }
-        }
     }
 
     public void addHandler(Handler h) {
         handlers.add(h);
     }
 
-    private void beginUpdate() {
-        pendingPut.set(true);
-    }
-
-    /** Wake the get/put thread if it is asleep */
-    private void endUpdate() {
-        try {
-            lock.lock();
-            putCondition.signal();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    public void stop() {
-        stop = true;
-        try {
-            lock.lock();
-            putCondition.signal();
-        } finally {
-            lock.unlock();
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-
-            }
-        }
-        Log.e("Toast", "State.stop() this=" + hashCode());
-    }
-
-    /** @return Current read/write state as JSON */
-    public synchronized JSONObject json() {
-        JSONObject json = new JSONObject();
-        try {
-            json.put("target", target);
-            json.put("on", on);
-            json.put("enabled", enabled);
-            JSONArray rulesJSON = new JSONArray();
-            for (Rule r: rules) {
-                rulesJSON.put(r.json());
-            }
-            json.put("rules", rulesJSON);
-        } catch (JSONException e) {
-            Log.e("Toast", "Exception", e);
-        }
-        return json;
-    }
-
-    /** @param json Read/write and read-only state as JSON */
-    public synchronized void readJSON(JSONObject json) {
-        try {
-            JSONArray temperaturesArray = json.getJSONArray("temperatures");
-            temperatures.clear();
-            for (int i = 0; i < temperaturesArray.length(); i++) {
-                temperatures.add(temperaturesArray.getDouble(i));
-            }
-
-            target = json.getDouble("target");
-            on = json.getBoolean("on");
-            enabled = json.getBoolean("enabled");
-
-            JSONArray rulesArray = json.getJSONArray("rules");
-            rules.clear();
-            for (int i = 0; i < rulesArray.length(); i++) {
-                rules.add(new Rule(rulesArray.getJSONObject(i)));
-            }
-
-            Log.e("Toast", "State.readJSON() read " + rules.size() + " rules and " + temperatures.size() + " temperatures.");
-            
-        } catch (JSONException e) {
-            Log.e("Toast", "Exception", e);
-        }
-    }
-
-    public boolean getConnected() {
-        return connected.get();
-    }
-
     public synchronized double getTarget() {
         return target;
     }
 
-    public synchronized boolean getEnabled() {
-        return enabled;
-    }
-
     public synchronized boolean getOn() {
         return on;
+    }
+
+    public synchronized boolean getEnabled() {
+        return enabled;
     }
 
     public synchronized ArrayList<Rule> getRules() {
@@ -299,27 +87,23 @@ public class State {
     }
 
     public synchronized void colder() {
-        beginUpdate();
         target -= 0.5;
-        endUpdate();
+        changed(TARGET);
     }
 
     public synchronized void warmer() {
-        beginUpdate();
         target += 0.5;
-        endUpdate();
+        changed(TARGET);
     }
 
     public synchronized void setEnabled(boolean e) {
-        beginUpdate();
         enabled = e;
-        endUpdate();
+        changed(ENABLED);
     }
 
     public synchronized void addOrReplace(Rule rule) {
-        beginUpdate();
         boolean done = false;
-        for (Rule r: rules) {
+        for (Rule r : rules) {
             if (r.getId() == rule.getId()) {
                 r.copyFrom(rule);
                 done = true;
@@ -329,20 +113,33 @@ public class State {
         if (!done) {
             rules.add(rule);
         }
-        endUpdate();
+
+        changed(RULES);
     }
 
     public synchronized void remove(Rule rule) {
-        beginUpdate();
+
         for (Iterator<Rule> i = rules.iterator(); i.hasNext(); ) {
             Rule r = i.next();
             if (r.getId() == rule.getId()) {
                 i.remove();
             }
         }
-        endUpdate();
+
+        changed(RULES);
     }
 
+    private void changed(int p) {
+        for (Handler h: handlers) {
+            Message m = Message.obtain();
+            Bundle b = new Bundle();
+            b.putInt("property", p);
+            m.setData(b);
+            h.sendMessage(m);
+        }
+    }
+
+<<<<<<< HEAD
     private synchronized void setConnected(boolean c) {
         connected.set(c);
         if (!c) {
@@ -351,4 +148,6 @@ public class State {
             temperatures.clear();
         }
     }
+=======
+>>>>>>> Hacks.
 }

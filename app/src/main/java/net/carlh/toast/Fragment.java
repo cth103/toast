@@ -12,7 +12,12 @@ public class Fragment extends android.support.v4.app.Fragment {
     }
 
     protected boolean getConnected() {
-        return getState() != null && getState().getConnected();
+        MainActivity activity = (MainActivity) getActivity();
+        if (activity == null) {
+            return false;
+        }
+
+        return activity.getConnected();
     }
 
     protected boolean getEnabled() {

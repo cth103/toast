@@ -21,9 +21,11 @@ package net.carlh.toast;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
@@ -42,6 +44,8 @@ import android.widget.ToggleButton;
 public class MainActivity extends FragmentActivity {
 
     private State state;
+    private Client client;
+    private boolean connected = false;
 
     public State getState() {
         return state;
@@ -56,28 +60,74 @@ public class MainActivity extends FragmentActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Log.e("Toast", "Create pager.");
         pager = (ViewPager) findViewById(R.id.pager);
         adapter = new Adapter(getSupportFragmentManager());
         pager.setAdapter(adapter);
 
-        Log.e("Toast", "Create state.");
         state = new State(this);
-        Log.e("Toast", "State created.");
         state.addHandler(new Handler() {
             public void handleMessage(Message message) {
-               update();
+                update();
             }
         });
 
-        update();
+        state.addHandler(new Handler() {
+            public void handleMessage(Message message) {
+                // XXX: update client by state change
+            }
+        });
+
+        startClient();
+    }
+
+    private void stopClient() {
+        if (client != null) {
+            client.stop();
+            client = null;
+        }
+    }
+
+    private void startClient() {
+        stopClient();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        try {
+            client = new Client(prefs.getString("hostname", "192.168.1.1"), Integer.parseInt(prefs.getString("port", "80")));
+            client.addHandler(new Handler() {
+                public void handleMessage(Message message) {
+                    Bundle data = message.getData();
+                    if (data != null) {
+                        /* We have received some JSON from the server */
+                        try {
+                            JSONObject json = new JSONObject(data.getString("json"));
+                        } catch (JSONException e) {
+                        }
+                    } else {
+                        /* Empty messages mean that the connection state has changed */
+                        update();
+                    }
+                }
+            });
+        } catch (IOException e) {
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        state.stop();
-        state = null;
+        stopClient();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopClient();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        stopClient();
+        startClient();
     }
 
     public static class Adapter extends FragmentPagerAdapter {
@@ -121,7 +171,6 @@ public class MainActivity extends FragmentActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         menuTimer = menu.getItem(1);
-        update();
         return true;
     }
 
@@ -144,16 +193,23 @@ public class MainActivity extends FragmentActivity {
         if (requestCode == TimerFragment.ADD_OR_UPDATE_RULE && data != null) {
             state.addOrReplace((Rule) data.getExtras().getSerializable("rule"));
         }
-        update();
     }
 
     private void update() {
         Log.e("Toast", "MainActivity.update()");
         if (menuTimer != null && state != null) {
-            menuTimer.setEnabled(state.getConnected());
+            menuTimer.setEnabled(getConnected());
         }
         adapter.getControlFragment().update();
         adapter.getTimerFragment().update();
         adapter.getGraphFragment().update();
+    }
+
+    public boolean getConnected() {
+        if (client != null) {
+            return client.getConnected();
+        } else {
+            return false;
+        }
     }
 }
