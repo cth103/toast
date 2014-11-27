@@ -100,7 +100,7 @@ public class Client {
                                 try {
                                     handler(new JSONObject(new String(d)));
                                 } catch (JSONException e) {
-                                    Log.e("Comms", "Exception " + e.toString());
+                                    Log.e("Toast", "Exception " + e.toString());
                                 }
                             }
                         }
@@ -112,7 +112,7 @@ public class Client {
                         }
 
                     } catch (ConnectException e) {
-                        Log.e("Client", "ConnectException");
+                        Log.e("Toast", "ConnectException");
                         try {
                             /* Sleep a little until we try again */
                             Thread.sleep(timeout);
@@ -120,7 +120,7 @@ public class Client {
 
                         }
                     } catch (UnknownHostException e) {
-                        Log.e("Client", "UnknownHostException");
+                        Log.e("Toas", "UnknownHostException");
                         try {
                             /* Sleep a little until we try again */
                             Thread.sleep(timeout);
@@ -171,7 +171,7 @@ public class Client {
                                 socket.getOutputStream().write(s.getBytes());
                             }
                         } catch (IOException e) {
-                            Log.e("Comms", "IOException in write");
+                            Log.e("Toast", "IOException in write");
                         }
                     }
                 }
@@ -187,8 +187,7 @@ public class Client {
                         for (Handler h: handlers) {
                             h.sendEmptyMessage(0);
                         }
-                        Log.e("Test", "NOT CONNECTED");
-                        connected.set(false);
+                        setConnected(false);
                     }
                     pong.set(false);
                     try {
@@ -209,13 +208,8 @@ public class Client {
 
     private void handler(JSONObject json) {
         try {
-            Log.e("Client", json.toString());
             if (json.get("command").equals("pong")) {
-                for (Handler h: handlers) {
-                    h.sendEmptyMessage(0);
-                }
-                Log.e("Test", "CONNECTED");
-                connected.set(true);
+                setConnected(true);
                 pong.set(true);
             } else {
                 for (Handler h: handlers) {
@@ -254,6 +248,14 @@ public class Client {
         handlers.add(handler);
     }
 
+    private void setConnected(boolean c) {
+        if (c != connected.get()) {
+            for (Handler h: handlers) {
+                h.sendEmptyMessage(0);
+            }
+        }
+        connected.set(c);
+    }
     public boolean getConnected() {
         return connected.get();
     }

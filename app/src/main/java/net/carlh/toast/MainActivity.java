@@ -95,7 +95,7 @@ public class MainActivity extends FragmentActivity {
             client.addHandler(new Handler() {
                 public void handleMessage(Message message) {
                     Bundle data = message.getData();
-                    if (data != null) {
+                    if (data != null && data.getString("JSON") != null) {
                         /* We have received some JSON from the server */
                         try {
                             JSONObject json = new JSONObject(data.getString("json"));
