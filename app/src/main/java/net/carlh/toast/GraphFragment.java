@@ -61,6 +61,7 @@ public class GraphFragment extends Fragment {
 
         graphView = new LineGraphView(getActivity(), "Temperature");
         graphView.getGraphViewStyle().setTextSize(getResources().getDimension(R.dimen.abc_text_size_small_material));
+        graphView.setScalable(true);
 
         graphView.setCustomLabelFormatter(new CustomLabelFormatter() {
             @Override
