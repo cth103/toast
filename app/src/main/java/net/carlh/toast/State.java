@@ -86,6 +86,36 @@ public class State {
         return temperatures;
     }
 
+    public synchronized void setFromJSON(JSONObject json) {
+        if (json.has("target")) {
+            if (Math.abs(target - json.getDouble("target")) > 1e-6) {
+                target = json.getDouble("target");
+                changed(TARGET);
+            }
+        } else if (json.has("on")) {
+            if (json.getBoolean("on") != on) {
+                on = json.getBoolean("on");
+                changed(ON);
+            } 
+        } else if (json.has("enabled")) {
+            setEnabled(enabled);
+        } else if (json.has("rules")) {
+            JSONArray array = json.getJSONArray("rules");
+            rules.clear();
+            for (int i = 0; i < array.length(); i++) {
+                rules.add(new Rule(array.getJSONObject(i)));
+            }
+            changed(RULES);
+        } else if (json.has("temperatures")) {
+            JSONArray array = json.getJSONArray("temperatures");
+            temperatures.clear();
+            for (int i = 0; i < array.length(); i++) {
+                temperatures.add(array.getDouble(i));
+            }
+            changed(TEMPERATURES);
+        }
+    }
+
     public synchronized void colder() {
         target -= 0.5;
         changed(TARGET);
@@ -97,8 +127,10 @@ public class State {
     }
 
     public synchronized void setEnabled(boolean e) {
-        enabled = e;
-        changed(ENABLED);
+        if (e != enabled) {
+            enabled = e;
+            changed(ENABLED);
+        }
     }
 
     public synchronized void addOrReplace(Rule rule) {
@@ -138,16 +170,4 @@ public class State {
             h.sendMessage(m);
         }
     }
-
-<<<<<<< HEAD
-    private synchronized void setConnected(boolean c) {
-        connected.set(c);
-        if (!c) {
-            /* If we are not connected our rules and temperature data are not trustworthy */
-            rules.clear();
-            temperatures.clear();
-        }
-    }
-=======
->>>>>>> Hacks.
 }

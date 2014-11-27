@@ -56,6 +56,7 @@ public class Client {
 
     public Client(final String hostName, final int port) throws java.net.UnknownHostException, java.io.IOException {
 
+	/* Thread to read stuff from the server */
         readThread = new Thread(new Runnable() {
 
             private byte[] getData(Socket socket, int length) {
@@ -120,7 +121,7 @@ public class Client {
 
                         }
                     } catch (UnknownHostException e) {
-                        Log.e("Toas", "UnknownHostException");
+                        Log.e("Toast", "UnknownHostException");
                         try {
                             /* Sleep a little until we try again */
                             Thread.sleep(timeout);
@@ -136,6 +137,7 @@ public class Client {
 
         readThread.start();
 
+        /* Thread to send stuff to the server */
         writeThread = new Thread(new Runnable() {
 
             public void run() {
@@ -180,11 +182,12 @@ public class Client {
 
         writeThread.start();
 
+        /* Thread to send pings every so often */
         pingThread = new Thread(new Runnable() {
             public void run() {
                 while (!stop.get()) {
                     if (pong.get() == false) {
-                        for (Handler h: handlers) {
+                        for (Handler h : handlers) {
                             h.sendEmptyMessage(0);
                         }
                         setConnected(false);
@@ -192,7 +195,7 @@ public class Client {
                     pong.set(false);
                     try {
                         JSONObject json = new JSONObject();
-                        json.put("command", "ping");
+                        json.put("type", "ping");
                         send(json);
                         Thread.sleep(pingInterval);
                     } catch (JSONException e) {
@@ -208,11 +211,12 @@ public class Client {
 
     private void handler(JSONObject json) {
         try {
-            if (json.get("command").equals("pong")) {
+            if (json.has("type") && json.get("type").equals("pong")) {
                 setConnected(true);
                 pong.set(true);
             } else {
-                for (Handler h: handlers) {
+                Log.e("Toast", "Received " + json.toString());
+                for (Handler h : handlers) {
                     Message m = Message.obtain();
                     Bundle b = new Bundle();
                     b.putString("json", json.toString());
@@ -249,13 +253,29 @@ public class Client {
     }
 
     private void setConnected(boolean c) {
-        if (c != connected.get()) {
-            for (Handler h: handlers) {
-                h.sendEmptyMessage(0);
+        if (c == connected.get()) {
+            return;
+        }
+
+        Log.e("Toast", "Connected=" + c);
+
+        if (c) {
+                /* Newly connected: ask the server to tell us everything */
+            try {
+                JSONObject json = new JSONObject();
+                json.put("type", "send_all");
+                send(json);
+            } catch (JSONException e) {
             }
         }
+
+        for (Handler h : handlers) {
+            h.sendEmptyMessage(0);
+        }
+
         connected.set(c);
     }
+
     public boolean getConnected() {
         return connected.get();
     }

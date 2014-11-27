@@ -92,9 +92,7 @@ public class GraphFragment extends Fragment {
     }
 
     void update() {
-        Log.e("Toast", "GraphFragment.update()");
         if (period == null) {
-            Log.e("Toast", "not doing it as period is null");
             return;
         }
 
@@ -102,7 +100,6 @@ public class GraphFragment extends Fragment {
 
         if (state != null) {
             ArrayList<Double> temperatures = state.getTemperatures();
-            Log.e("Toast", temperatures.size() + " temperatures in state.");
             if (temperatures.size() > 0) {
                 period.setEnabled(true);
                 graphView.setVisibility(View.VISIBLE);
@@ -120,7 +117,6 @@ public class GraphFragment extends Fragment {
                 graphView.setVisibility(View.INVISIBLE);
             }
         } else {
-            Log.e("Toast", "state is null");
             period.setEnabled(false);
             graphView.setVisibility(View.INVISIBLE);
         }

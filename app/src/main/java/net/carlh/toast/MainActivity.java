@@ -41,9 +41,15 @@ import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+
 public class MainActivity extends FragmentActivity {
 
     private State state;
+    /* XXX: needs locking */
     private Client client;
     private boolean connected = false;
 
@@ -73,7 +79,42 @@ public class MainActivity extends FragmentActivity {
 
         state.addHandler(new Handler() {
             public void handleMessage(Message message) {
-                // XXX: update client by state change
+                if (client == null) {
+                    return;
+                }
+
+                JSONObject json = new JSONObject();
+                json.set("type", "change");
+
+                switch (message.getData().getInt("property")) {
+                case State.TARGET:
+                    json.set("target", state.getTarget());
+                    break;
+                case State.ON:
+                    json.set("on", state.getOn());
+                    break;
+                case State.ENABLED:
+                    json.set("enabled", state.getEnabled());
+                    break;
+                case State.RULES:
+                    JSONArray array = new JSONArray();
+                    ArrayList<Rule> rules = state.getRules();
+                    for (int i = 0; i < rules.size(); i++) {
+                        array.insert(i, rules[i].json());
+                    }
+                    json.set("rules", array);
+                    break;
+                case State.TEMPERATURES:
+                    JSONArray array = new JSONArray();
+                    ArrayList<Double> temperatures = state.getTemperatures();
+                    for (int i = 0; i < temperatures.size(); i++) {
+                        array.insert(i, temperatures[i]);
+                    }
+                    json.set("temperatures", array);
+                    break;
+                }
+
+                client.send(json);
             }
         });
 
@@ -95,10 +136,11 @@ public class MainActivity extends FragmentActivity {
             client.addHandler(new Handler() {
                 public void handleMessage(Message message) {
                     Bundle data = message.getData();
-                    if (data != null && data.getString("JSON") != null) {
+                    if (data != null && data.getString("json") != null) {
                         /* We have received some JSON from the server */
                         try {
-                            JSONObject json = new JSONObject(data.getString("json"));
+                            Log.e("Toast", "Received " + data.getString("json"));
+                            state.setFromJSON(new JSONObject(data.getString("json"));
                         } catch (JSONException e) {
                         }
                     } else {
@@ -196,7 +238,6 @@ public class MainActivity extends FragmentActivity {
     }
 
     private void update() {
-        Log.e("Toast", "MainActivity.update()");
         if (menuTimer != null && state != null) {
             menuTimer.setEnabled(getConnected());
         }
