@@ -238,7 +238,6 @@ public class MainActivity extends FragmentActivity {
     }
 
     private void update() {
-        Log.e("Toast", "MainActivity.update() with " + getConnected());
         if (menuTimer != null && state != null) {
             menuTimer.setEnabled(getConnected());
         }
