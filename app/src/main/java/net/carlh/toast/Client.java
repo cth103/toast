@@ -215,7 +215,7 @@ public class Client {
                 setConnected(true);
                 pong.set(true);
             } else {
-                Log.e("Toast", "Received " + json.toString());
+                //Log.e("Toast", "Received " + json.toString());
                 for (Handler h : handlers) {
                     Message m = Message.obtain();
                     Bundle b = new Bundle();
@@ -257,7 +257,7 @@ public class Client {
             return;
         }
 
-        Log.e("Toast", "Connected=" + c);
+        //Log.e("Toast", "Connected=" + c);
 
         if (c) {
                 /* Newly connected: ask the server to tell us everything */

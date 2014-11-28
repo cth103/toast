@@ -23,43 +23,42 @@ import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 
 public class State {
 
-    /* State identifiers */
-
-    public final int TARGET = 0;
-    public final int ON = 1;
-    public final int ENABLED = 2;
-    public final int RULES = 3;
-    public final int TEMPERATURES = 4;
-
-    /* Stuff to manage the state */
-
+    /** Our context */
     private Context context;
     /** Handlers that will be notified when there is a change in state */
     private ArrayList<Handler> handlers;
 
-    /* State */
-
-    private double target;
-    private boolean on;
-    private boolean enabled;
-    private ArrayList<Rule> rules;
-    private ArrayList<Double> temperatures;
+    private ArrayList<PropertyBase> properties = new ArrayList<PropertyBase>();
+    private DoubleProperty target;
+    private BooleanProperty on;
+    private BooleanProperty enabled;
+    private ListProperty<Rule> rules;
+    private ListProperty<Double> temperatures;
 
     public State(Context context) {
         this.context = context;
         this.handlers = new ArrayList<Handler>();
 
-        this.target = 0;
-        this.on = false;
-        this.enabled = false;
-        this.rules = new ArrayList<Rule>();
-        this.temperatures = new ArrayList<Double>();
+        target = new DoubleProperty("target", 0.0);
+        on = new BooleanProperty("on", false);
+        enabled = new BooleanProperty("enabled", false);
+        rules = new ListProperty<Rule>("rules");
+        temperatures = new ListProperty<Double>("temperatures");
+
+        properties.add(target);
+        properties.add(on);
+        properties.add(enabled);
+        properties.add(rules);
+        properties.add(temperatures);
     }
 
     public void addHandler(Handler h) {
@@ -67,75 +66,52 @@ public class State {
     }
 
     public synchronized double getTarget() {
-        return target;
+        return target.get();
     }
 
     public synchronized boolean getOn() {
-        return on;
+        return on.get();
     }
 
     public synchronized boolean getEnabled() {
-        return enabled;
+        return enabled.get();
     }
 
     public synchronized ArrayList<Rule> getRules() {
-        return rules;
+        return rules.get();
     }
 
     public synchronized ArrayList<Double> getTemperatures() {
-        return temperatures;
+        return temperatures.get();
     }
 
     public synchronized void setFromJSON(JSONObject json) {
-        if (json.has("target")) {
-            if (Math.abs(target - json.getDouble("target")) > 1e-6) {
-                target = json.getDouble("target");
-                changed(TARGET);
+        for (PropertyBase p: properties) {
+            if (p.set(json)) {
+                changed(p.getId());
             }
-        } else if (json.has("on")) {
-            if (json.getBoolean("on") != on) {
-                on = json.getBoolean("on");
-                changed(ON);
-            } 
-        } else if (json.has("enabled")) {
-            setEnabled(enabled);
-        } else if (json.has("rules")) {
-            JSONArray array = json.getJSONArray("rules");
-            rules.clear();
-            for (int i = 0; i < array.length(); i++) {
-                rules.add(new Rule(array.getJSONObject(i)));
-            }
-            changed(RULES);
-        } else if (json.has("temperatures")) {
-            JSONArray array = json.getJSONArray("temperatures");
-            temperatures.clear();
-            for (int i = 0; i < array.length(); i++) {
-                temperatures.add(array.getDouble(i));
-            }
-            changed(TEMPERATURES);
         }
     }
 
     public synchronized void colder() {
-        target -= 0.5;
-        changed(TARGET);
+        target.set(target.get() - 0.5);
+        changed(target.getId());
     }
 
     public synchronized void warmer() {
-        target += 0.5;
-        changed(TARGET);
+        target.set(target.get() + 0.5);
+        changed(target.getId());
     }
 
     public synchronized void setEnabled(boolean e) {
-        if (e != enabled) {
-            enabled = e;
-            changed(ENABLED);
+        if (enabled.set(e)) {
+            changed(enabled.getId());
         }
     }
 
     public synchronized void addOrReplace(Rule rule) {
         boolean done = false;
-        for (Rule r : rules) {
+        for (Rule r : rules.get()) {
             if (r.getId() == rule.getId()) {
                 r.copyFrom(rule);
                 done = true;
@@ -146,19 +122,21 @@ public class State {
             rules.add(rule);
         }
 
-        changed(RULES);
+        changed(rules.getId());
     }
 
     public synchronized void remove(Rule rule) {
 
-        for (Iterator<Rule> i = rules.iterator(); i.hasNext(); ) {
+        ArrayList<Rule> rulesCopy = rules.get();
+        for (Iterator<Rule> i = rulesCopy.iterator(); i.hasNext(); ) {
             Rule r = i.next();
             if (r.getId() == rule.getId()) {
                 i.remove();
             }
         }
 
-        changed(RULES);
+        rules.set(rulesCopy);
+        changed(rules.getId());
     }
 
     private void changed(int p) {
@@ -168,6 +146,14 @@ public class State {
             b.putInt("property", p);
             m.setData(b);
             h.sendMessage(m);
+        }
+    }
+
+    public void addAsJSON(JSONObject json, int id) {
+        for (PropertyBase p: properties) {
+            if (p.getId() == id) {
+                p.addAsJSON(json);
+            }
         }
     }
 }

@@ -41,10 +41,12 @@ import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class MainActivity extends FragmentActivity {
 
@@ -83,38 +85,15 @@ public class MainActivity extends FragmentActivity {
                     return;
                 }
 
-                JSONObject json = new JSONObject();
-                json.set("type", "change");
+                try {
 
-                switch (message.getData().getInt("property")) {
-                case State.TARGET:
-                    json.set("target", state.getTarget());
-                    break;
-                case State.ON:
-                    json.set("on", state.getOn());
-                    break;
-                case State.ENABLED:
-                    json.set("enabled", state.getEnabled());
-                    break;
-                case State.RULES:
-                    JSONArray array = new JSONArray();
-                    ArrayList<Rule> rules = state.getRules();
-                    for (int i = 0; i < rules.size(); i++) {
-                        array.insert(i, rules[i].json());
-                    }
-                    json.set("rules", array);
-                    break;
-                case State.TEMPERATURES:
-                    JSONArray array = new JSONArray();
-                    ArrayList<Double> temperatures = state.getTemperatures();
-                    for (int i = 0; i < temperatures.size(); i++) {
-                        array.insert(i, temperatures[i]);
-                    }
-                    json.set("temperatures", array);
-                    break;
+                    JSONObject json = new JSONObject();
+                    json.put("type", "change");
+                    state.addAsJSON(json, message.getData().getInt("property"));
+                    client.send(json);
+
+                } catch (JSONException e) {
                 }
-
-                client.send(json);
             }
         });
 
@@ -140,7 +119,7 @@ public class MainActivity extends FragmentActivity {
                         /* We have received some JSON from the server */
                         try {
                             Log.e("Toast", "Received " + data.getString("json"));
-                            state.setFromJSON(new JSONObject(data.getString("json"));
+                            state.setFromJSON(new JSONObject(data.getString("json")));
                         } catch (JSONException e) {
                         }
                     } else {
