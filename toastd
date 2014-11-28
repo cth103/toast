@@ -137,23 +137,26 @@ class JSONServer:
         with self.mutex:
             self.clients.append(conn)
 
-        while True:
-            s = self.get_data(conn, 4)
-            if len(s) < 4:
-                break
+        try:
+            while True:
+                s = self.get_data(conn, 4)
+                if len(s) < 4:
+                    break
 
-            size = (ord(s[0]) << 24) | (ord(s[1]) << 16) | (ord(s[2]) << 8) | ord(s[3])
-            s = self.get_data(conn, size)
-            if len(s) != size:
-                break
+                size = (ord(s[0]) << 24) | (ord(s[1]) << 16) | (ord(s[2]) << 8) | ord(s[3])
+                s = self.get_data(conn, size)
+                if len(s) != size:
+                    break
 
-            j = json.loads(s);
-            if j['type'] == 'ping':
-                self.send({'type': 'pong'})
-            else:
-                debug('<- %s' % json.dumps(j))
-                self.handler(j)
-
+                j = json.loads(s);
+                if j['type'] == 'ping':
+                    self.send({'type': 'pong'})
+                else:
+                    debug('<- %s' % json.dumps(j))
+                    self.handler(j)
+        except e:
+            warning(str(e))
+                    
         with self.mutex:
             self.clients.remove(conn)
 
@@ -171,8 +174,8 @@ class JSONServer:
                 length[1] = (len(s) >> 16) & 0xff
                 length[2] = (len(s) >>  8) & 0xff
                 length[3] = (len(s) >>  0) & 0xff
-                c.send(length)
-                c.send(s)
+                c.sendall(length)
+                c.sendall(s)
 
 # Rule for when heating should be on
 class Rule:
