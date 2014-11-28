@@ -95,8 +95,13 @@ public class Client {
                             }
 
                             int length = (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
-                            byte[] d = getData(socket, length);
+                            if (length < 0 || length > (64*1024)) {
+                                /* Don't like the sound of that */
+                                break;
+                            }
 
+                            byte[] d = getData(socket, length);
+                            
                             if (d.length == length) {
                                 try {
                                     handler(new JSONObject(new String(d)));
@@ -215,7 +220,6 @@ public class Client {
                 setConnected(true);
                 pong.set(true);
             } else {
-                //Log.e("Toast", "Received " + json.toString());
                 for (Handler h : handlers) {
                     Message m = Message.obtain();
                     Bundle b = new Bundle();
@@ -228,6 +232,7 @@ public class Client {
         }
     }
 
+    /** Send to all clients */
     public void send(JSONObject json) {
         lock.lock();
         try {
@@ -248,6 +253,10 @@ public class Client {
         }
     }
 
+    /** Add a handler which will be called with an empty message
+     *  when connection state changes, or a message containing
+     *  a JSON block (with key "json").
+     */
     void addHandler(Handler handler) {
         handlers.add(handler);
     }
@@ -255,18 +264,6 @@ public class Client {
     private void setConnected(boolean c) {
         if (c == connected.get()) {
             return;
-        }
-
-        //Log.e("Toast", "Connected=" + c);
-
-        if (c) {
-                /* Newly connected: ask the server to tell us everything */
-            try {
-                JSONObject json = new JSONObject();
-                json.put("type", "send_all");
-                send(json);
-            } catch (JSONException e) {
-            }
         }
 
         for (Handler h : handlers) {

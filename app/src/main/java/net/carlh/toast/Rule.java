@@ -72,7 +72,7 @@ public class Rule implements Serializable {
         offMinute = r.offMinute;
     }
 
-    JSONObject json() {
+    JSONObject asJSON() {
         JSONObject json = new JSONObject();
         try {
             if (id != -1) {

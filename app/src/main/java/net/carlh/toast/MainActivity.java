@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
@@ -51,9 +52,7 @@ import java.util.ArrayList;
 public class MainActivity extends FragmentActivity {
 
     private State state;
-    /* XXX: needs locking */
     private Client client;
-    private boolean connected = false;
 
     public State getState() {
         return state;
@@ -72,83 +71,86 @@ public class MainActivity extends FragmentActivity {
         adapter = new Adapter(getSupportFragmentManager());
         pager.setAdapter(adapter);
 
+        /* State: this must update the UI and the server
+           when it changes.
+        */
+
         state = new State(this);
         state.addHandler(new Handler() {
             public void handleMessage(Message message) {
-                update();
-            }
-        });
 
-        state.addHandler(new Handler() {
-            public void handleMessage(Message message) {
-                if (client == null) {
-                    return;
-                }
-
-                try {
-
+                /* Send the change to the server (unless it's something
+                   that only goes server -> client).
+                */
+                int property = message.getData().getInt("property");
+                if (property != State.TEMPERATURES) {
                     JSONObject json = new JSONObject();
-                    json.put("type", "change");
-                    state.addAsJSON(json, message.getData().getInt("property"));
+                    try {
+                        json.put("type", "change");
+                    } catch (JSONException e) {
+                    }
+                    state.addAsJSON(json, property);
                     client.send(json);
-
-                } catch (JSONException e) {
                 }
+                
+                /* Update the whole UI */
+                update();
             }
         });
 
         startClient();
     }
 
+    /* Must be called from UI thread */
     private void stopClient() {
         if (client != null) {
             client.stop();
             client = null;
         }
     }
-
+    
+    /* Must be called from UI thread */
     private void startClient() {
         stopClient();
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+        /* Client: this must update the State when it receives new data from the server.
+           We also need to know when the client connects or disconnects.
+        */
+
         try {
             client = new Client(prefs.getString("hostname", "192.168.1.1"), Integer.parseInt(prefs.getString("port", "80")));
             client.addHandler(new Handler() {
                 public void handleMessage(Message message) {
+
                     Bundle data = message.getData();
+
                     if (data != null && data.getString("json") != null) {
-                        /* We have received some JSON from the server */
+                        /* Some state changed */
                         try {
-                            Log.e("Toast", "Received " + data.getString("json"));
                             state.setFromJSON(new JSONObject(data.getString("json")));
                         } catch (JSONException e) {
                         }
                     } else {
-                        /* Empty messages mean that the connection state has changed */
+
+                        /* Connected or disconnected */
+                        if (getConnected()) {
+                            /* Newly connected: ask the server to tell us everything */
+                            try {
+                                JSONObject json = new JSONObject();
+                                json.put("type", "send_all");
+                                client.send(json);
+                            } catch (JSONException e) {
+                            }
+                        }
+
+                        /* Update UI */
                         update();
                     }
                 }
             });
         } catch (IOException e) {
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        stopClient();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopClient();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        stopClient();
-        startClient();
     }
 
     public static class Adapter extends FragmentPagerAdapter {
@@ -216,7 +218,27 @@ public class MainActivity extends FragmentActivity {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        stopClient();
+        startClient();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        stopClient();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopClient();
+    }
+
     private void update() {
+        Log.e("Toast", "MainActivity.update() with " + getConnected());
         if (menuTimer != null && state != null) {
             menuTimer.setEnabled(getConnected());
         }
@@ -225,6 +247,7 @@ public class MainActivity extends FragmentActivity {
         adapter.getGraphFragment().update();
     }
 
+    /* Must be called from the UI thread */
     public boolean getConnected() {
         if (client != null) {
             return client.getConnected();

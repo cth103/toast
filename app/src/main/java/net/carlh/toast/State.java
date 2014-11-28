@@ -25,6 +25,8 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -32,111 +34,30 @@ import java.util.Iterator;
 
 public class State {
 
+    public static final int TARGET = 0;
+    public static final int ON = 1;
+    public static final int ENABLED = 2;
+    public static final int RULES = 3;
+    public static final int TEMPERATURES = 4;
+
     /** Our context */
     private Context context;
     /** Handlers that will be notified when there is a change in state */
     private ArrayList<Handler> handlers;
 
-    private ArrayList<PropertyBase> properties = new ArrayList<PropertyBase>();
-    private DoubleProperty target;
-    private BooleanProperty on;
-    private BooleanProperty enabled;
-    private ListProperty<Rule> rules;
-    private ListProperty<Double> temperatures;
+    private double target = 0;
+    private boolean on = false;
+    private boolean enabled = false;
+    private ArrayList<Rule> rules = new ArrayList<Rule>();
+    private ArrayList<Double> temperatures = new ArrayList<Double>();
 
     public State(Context context) {
         this.context = context;
         this.handlers = new ArrayList<Handler>();
-
-        target = new DoubleProperty("target", 0.0);
-        on = new BooleanProperty("on", false);
-        enabled = new BooleanProperty("enabled", false);
-        rules = new ListProperty<Rule>("rules");
-        temperatures = new ListProperty<Double>("temperatures");
-
-        properties.add(target);
-        properties.add(on);
-        properties.add(enabled);
-        properties.add(rules);
-        properties.add(temperatures);
     }
 
     public void addHandler(Handler h) {
         handlers.add(h);
-    }
-
-    public synchronized double getTarget() {
-        return target.get();
-    }
-
-    public synchronized boolean getOn() {
-        return on.get();
-    }
-
-    public synchronized boolean getEnabled() {
-        return enabled.get();
-    }
-
-    public synchronized ArrayList<Rule> getRules() {
-        return rules.get();
-    }
-
-    public synchronized ArrayList<Double> getTemperatures() {
-        return temperatures.get();
-    }
-
-    public synchronized void setFromJSON(JSONObject json) {
-        for (PropertyBase p: properties) {
-            if (p.set(json)) {
-                changed(p.getId());
-            }
-        }
-    }
-
-    public synchronized void colder() {
-        target.set(target.get() - 0.5);
-        changed(target.getId());
-    }
-
-    public synchronized void warmer() {
-        target.set(target.get() + 0.5);
-        changed(target.getId());
-    }
-
-    public synchronized void setEnabled(boolean e) {
-        if (enabled.set(e)) {
-            changed(enabled.getId());
-        }
-    }
-
-    public synchronized void addOrReplace(Rule rule) {
-        boolean done = false;
-        for (Rule r : rules.get()) {
-            if (r.getId() == rule.getId()) {
-                r.copyFrom(rule);
-                done = true;
-            }
-        }
-
-        if (!done) {
-            rules.add(rule);
-        }
-
-        changed(rules.getId());
-    }
-
-    public synchronized void remove(Rule rule) {
-
-        ArrayList<Rule> rulesCopy = rules.get();
-        for (Iterator<Rule> i = rulesCopy.iterator(); i.hasNext(); ) {
-            Rule r = i.next();
-            if (r.getId() == rule.getId()) {
-                i.remove();
-            }
-        }
-
-        rules.set(rulesCopy);
-        changed(rules.getId());
     }
 
     private void changed(int p) {
@@ -149,11 +70,162 @@ public class State {
         }
     }
 
-    public void addAsJSON(JSONObject json, int id) {
-        for (PropertyBase p: properties) {
-            if (p.getId() == id) {
-                p.addAsJSON(json);
+    /* Get */
+
+    public synchronized double getTarget() {
+        return target;
+    }
+
+    public synchronized boolean getOn() {
+        return on;
+    }
+
+    public synchronized boolean getEnabled() {
+        return enabled;
+    }
+
+    public synchronized ArrayList<Rule> getRules() {
+        return rules;
+    }
+
+    public synchronized ArrayList<Double> getTemperatures() {
+        return temperatures;
+    }
+
+    public synchronized void addAsJSON(JSONObject json, int id) {
+        try {
+            switch (id) {
+                case TARGET:
+                    json.put("target", target);
+                    break;
+                case ON:
+                    json.put("on", on);
+                    break;
+                case ENABLED:
+                    json.put("enabled", enabled);
+                    break;
+                case RULES:
+                    JSONArray a = new JSONArray();
+                    for (Rule r : rules) {
+                        a.put(r.asJSON());
+                    }
+                    json.put("rules", a);
+                    break;
+                case TEMPERATURES:
+                    a = new JSONArray();
+                    for (Double t : temperatures) {
+                        a.put(t);
+                    }
+                    json.put("temperatures", a);
+                    break;
             }
+        } catch (JSONException e) {
+        }
+    }
+
+
+    /* Set */
+
+    public synchronized void colder() {
+        target -= 0.5;
+        changed(TARGET);
+    }
+
+    public synchronized void warmer() {
+        target += 0.5;
+        changed(TARGET);
+    }
+
+    public synchronized void setTarget(double t) {
+        if (Math.abs(target - t) > 1e-6) {
+            target = t;
+            changed(TARGET);
+        }
+    }
+
+    public synchronized void setOn(boolean o) {
+        if (on != o) {
+            on = o;
+            changed(ON);
+        }
+    }
+
+    public synchronized void setEnabled(boolean e) {
+        if (enabled != e) {
+            enabled = e;
+            changed(ENABLED);
+        }
+    }
+    public synchronized void addOrReplace(Rule rule) {
+        boolean done = false;
+        for (Rule r : rules) {
+            if (r.getId() == rule.getId()) {
+                r.copyFrom(rule);
+                done = true;
+            }
+        }
+
+        if (!done) {
+            rules.add(rule);
+        }
+
+        changed(RULES);
+    }
+
+    public synchronized void remove(Rule rule) {
+
+        for (Iterator<Rule> i = rules.iterator(); i.hasNext(); ) {
+            Rule r = i.next();
+            if (r.getId() == rule.getId()) {
+                i.remove();
+            }
+        }
+
+        changed(RULES);
+    }
+
+    public synchronized void setRules(ArrayList<Rule> r) {
+        rules = r;
+        changed(RULES);
+    }
+
+    public synchronized void setTemperatures(ArrayList<Double> t) {
+        temperatures = t;
+        changed(TEMPERATURES);
+    }
+
+    public synchronized void setFromJSON(JSONObject json) {
+        try {
+            if (json.has("target")) {
+                setTarget(json.getDouble("target"));
+            }
+            
+            if (json.has("on")) {
+                setOn(json.getBoolean("on"));
+            }
+            
+            if (json.has("enabled")) {
+                setEnabled(json.getBoolean("enabled"));
+            }
+            
+            if (json.has("rules")) {
+                ArrayList<Rule> r = new ArrayList<Rule>();
+                JSONArray j = json.getJSONArray("rules");
+                for (int i = 0; i < j.length(); i++) {
+                    r.add(new Rule(j.getJSONObject(i)));
+                }
+                setRules(r);
+            }
+            
+            if (json.has("temperatures")) {
+                ArrayList<Double> t = new ArrayList<Double>();
+                JSONArray j = json.getJSONArray("temperatures");
+                for (int i = 0; i < j.length(); i++) {
+                    t.add(j.getDouble(i));
+                }
+                setTemperatures(t);
+            }
+        } catch (JSONException e) {
         }
     }
 }
