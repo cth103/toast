@@ -90,15 +90,15 @@ public class MainActivity extends FragmentActivity {
                     } catch (JSONException e) {
                     }
                     state.addAsJSON(json, property);
-                    client.send(json);
+                    if (client != null) {
+                        client.send(json);
+                    }
                 }
                 
                 /* Update the whole UI */
                 update();
             }
         });
-
-        startClient();
     }
 
     /* Must be called from UI thread */
@@ -221,7 +221,6 @@ public class MainActivity extends FragmentActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        stopClient();
         startClient();
     }
 

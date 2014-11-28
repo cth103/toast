@@ -44,6 +44,7 @@ public class Client {
     private ArrayList<String> toWrite = new ArrayList<String>();
     /** Thread to ping the server */
     private Thread pingThread;
+    AtomicBoolean ping = new AtomicBoolean(false);
     /** True if we have received a pong reply to our last ping */
     AtomicBoolean pong = new AtomicBoolean(false);
     /** Handlers that will be told about incoming commands */
@@ -70,6 +71,7 @@ public class Client {
                         }
                         offset += t;
                     } catch (IOException e) {
+                        Log.e("Toast", "IOException: Client.getData()", e);
                         break;
                     }
                 }
@@ -152,7 +154,7 @@ public class Client {
 
                     lock.lock();
                     try {
-                        while (toWrite.size() == 0) {
+                        while (toWrite.size() == 0 && !stop.get()) {
                             writeCondition.await();
                         }
                     } catch (InterruptedException e) {
@@ -192,7 +194,7 @@ public class Client {
         pingThread = new Thread(new Runnable() {
             public void run() {
                 while (!stop.get()) {
-                    if (pong.get() == false) {
+                    if (ping.get() == true && pong.get() == false) {
                         for (Handler h : handlers) {
                             h.sendEmptyMessage(0);
                         }
@@ -203,6 +205,7 @@ public class Client {
                         JSONObject json = new JSONObject();
                         json.put("type", "ping");
                         send(json);
+                        ping.set(true);
                         Thread.sleep(pingInterval);
                     } catch (JSONException e) {
                     } catch (InterruptedException e) {
@@ -233,7 +236,7 @@ public class Client {
         }
     }
 
-    /** Send to all clients */
+    /** Send to server */
     public void send(JSONObject json) {
         lock.lock();
         try {
@@ -246,12 +249,25 @@ public class Client {
 
     public void stop() {
         stop.set(true);
+
+        /* Wake the write thread so it notices that we want to stop */
         lock.lock();
         try {
             writeCondition.signal();
         } finally {
             lock.unlock();
         }
+
+        /* This interrupts blocking reads in the read thread */
+        try {
+            synchronized (mutex) {
+                socket.close();
+            }
+        } catch (IOException e) {
+        }
+
+        /* Interrupt the ping thread */
+        pingThread.interrupt();
     }
 
     /** Add a handler which will be called with an empty message
@@ -267,11 +283,11 @@ public class Client {
             return;
         }
 
+        connected.set(c);
+
         for (Handler h : handlers) {
             h.sendEmptyMessage(0);
         }
-
-        connected.set(c);
     }
 
     public boolean getConnected() {

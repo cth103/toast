@@ -185,8 +185,10 @@ public class State {
     }
 
     public synchronized void setRules(ArrayList<Rule> r) {
-        rules = r;
-        changed(RULES);
+        if (rules != r) {
+            rules = r;
+            changed(RULES);
+        }
     }
 
     public synchronized void setTemperatures(ArrayList<Double> t) {
