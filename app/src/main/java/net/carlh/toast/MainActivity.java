@@ -119,7 +119,8 @@ public class MainActivity extends FragmentActivity {
         */
 
         try {
-            client = new Client(prefs.getString("hostname", "192.168.1.1"), Integer.parseInt(prefs.getString("port", "80")));
+            client = new Client();
+
             client.addHandler(new Handler() {
                 public void handleMessage(Message message) {
 
@@ -149,6 +150,9 @@ public class MainActivity extends FragmentActivity {
                     }
                 }
             });
+
+            client.start(prefs.getString("hostname", "192.168.1.1"), Integer.parseInt(prefs.getString("port", "80")));
+
         } catch (IOException e) {
         }
     }
