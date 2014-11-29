@@ -154,7 +154,7 @@ class JSONServer:
                 else:
                     debug('<- %s' % json.dumps(j))
                     self.handler(j)
-        except e:
+        except Exception as e:
             warning(str(e))
                     
         with self.mutex:
