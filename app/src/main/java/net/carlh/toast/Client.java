@@ -55,7 +55,7 @@ public class Client {
     /** Socket timeout in ms */
     private int timeout = 5000;
 
-    public Client(final String hostName, final int port) throws java.net.UnknownHostException, java.io.IOException {
+    public void start(final String hostName, final int port) throws java.net.UnknownHostException, java.io.IOException {
 
 	/* Thread to read stuff from the server */
         readThread = new Thread(new Runnable() {
