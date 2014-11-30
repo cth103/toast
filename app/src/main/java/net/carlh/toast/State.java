@@ -156,6 +156,7 @@ public class State {
             changed(ENABLED);
         }
     }
+    
     public synchronized void addOrReplace(Rule rule) {
         boolean done = false;
         for (Rule r : rules) {
@@ -173,7 +174,6 @@ public class State {
     }
 
     public synchronized void remove(Rule rule) {
-
         for (Iterator<Rule> i = rules.iterator(); i.hasNext(); ) {
             Rule r = i.next();
             if (r.getId() == rule.getId()) {

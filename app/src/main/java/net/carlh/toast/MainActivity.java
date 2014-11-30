@@ -85,16 +85,14 @@ public class MainActivity extends FragmentActivity {
                    that only goes server -> client).
                 */
                 int property = message.getData().getInt("property");
-                if (property != State.TEMPERATURES) {
+                if (property != State.TEMPERATURES && client != null) {
                     JSONObject json = new JSONObject();
                     try {
                         json.put("type", "change");
                     } catch (JSONException e) {
                     }
                     state.addAsJSON(json, property);
-                    if (client != null) {
-                        client.send(json);
-                    }
+                    client.send(json);
                 }
                 
                 /* Update the whole UI */
@@ -178,11 +176,12 @@ public class MainActivity extends FragmentActivity {
         }
 
         public Fragment getItem(int position) {
-            if (position == 0) {
+            switch (position) {
+            case 0:
                 return new ControlFragment();
-            } else if (position == 1) {
+            case 1:
                 return new TimerFragment();
-            } else {
+            case 2:
                 return new GraphFragment();
             }
         }
