@@ -184,6 +184,8 @@ public class MainActivity extends FragmentActivity {
             case 2:
                 return new GraphFragment();
             }
+
+            return null;
         }
     }
         
