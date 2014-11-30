@@ -106,12 +106,24 @@ public class GraphFragment extends Fragment {
                 graphView.removeAllSeries();
                 
                 dataLength = Math.min(temperatures.size(), minutes);
-                GraphView.GraphViewData[] d = new GraphView.GraphViewData[dataLength];
+                GraphView.GraphViewData[] data = new GraphView.GraphViewData[dataLength];
+                ArrayList<Double> maf = new ArrayList<Double>();
+                final int mafLength = 5;
                 for (int i = 0; i < dataLength; i++) {
-                    d[i] = new GraphView.GraphViewData(i, temperatures.get(temperatures.size() - dataLength + i));
+                    double v = temperatures.get(temperatures.size() - dataLength + i);
+                    maf.add(v);
+                    if (maf.size() > mafLength) {
+                        maf.remove(0);
+                        double total = 0;
+                        for (Double d: maf) {
+                            total += d;
+                        }
+                        v = total / mafLength;
+                    }
+                    data[i] = new GraphView.GraphViewData(i, v);
                 }
                 
-                graphView.addSeries(new GraphViewSeries(d));
+                graphView.addSeries(new GraphViewSeries(data));
             } else {
                 period.setEnabled(false);
                 graphView.setVisibility(View.INVISIBLE);
