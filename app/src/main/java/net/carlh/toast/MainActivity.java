@@ -178,7 +178,6 @@ public class MainActivity extends FragmentActivity {
         }
 
         public Fragment getItem(int position) {
-            Log.e("Test", "Fragment getItem " + position);
             if (position == 0) {
                 return new ControlFragment();
             } else if (position == 1) {

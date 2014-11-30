@@ -1,3 +1,22 @@
+/*
+    Copyright (C) 2014 Carl Hetherington <cth@carlh.net>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+*/
+
 package net.carlh.toast;
 
 import android.os.Bundle;
@@ -21,11 +40,16 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 
+/** Fragment to plot graphs of temperature */
 public class GraphFragment extends Fragment {
 
+    /** Number of minutes to plot */
     int minutes = 60;
+    /** Number of minutes that we have data for */
     int dataLength = 0;
+    /** Period spinner */
     Spinner period;
+    /** The graph */
     GraphView graphView;
 
     @Override
@@ -63,6 +87,7 @@ public class GraphFragment extends Fragment {
         graphView.getGraphViewStyle().setTextSize(getResources().getDimension(R.dimen.abc_text_size_small_material));
         graphView.setScalable(true);
 
+        /* Format the x axis with times or dates */
         graphView.setCustomLabelFormatter(new CustomLabelFormatter() {
             @Override
             public String formatLabel(double value, boolean isValueX) {
@@ -93,44 +118,41 @@ public class GraphFragment extends Fragment {
 
     public void update() {
         if (period == null) {
+            /* The UI hasn't been created yet */
             return;
         }
 
         State state = getState();
 
-        if (state != null) {
-            ArrayList<Double> temperatures = state.getTemperatures();
-            if (temperatures.size() > 0) {
-                period.setEnabled(true);
-                graphView.setVisibility(View.VISIBLE);
-                graphView.removeAllSeries();
-                
-                dataLength = Math.min(temperatures.size(), minutes);
-                GraphView.GraphViewData[] data = new GraphView.GraphViewData[dataLength];
-                ArrayList<Double> maf = new ArrayList<Double>();
-                final int mafLength = 5;
-                for (int i = 0; i < dataLength; i++) {
-                    double v = temperatures.get(temperatures.size() - dataLength + i);
-                    maf.add(v);
-                    if (maf.size() > mafLength) {
-                        maf.remove(0);
-                        double total = 0;
-                        for (Double d: maf) {
-                            total += d;
-                        }
-                        v = total / mafLength;
-                    }
-                    data[i] = new GraphView.GraphViewData(i, v);
-                }
-                
-                graphView.addSeries(new GraphViewSeries(data));
-            } else {
-                period.setEnabled(false);
-                graphView.setVisibility(View.INVISIBLE);
-            }
-        } else {
+        if (state == null || state.getTemperatures().size() == 0) {
             period.setEnabled(false);
             graphView.setVisibility(View.INVISIBLE);
+            return;
         }
+
+        ArrayList<Double> temperatures = state.getTemperatures();
+        period.setEnabled(true);
+        graphView.setVisibility(View.VISIBLE);
+        graphView.removeAllSeries();
+                
+        dataLength = Math.min(temperatures.size(), minutes);
+        GraphView.GraphViewData[] data = new GraphView.GraphViewData[dataLength];
+        ArrayList<Double> maf = new ArrayList<Double>();
+        final int mafLength = 5;
+        for (int i = 0; i < dataLength; i++) {
+            double v = temperatures.get(temperatures.size() - dataLength + i);
+            maf.add(v);
+            if (maf.size() > mafLength) {
+                maf.remove(0);
+                double total = 0;
+                for (Double d: maf) {
+                    total += d;
+                }
+                v = total / mafLength;
+            }
+            data[i] = new GraphView.GraphViewData(i, v);
+        }
+        
+        graphView.addSeries(new GraphViewSeries(data));
     }
 }
