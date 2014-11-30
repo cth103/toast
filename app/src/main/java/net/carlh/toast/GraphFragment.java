@@ -91,7 +91,7 @@ public class GraphFragment extends Fragment {
         return view;
     }
 
-    void update() {
+    public void update() {
         if (period == null) {
             return;
         }

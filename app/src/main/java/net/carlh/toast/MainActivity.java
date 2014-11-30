@@ -48,6 +48,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends FragmentActivity {
 
@@ -64,6 +65,7 @@ public class MainActivity extends FragmentActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -99,19 +101,26 @@ public class MainActivity extends FragmentActivity {
                 update();
             }
         });
+
+        startClient();
     }
 
     /* Must be called from UI thread */
     private void stopClient() {
-        if (client != null) {
-            client.stop();
-            client = null;
+        if (client == null) {
+            return;
         }
+
+        client.stop();
+        client = null;
     }
     
     /* Must be called from UI thread */
     private void startClient() {
-        stopClient();
+        if (client != null) {
+            return;
+        }
+
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
         /* Client: this must update the State when it receives new data from the server.
@@ -154,14 +163,11 @@ public class MainActivity extends FragmentActivity {
             client.start(prefs.getString("hostname", "192.168.1.1"), Integer.parseInt(prefs.getString("port", "80")));
 
         } catch (IOException e) {
+            Log.e("Toast", "IOException in startClient", e);
         }
     }
 
     public static class Adapter extends FragmentPagerAdapter {
-
-        private ControlFragment controlFragment = new ControlFragment();
-        private TimerFragment timerFragment = new TimerFragment();
-        private GraphFragment graphFragment = new GraphFragment();
 
         public Adapter(FragmentManager fm) {
             super(fm);
@@ -172,25 +178,14 @@ public class MainActivity extends FragmentActivity {
         }
 
         public Fragment getItem(int position) {
+            Log.e("Test", "Fragment getItem " + position);
             if (position == 0) {
-                return controlFragment;
+                return new ControlFragment();
             } else if (position == 1) {
-                return timerFragment;
+                return new TimerFragment();
             } else {
-                return graphFragment;
+                return new GraphFragment();
             }
-        }
-
-        public ControlFragment getControlFragment() {
-            return controlFragment;
-        }
-
-        public TimerFragment getTimerFragment() {
-            return timerFragment;
-        }
-
-        public GraphFragment getGraphFragment() {
-            return graphFragment;
         }
     }
         
@@ -244,9 +239,15 @@ public class MainActivity extends FragmentActivity {
         if (menuTimer != null && state != null) {
             menuTimer.setEnabled(getConnected());
         }
-        adapter.getControlFragment().update();
-        adapter.getTimerFragment().update();
-        adapter.getGraphFragment().update();
+
+        FragmentManager manager = getSupportFragmentManager();
+        List<Fragment> fragments = manager.getFragments();
+        for (Fragment f: fragments) {
+            net.carlh.toast.Fragment tf = (net.carlh.toast.Fragment) f;
+            if (tf != null && tf.isVisible ()) {
+                tf.update();
+            }
+        }
     }
 
     /* Must be called from the UI thread */
