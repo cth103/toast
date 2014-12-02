@@ -77,7 +77,7 @@ public class Client {
 
     public void start(final String hostName, final int port) throws java.net.UnknownHostException, java.io.IOException {
 
-	/* Thread to read stuff from the server */
+        /* Thread to read stuff from the server */
         readThread = new Thread(new Runnable() {
 
             private byte[] getData(Socket socket, int length) {
@@ -94,7 +94,8 @@ public class Client {
                         /* This is probably because the socket has been closed in order to make
                            this thread terminate.
                         */
-                        Log.e("Toast", "SocketException in client.getData()");
+                        Log.e("Toast", "SocketException in client.getData");
+                        break;
                     } catch (IOException e) {
                         Log.e("Toast", "IOException in Client.getData()", e);
                         break;
@@ -117,6 +118,7 @@ public class Client {
 
                         while (true) {
                             byte[] b = getData(socket, 4);
+
                             if (b.length != 4) {
                                 break;
                             }
@@ -130,12 +132,14 @@ public class Client {
 
                             byte[] d = getData(socket, length);
                             
-                            if (d.length == length) {
-                                try {
-                                    handler(new JSONObject(new String(d)));
-                                } catch (JSONException e) {
-                                    Log.e("Toast", "Exception " + e.toString());
-                                }
+                            if (d.length != length) {
+                                break;
+                            }
+
+                            try {
+                                handler(new JSONObject(new String(d)));
+                            } catch (JSONException e) {
+                                Log.e("Toast", "Exception " + e.toString());
                             }
                         }
 
@@ -147,22 +151,16 @@ public class Client {
 
                     } catch (ConnectException e) {
                         Log.e("Toast", "ConnectException");
-                        try {
-                            /* Sleep a little until we try again */
-                            Thread.sleep(timeout);
-                        } catch (java.lang.InterruptedException f) {
-
-                        }
                     } catch (UnknownHostException e) {
                         Log.e("Toast", "UnknownHostException");
-                        try {
-                            /* Sleep a little until we try again */
-                            Thread.sleep(timeout);
-                        } catch (java.lang.InterruptedException f) {
-
-                        }
                     } catch (IOException e) {
                         Log.e("Client", "IOException");
+                    } finally {
+                        try {
+                            Thread.sleep(timeout);
+                        } catch (java.lang.InterruptedException e) {
+
+                        }
                     }
                 }
             }
@@ -293,6 +291,16 @@ public class Client {
 
         /* Interrupt the ping thread */
         pingThread.interrupt();
+
+        /* Interrupt sleeps in the read thread */
+        readThread.interrupt();
+
+        try {
+            readThread.join();
+            writeThread.join();
+            pingThread.join();
+        } catch (InterruptedException e) {
+        }
     }
 
     /** Add a handler which will be called with an empty message
