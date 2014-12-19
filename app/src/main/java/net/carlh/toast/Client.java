@@ -1,3 +1,22 @@
+/*
+    Copyright (C) 2014 Carl Hetherington <cth@carlh.net>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+*/
+
 package net.carlh.toast;
 
 import android.os.Bundle;
@@ -16,6 +35,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -57,7 +77,7 @@ public class Client {
 
     public void start(final String hostName, final int port) throws java.net.UnknownHostException, java.io.IOException {
 
-	/* Thread to read stuff from the server */
+        /* Thread to read stuff from the server */
         readThread = new Thread(new Runnable() {
 
             private byte[] getData(Socket socket, int length) {
@@ -70,8 +90,14 @@ public class Client {
                             break;
                         }
                         offset += t;
+                    } catch (SocketException e) {
+                        /* This is probably because the socket has been closed in order to make
+                           this thread terminate.
+                        */
+                        Log.e("Toast", "SocketException in client.getData");
+                        break;
                     } catch (IOException e) {
-                        Log.e("Toast", "IOException: Client.getData()", e);
+                        Log.e("Toast", "IOException in Client.getData()", e);
                         break;
                     }
                 }
@@ -92,6 +118,7 @@ public class Client {
 
                         while (true) {
                             byte[] b = getData(socket, 4);
+
                             if (b.length != 4) {
                                 break;
                             }
@@ -105,12 +132,14 @@ public class Client {
 
                             byte[] d = getData(socket, length);
                             
-                            if (d.length == length) {
-                                try {
-                                    handler(new JSONObject(new String(d)));
-                                } catch (JSONException e) {
-                                    Log.e("Toast", "Exception " + e.toString());
-                                }
+                            if (d.length != length) {
+                                break;
+                            }
+
+                            try {
+                                handler(new JSONObject(new String(d)));
+                            } catch (JSONException e) {
+                                Log.e("Toast", "Exception " + e.toString());
                             }
                         }
 
@@ -122,22 +151,16 @@ public class Client {
 
                     } catch (ConnectException e) {
                         Log.e("Toast", "ConnectException");
-                        try {
-                            /* Sleep a little until we try again */
-                            Thread.sleep(timeout);
-                        } catch (java.lang.InterruptedException f) {
-
-                        }
                     } catch (UnknownHostException e) {
                         Log.e("Toast", "UnknownHostException");
-                        try {
-                            /* Sleep a little until we try again */
-                            Thread.sleep(timeout);
-                        } catch (java.lang.InterruptedException f) {
-
-                        }
                     } catch (IOException e) {
                         Log.e("Client", "IOException");
+                    } finally {
+                        try {
+                            Thread.sleep(timeout);
+                        } catch (java.lang.InterruptedException e) {
+
+                        }
                     }
                 }
             }
@@ -268,6 +291,16 @@ public class Client {
 
         /* Interrupt the ping thread */
         pingThread.interrupt();
+
+        /* Interrupt sleeps in the read thread */
+        readThread.interrupt();
+
+        try {
+            readThread.join();
+            writeThread.join();
+            pingThread.join();
+        } catch (InterruptedException e) {
+        }
     }
 
     /** Add a handler which will be called with an empty message
