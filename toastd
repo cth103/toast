@@ -39,7 +39,7 @@ HEATING = 2
 # 1-wire bus sensor ID for temperature
 SENSOR = '28-0000063fb15e'
 # Hysteresis in degrees
-HYSTERESIS = 0.5
+HYSTERESIS = 0.2
 # Interval in seconds to check state and update hardware
 CHECK_INTERVAL = 1
 # Minutes to keep temperatures in memory
