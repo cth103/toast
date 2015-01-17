@@ -33,6 +33,7 @@ import datetime
 import socket
 import argparse
 import urlparse
+import traceback
 
 # GPIO pin of heating relay
 HEATING = 2
@@ -116,7 +117,7 @@ class JSONServer:
     def run(self, sock):
         while True:
             conn, addr = sock.accept()
-            conn.settimeout(2)
+            conn.settimeout(10)
             threading.Thread(target=self.client, args=(conn,)).start()
 
     # Try to get some amount of data from a socket
@@ -150,6 +151,7 @@ class JSONServer:
 
                 j = json.loads(s);
                 if j['type'] == 'ping':
+                    debug('<- ping')
                     self.send({'type': 'pong'})
                 else:
                     debug('<- %s' % json.dumps(j))
@@ -163,8 +165,7 @@ class JSONServer:
         conn.close()
 
     def send(self, d):
-        if not 'type' in d or d['type'] != 'pong':
-            debug('-> %s' % json.dumps(d))
+        debug('-> %s' % json.dumps(d))
 
         with self.mutex:
             for c in self.clients:
