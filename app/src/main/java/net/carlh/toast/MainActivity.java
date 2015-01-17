@@ -242,10 +242,12 @@ public class MainActivity extends FragmentActivity {
 
         FragmentManager manager = getSupportFragmentManager();
         List<Fragment> fragments = manager.getFragments();
-        for (Fragment f: fragments) {
-            net.carlh.toast.Fragment tf = (net.carlh.toast.Fragment) f;
-            if (tf != null && tf.isVisible ()) {
-                tf.update();
+        if (fragments != null) {
+            for (Fragment f : fragments) {
+                net.carlh.toast.Fragment tf = (net.carlh.toast.Fragment) f;
+                if (tf != null && tf.isVisible()) {
+                    tf.update();
+                }
             }
         }
     }

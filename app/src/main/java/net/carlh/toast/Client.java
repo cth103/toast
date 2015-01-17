@@ -71,7 +71,7 @@ public class Client {
     ArrayList<Handler> handlers = new ArrayList<Handler>();
 
     /** Ping interval in ms (must be less than timeout) */
-    private int pingInterval = 1000;
+    private int pingInterval = 4000;
     /** Socket timeout in ms */
     private int timeout = 5000;
 
@@ -124,7 +124,7 @@ public class Client {
                             }
 
                             int length = ((b[0] & 0xff) << 24) | ((b[1] & 0xff) << 16) | ((b[2] & 0xff) << 8) | (b[3] & 0xff);
-                            if (length < 0 || length > (64*1024)) {
+                            if (length < 0 || length > (128*1024)) {
                                 /* Don't like the sound of that */
                                 Log.e("Toast", "Strange length " + length);
                                 break;
@@ -284,7 +284,9 @@ public class Client {
         /* This interrupts blocking reads in the read thread */
         try {
             synchronized (mutex) {
-                socket.close();
+                if (socket != null) {
+                    socket.close();
+                }
             }
         } catch (IOException e) {
         }
