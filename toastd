@@ -45,6 +45,12 @@ HYSTERESIS = 0.2
 CHECK_INTERVAL = 1
 # Minutes to keep temperatures in memory
 MEMORY_LOG_MINUTES = 60 * 24 * 7
+# Auto-off start hour
+AUTO_OFF_START = 0
+# Auto-off end hour
+AUTO_OFF_END = 6
+# Auto-off check interval (minutes)
+AUTO_OFF_INTERVAL = 30
 
 # True if we have already warned about not being able to find the 1-wire bus sensor
 warned_about_owb = False
@@ -436,6 +442,12 @@ def update():
     if active_rule != current_rule:
         state.set_enabled(active_rule is not None)
         current_rule = active_rule
+
+    # Apply auto-off
+    time = datetime.datetime.now()
+    if time.hour >= AUTO_OFF_START and time.hour <= AUTO_OFF_END and (time.minute % AUTO_OFF_INTERVAL) == 0 and state.enabled:
+        state.set_enabled(False)
+        print 'Turned off automatically at %d:%02d' % (time.hour, time.minute)
 
     # Then handle turning the boiler on or off
     t = state.get_current_temperature()
