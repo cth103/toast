@@ -416,9 +416,12 @@ def get_temperature():
     global warned_about_owb
     global test_temperature
 
+    debug('Reading temperature')
+
     try:
         f = open('/sys/bus/w1/devices/%s/w1_slave' % SENSOR, 'r')
     except:
+        debug('Failed to open one-wire bus device')
         if not warned_about_owb:
             warning('failed to find temperature sensor; using ramping temperature')
             warned_about_owb = True
@@ -430,6 +433,7 @@ def get_temperature():
     l = f.readline()
     l = f.readline()
     f.close()
+    debug('Parse temperature from %s' % l)
     return float(l.split()[9].split('=')[1]) / 1000
 
 
