@@ -512,7 +512,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--port', help='port to bind to', type=int, default=80)
 parser.add_argument('-d', '--debug', help='enable debugging', action='store_true', default=False)
 parser.add_argument('-i', '--log-interval', help='interval in seconds at which to log temperatures', type=int, default=60)
-parser.add_argument('-l', '--log-directory', help='directory to log temperatures to', type=str, default='/var/log/heating')
+parser.add_argument('-l', '--log-directory', help='directory to log temperatures to', type=str, default='/var/log/toast')
 args = parser.parse_args()
 
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
