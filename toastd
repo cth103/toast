@@ -82,6 +82,9 @@ def debug(d):
     global args
     if args.debug:
         print d
+        f = open(os.path.join(args.log_directory, 'debug.log'), 'a')
+        print>>f,d
+        f.close()
 
 class JSONServer:
     def __init__(self, port):
