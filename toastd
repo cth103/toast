@@ -35,10 +35,11 @@ import argparse
 import urlparse
 import traceback
 
+import json_server
+import util
+
 # GPIO pin of heating relay
 HEATING = 2
-# 1-wire bus sensor ID for temperature
-SENSOR = '28-0000063fb15e'
 # Hysteresis in degrees
 HYSTERESIS = 0.2
 # Interval in seconds to check state and update hardware
@@ -52,10 +53,39 @@ AUTO_OFF_END = 6
 # Auto-off check interval (minutes)
 AUTO_OFF_INTERVAL = 30
 
-# True if we have already warned about not being able to find the 1-wire bus sensor
-warned_about_owb = False
-# Current fake temperature if we are in test mode (with no temperature sensor)
-test_temperature = 15.0
+class Zone:
+    def __init__(self, name, ip, port=9142):
+        self.name = name
+        self.ip = ip
+        self.port = port
+
+    def __str__(self):
+        return self.name
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def set_on(self, on):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((self.ip, self.port))
+        util.send_json(s, {'type': 'set', 'on': on})
+
+    def get_temperature(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((self.ip, self.port))
+        util.send_json(s, {'type': 'get'})
+        return util.receive_json(s)['temperature']
+
+ZONES = []
+ZONES.append(Zone('Sitting room', 'localhost'))
+ZONES.append(Zone('Bathroom', '192.168.1.65'))
+
 # True to stop all threads
 stop = False
 # Server which talks to clients
@@ -64,132 +94,16 @@ server = None
 write_logs = True
 current_rule = None
 
-class Error(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return self.value
-    def __repr__(self):
-        return str(self)
+def zone_by_name(name):
+    for z in ZONES:
+        if z.name == name:
+            return z
 
-def warning(w):
-    print 'WARNING: %s' % w
+    return None
 
-def verbose(v):
-    print v
-
-def debug(d):
-    global args
-    if args.debug:
-        print d
-        f = open(os.path.join(args.log_directory, 'debug.log'), 'a')
-        print>>f,d
-        f.close()
-
-class JSONServer:
-    def __init__(self, port):
-        # Port number to listen on
-        self.port = port
-        # Active client sockets
-        self.clients = []
-        # Mutex for self.clients
-        self.mutex = threading.Lock()
-
-    # Start the server
-    def start(self):
-        for res in socket.getaddrinfo(None, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM, 0, socket.AI_PASSIVE):
-            af, socktype, proto, canonname, sa = res
-            try:
-                s = socket.socket(af, socktype, proto)
-            except socket.error as msg:
-                s = None
-                continue
-
-            try:
-                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.bind(sa)
-                s.listen(1)
-            except socket.error as msg:
-                s.close()
-                s = None
-                continue
-
-            break
-
-        if s is None:
-            raise Error('could not open socket (%s)' % msg)
-
-        self.accept_thread = threading.Thread(target=self.run, args=(s,))
-        self.accept_thread.start()
-    
-    # Thread which listens for incoming connections
-    def run(self, sock):
-        while True:
-            conn, addr = sock.accept()
-            conn.settimeout(10)
-            threading.Thread(target=self.client, args=(conn,)).start()
-
-    # Try to get some amount of data from a socket
-    def get_data(self, sock, length):
-        all = ""
-        got = 0
-        while got < length:
-            d = sock.recv(length - got)
-            if not d:
-                break
-            all += d
-            got += len(d)
-
-        return all
-        
-    # Thread to handle one client session
-    def client(self, conn):
-        with self.mutex:
-            self.clients.append(conn)
-
-        try:
-            while True:
-                s = self.get_data(conn, 4)
-                if len(s) < 4:
-                    break
-
-                size = (ord(s[0]) << 24) | (ord(s[1]) << 16) | (ord(s[2]) << 8) | ord(s[3])
-                s = self.get_data(conn, size)
-                if len(s) != size:
-                    break
-
-                j = json.loads(s);
-                if j['type'] == 'ping':
-                    debug('<- ping')
-                    self.send({'type': 'pong'})
-                else:
-                    debug('<- %s' % json.dumps(j))
-                    self.handler(j)
-        except Exception as e:
-            warning(str(e))
-                    
-        with self.mutex:
-            self.clients.remove(conn)
-
-        conn.close()
-
-    def send(self, d):
-        debug('-> %s' % json.dumps(d))
-
-        with self.mutex:
-            for c in self.clients:
-                s = json.dumps(d)
-                length = bytearray(4)
-                length[0] = (len(s) >> 24) & 0xff
-                length[1] = (len(s) >> 16) & 0xff
-                length[2] = (len(s) >>  8) & 0xff
-                length[3] = (len(s) >>  0) & 0xff
-                c.sendall(length)
-                c.sendall(s)
-
-# Rule for when heating should be on
+# Rule to specify a target to aim for during a particular time range
 class Rule:
-    
+
     MONDAY = 1 << 0
     TUESDAY = 1 << 1
     WEDNESDAY = 1 << 2
@@ -200,7 +114,7 @@ class Rule:
 
     next_id = 0
 
-    def __init__(self, days=0, on_hour=None, on_minute=None, off_hour=None, off_minute=None):
+    def __init__(self, days=0, on_hour=None, on_minute=None, off_hour=None, off_minute=None, target=None, zone=None):
         self.id = Rule.next_id
         Rule.next_id += 1
         self.days = days
@@ -208,6 +122,8 @@ class Rule:
         self.on_minute = on_minute
         self.off_hour = off_hour
         self.off_minute = off_minute
+        self.target = target
+        self.zone = zone
 
     def read_dict(self, data):
         if 'id' in data:
@@ -220,6 +136,8 @@ class Rule:
         self.on_minute = data['on_minute']
         self.off_hour = data['off_hour']
         self.off_minute = data['off_minute']
+        self.target = data['target']
+        self.zone = zone_by_name(data['zone'])
 
     def as_dict(self):
         return {"id": self.id,
@@ -227,7 +145,9 @@ class Rule:
                 "on_hour": self.on_hour,
                 "on_minute": self.on_minute,
                 "off_hour": self.off_hour,
-                "off_minute": self.off_minute}
+                "off_minute": self.off_minute,
+                "target": self.target,
+                "zone": str(self.zone)}
 
     def active(self, time=None):
         if time is None:
@@ -244,7 +164,7 @@ class Rule:
         return on_ok and off_ok
 
     def __str__(self):
-        return '%d: %d %d:%d %d:%d' % (self.id, self.days, self.on_hour, self.on_minute, self.off_hour, self.off_minute)
+        return '%d: %d %d:%d %d:%d %f %s' % (self.id, self.days, self.on_hour, self.on_minute, self.off_hour, self.off_minute, self.target, self.zone)
 
     def __eq__(self, other):
         if other is None:
@@ -253,11 +173,10 @@ class Rule:
         on_same = self.on_hour == other.on_hour and self.on_minute == other.on_minute
         off_same = self.off_hour == other.off_hour and self.off_minute == other.off_minute
 
-        return self.id == other.id and self.days == other.days and on_same and off_same
+        return self.id == other.id and self.days == other.days and on_same and off_same and self.zone == other.zone
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
 
 
 class State:
@@ -265,22 +184,30 @@ class State:
     def __init__(self):
         global args
 
-        self.target = 21
+        # Whether the boiler is on
         self.on = False
+        # Whether the whole thing is enabled (i.e. checking temperatures and maybe heating)
         self.enabled = False
-        self.temperatures = []
         self.rules = []
+        # Temperatures in each zone
+        self.temperatures = {}
+        # Target for each zone
+        self.target = {}
+
+        for z in ZONES:
+            self.temperatures[z] = []
+            self.target[z] = 21
 
         self.mutex = threading.Lock()
 
 
     # Set methods for use by the server
 
-    def set_target(self, target):
+    def set_target(self, zone, target):
         changed = False
         with self.mutex:
-            if abs(target - self.target) > 1e-6:
-                self.target = target
+            if abs(target - self.target[zone]) > 1e-6:
+                self.target[zone] = target
                 changed = True
         if changed:
             server.send(self.as_dict("target"))
@@ -305,16 +232,16 @@ class State:
         if changed:
             server.send(self.as_dict("enabled"))
 
-    def set_temperatures(self, temperatures):
+    def set_temperatures(self, zone, temperatures):
         with self.mutex:
-            self.temperatures = temperatures
+            self.temperatures[zone] = temperatures
         server.send(self.as_dict("temperatures"))
 
-    def add_temperature(self, t):
+    def add_temperature(self, zone, t):
         with self.mutex:
-            self.temperatures.append(t)
-            if len(self.temperatures) > MEMORY_LOG_MINUTES:
-                state.temperatures.pop(0)
+            self.temperatures[zone].append(t)
+            if len(self.temperatures[zone]) > MEMORY_LOG_MINUTES:
+                state.temperatures[zone].pop(0)
         server.send(self.as_dict("temperatures"))
 
     def set_rules(self, r):
@@ -329,16 +256,16 @@ class State:
 
     # Get methods for use by the server
 
-    def get_current_temperature(self):
+    def get_current_temperature(self, zone):
         t = 0.0
         with self.mutex:
-            if len(self.temperatures) > 0:
-                t = self.temperatures[-1]
+            if len(self.temperatures[zone]) > 0:
+                t = self.temperatures[zone][-1]
         return t
 
-    def get_target(self):
+    def get_target(self, zone):
         with self.mutex:
-            return self.target
+            return self.target[zone]
 
     def get_active_rule(self):
         with self.mutex:
@@ -369,7 +296,7 @@ class State:
                "on": self.on,
                "enabled": self.enabled,
                "rules": rules}
-        
+
         if key is not None:
             out = { key: all[key] }
         else:
@@ -379,13 +306,15 @@ class State:
 
     def set_from_dict(self, c):
         if 'target' in c:
-            self.set_target(c['target'])
+            for z in ZONES:
+                self.set_target(z, c['target'][z.name])
         if 'on' in c:
             self.set_on(c['on'])
         if 'enabled' in c:
             self.set_enabled(c['enabled'])
         if 'temperatures' in c:
-            self.set_temperatures(c['temperatures'])
+            for z in ZONES:
+                self.set_temperatures(z, c['temperatures'][z.name])
         if 'rules' in c:
             rules = []
             for dr in c['rules']:
@@ -394,7 +323,7 @@ class State:
                 rules.append(r)
             self.set_rules(rules)
 
-        
+
 def setup():
     global args
     global have_gpio
@@ -405,48 +334,24 @@ def setup():
         RPi.GPIO.setmode(RPi.GPIO.BCM)
         RPi.GPIO.setup(HEATING, RPi.GPIO.OUT)
     else:
-        warning('GPIO library not found; running without GPIO')
+        util.warning('GPIO library not found; running without GPIO')
 
     try:
         os.makedirs(args.log_directory)
     except OSError as e:
         if e.errno != 17:
-            warning('could not create log directory `%s\'; logging disabled' % args.log_directory)
+            util.warning('could not create log directory `%s\'; logging disabled' % args.log_directory)
             write_logs = False
-
-
-def get_temperature():
-    global warned_about_owb
-    global test_temperature
-
-    debug('Reading temperature')
-
-    try:
-        f = open('/sys/bus/w1/devices/%s/w1_slave' % SENSOR, 'r')
-    except:
-        debug('Failed to open one-wire bus device')
-        if not warned_about_owb:
-            warning('failed to find temperature sensor; using ramping temperature')
-            warned_about_owb = True
-        test_temperature += 1
-        if test_temperature > 40:
-            test_temperature = 15
-        return test_temperature
-        
-    l = f.readline()
-    l = f.readline()
-    f.close()
-    debug('Parse temperature from %s' % l)
-    return float(l.split()[9].split('=')[1]) / 1000
 
 
 def update():
     global state
     global current_rule
-    
+
     # Apply rules first
     active_rule = state.get_active_rule()
     if active_rule != current_rule:
+        state.set_target(active_rule.zone, active_rule.target)
         state.set_enabled(active_rule is not None)
         current_rule = active_rule
 
@@ -454,20 +359,31 @@ def update():
     time = datetime.datetime.now()
     if time.hour >= AUTO_OFF_START and time.hour <= AUTO_OFF_END and (time.minute % AUTO_OFF_INTERVAL) == 0 and state.enabled:
         state.set_enabled(False)
-        print 'Turned off automatically at %d:%02d' % (time.hour, time.minute)
+        verbose('Turned off automatically at %d:%02d' % (time.hour, time.minute))
 
-    # Then handle turning the boiler on or off
-    t = state.get_current_temperature()
+    # Zone radiators on or off
+    heat_required = False
+    for z in ZONES:
+        try:
+            t = state.get_current_temperature(z)
+            if t > (state.get_target(z) + HYSTERESIS):
+                z.set_on(False)
+            elif t < (state.get_target(z) - HYSTERESIS):
+                z.set_on(True)
+                heat_required = True
+        except socket.error as e:
+            util.warning('could not instruct zone %s (%s)' % (z, e))
+        except util.Error as e:
+            util.warning('could not instruct zone %s (%s)' % (z, e))
 
-    if t > (state.get_target() + HYSTERESIS) or not state.get_enabled():
-        state.set_on(False)
-    elif t < (state.get_target() - HYSTERESIS) and state.get_enabled():
-        state.set_on(True)
-    
+    # Then turn the boiler on or off
+    state.set_on(heat_required and state.get_enabled())
+
 def check():
     global state
     global stop
     while not stop:
+        util.verbose('checking state')
         update()
         time.sleep(CHECK_INTERVAL)
 
@@ -479,16 +395,21 @@ def log():
     while not stop:
         log_file = os.path.join(args.log_directory, time.strftime("%d-%m-%Y.log"))
 
-        temp = get_temperature()
+        for z in ZONES:
+            try:
+                temp = z.get_temperature()
 
-        if state.get_target() is not None and write_logs:
-            f = open(log_file, 'a')
-            print>>f,'%s %f %f %d %d' % (time.strftime("%H:%M:%S"), temp, state.get_target(), state.get_on(), state.get_enabled())
-            f.close()
+                if write_logs:
+                    f = open(log_file, 'a')
+                    print>>f,'%s %f %f %d %d' % (time.strftime("%H:%M:%S"), temp, state.get_target(z), state.get_on(), state.get_enabled())
+                    f.close()
 
-        state.add_temperature(temp)
+                state.add_temperature(temp)
+            except:
+                util.warning('could not get temperature from %s' % z)
+
         time.sleep(args.log_interval)
-  
+
 def test():
     rule = Rule(Rule.MONDAY, 9, 30, 15, 30)
     assert(rule.active(datetime.datetime(2014, 11, 17, 8, 45)) == False)
@@ -505,7 +426,9 @@ def test():
     assert(rule.active(datetime.datetime(2014, 11, 19, 8, 20)) == True)
 
 def handler(json):
-    if json['type'] == 'send_all':
+    if json['type'] == 'ping':
+        server.send({'type': 'pong'})
+    elif json['type'] == 'send_all':
         global state
         server.send(state.as_dict())
     elif json['type'] == 'change':
@@ -513,7 +436,6 @@ def handler(json):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--port', help='port to bind to', type=int, default=80)
-parser.add_argument('-d', '--debug', help='enable debugging', action='store_true', default=False)
 parser.add_argument('-i', '--log-interval', help='interval in seconds at which to log temperatures', type=int, default=60)
 parser.add_argument('-l', '--log-directory', help='directory to log temperatures to', type=str, default='/var/log/toast')
 args = parser.parse_args()
@@ -523,7 +445,7 @@ if len(sys.argv) > 1 and sys.argv[1] == 'test':
 else:
     setup()
 
-    server = JSONServer(args.port)
+    server = json_server.Server(args.port)
     server.handler = handler
     server.start()
 
@@ -531,10 +453,9 @@ else:
 
     check_thread = threading.Thread(target=check)
     check_thread.start()
-    
+
     log_thread = threading.Thread(target=log)
     log_thread.start()
 
     while True:
         time.sleep(60)
-

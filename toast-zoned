@@ -1,0 +1,88 @@
+#!/usr/bin/python
+#
+#    Copyright (C) 2014-2015 Carl Hetherington <cth@carlh.net>
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+
+have_gpio = True
+try:
+    import RPi.GPIO
+except:
+    have_gpio = False
+
+import argparse
+import time
+
+import json_server
+import util
+
+# 1-wire bus sensor ID for temperature
+SENSOR = '28-0000063fb15e'
+# GPIO pin of radiator relay
+RADIATOR = 2
+
+# True if we have already warned about not being able to find the 1-wire bus sensor
+warned_about_owb = False
+# Current fake temperature if we are in test mode (with no temperature sensor)
+test_temperature = 15.0
+
+def get_temperature():
+    global warned_about_owb
+    global test_temperature
+
+    try:
+        f = open('/sys/bus/w1/devices/%s/w1_slave' % SENSOR, 'r')
+    except:
+        if not warned_about_owb:
+            util.warning('failed to find temperature sensor; using ramping temperature')
+            warned_about_owb = True
+        test_temperature += 1
+        if test_temperature > 40:
+            test_temperature = 15
+        return test_temperature
+
+    l = f.readline()
+    l = f.readline()
+    f.close()
+    return float(l.split()[9].split('=')[1]) / 1000
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-p', '--port', help='port to bind to', type=int, default=9142)
+parser.add_argument('-l', '--log-directory', help='directory to log to', type=str, default='/var/log/toast')
+args = parser.parse_args()
+
+def handler(json):
+    if json['type'] == 'ping':
+        server.send({'type': 'pong'})
+    elif json['type'] == 'get':
+        server.send({'temperature': get_temperature()})
+    elif json['type'] == 'set':
+        if 'on' in json and have_gpio:
+            RPi.GPIO.output(HEATING, json['on'])
+
+if have_gpio:
+    RPi.GPIO.setwarnings(False)
+    RPi.GPIO.setmode(RPi.GPIO.BCM)
+    RPi.GPIO.setup(HEATING, RPi.GPIO.OUT)
+else:
+    util.warning('GPIO library not found; running without GPIO')
+
+server = json_server.Server(args.port)
+server.handler = handler
+server.start()
+
+while True:
+    time.sleep(60)
