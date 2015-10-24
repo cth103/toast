@@ -32,7 +32,7 @@ import util
 # 1-wire bus sensor ID for temperature
 SENSOR = '28-0000063fb15e'
 # GPIO pin of radiator relay
-RADIATOR = 2
+RADIATOR = 7
 
 # True if we have already warned about not being able to find the 1-wire bus sensor
 warned_about_owb = False
@@ -71,12 +71,12 @@ def handler(json):
         server.send({'temperature': get_temperature()})
     elif json['type'] == 'set':
         if 'on' in json and have_gpio:
-            RPi.GPIO.output(HEATING, json['on'])
+            RPi.GPIO.output(RADIATOR, json['on'])
 
 if have_gpio:
     RPi.GPIO.setwarnings(False)
     RPi.GPIO.setmode(RPi.GPIO.BCM)
-    RPi.GPIO.setup(HEATING, RPi.GPIO.OUT)
+    RPi.GPIO.setup(RADIATOR, RPi.GPIO.OUT)
 else:
     util.warning('GPIO library not found; running without GPIO')
 
