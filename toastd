@@ -361,6 +361,8 @@ def update():
         state.set_enabled(False)
         util.verbose('Turned off automatically at %d:%02d' % (time.hour, time.minute))
 
+    note = ''
+
     # Zone radiators on or off
     heat_required = False
     for z in ZONES:
@@ -368,19 +370,18 @@ def update():
             t = state.get_current_temperature(z)
             if t > (state.get_target(z) + HYSTERESIS):
                 z.set_on(False)
-                util.verbose('%s off' % z)
+                note += '%s off ' % z
             elif t < (state.get_target(z) - HYSTERESIS):
                 z.set_on(True)
                 heat_required = True
-                util.verbose('%s on' % z)
-        except socket.error as e:
-            util.warning('could not instruct zone %s (%s)' % (z, e))
-        except util.Error as e:
+                note += '%s on ' % z
+        except (socket.error, util.Error) as e:
             util.warning('could not instruct zone %s (%s)' % (z, e))
 
     # Then turn the boiler on or off
     state.set_on(heat_required and state.get_enabled())
-    util.verbose('boiler %d' % (heat_required and state.get_enabled()))
+    note += ' and boiler %d' % (heat_required and state.get_enabled())
+    util.verbose(note)
 
 def check():
     global state
