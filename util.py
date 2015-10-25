@@ -62,7 +62,7 @@ def receive_json(socket):
     """Receive some JSON from a socket"""
     s = get_data(socket, 4)
     if len(s) < 4:
-        raise Error('could not get data from socket (got %d instead of 4)' % len(s))
+        return None
 
     size = (ord(s[0]) << 24) | (ord(s[1]) << 16) | (ord(s[2]) << 8) | ord(s[3])
     s = get_data(socket, size)

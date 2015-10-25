@@ -75,6 +75,8 @@ class Server:
         try:
             while True:
                 json = util.receive_json(conn)
+                if json is None:
+                    break
                 self.handler(json)
         except Exception as e:
             util.warning('Server handler threw "%s"' % e)
