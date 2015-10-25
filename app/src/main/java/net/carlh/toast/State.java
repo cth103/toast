@@ -266,7 +266,7 @@ public class State {
             }
 
             if (json.has("boiler_on")) {
-                setBoilerOn(json.getBoolean("on"));
+                setBoilerOn(json.getBoolean("boiler_on"));
             }
 
             if (json.has("temperatures")) {
