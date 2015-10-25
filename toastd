@@ -410,7 +410,7 @@ def update():
 
     # Work out whether each zone is enabled and what its temperature should be
     # Start with current state
-    heating_enabled = state.heating_enabled()
+    heating_enabled = state.get_heating_enabled()
     zone_enabled = {}
     target = {}
     for z in ZONES:
@@ -419,7 +419,7 @@ def update():
 
     # Apply rules
     for r in state.get_active_rules():
-        util.verbose('Rule makes %s target %f' (r.zone, r.target))
+        util.verbose('Rule makes %s target %f' % (r.zone, r.target))
         heating_enabled = True
         zone_enabled[r.zone] = True
         target[r.zone] = r.target
@@ -437,10 +437,10 @@ def update():
         try:
             if zone_enabled[z]:
                 t = state.get_current_temperature(z)
-                if t > (target(z) + HYSTERESIS):
+                if t > (target[z] + HYSTERESIS):
                     z.set_radiator_on(False)
                     note += '%s off ' % z
-                elif t < (target(z) - HYSTERESIS):
+                elif t < (target[z] - HYSTERESIS):
                     z.set_radiator_on(True)
                     note += '%s on ' % z
             else:
