@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2014 Carl Hetherington <cth@carlh.net>
+    Copyright (C) 2014-2015 Carl Hetherington <cth@carlh.net>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -39,28 +39,47 @@ import com.jjoe64.graphview.LineGraphView;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Map;
 
 /** Fragment to plot graphs of temperature */
 public class GraphFragment extends Fragment {
 
     /** Number of minutes to plot */
-    int minutes = 60;
+    private int minutes = 60;
     /** Number of minutes that we have data for */
-    int dataLength = 0;
+    private int dataLength = 0;
+    /** Zone spinner */
+    private Spinner zone;
     /** Period spinner */
-    Spinner period;
+    private Spinner period;
     /** The graph */
-    GraphView graphView;
+    private GraphView graphView;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_graph, container, false);
 
+        zone = (Spinner) view.findViewById(R.id.graphZone);
+        Map<String, ArrayList<Double> > temps = getState().getTemperatures();
+        ArrayAdapter zoneAdapter = new ArrayAdapter(getActivity(), android.R.layout.simple_spinner_item, temps.keySet().toArray());
+        zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        zone.setAdapter(zoneAdapter);
+        zone.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                update();
+            }
+
+            public void onNothingSelected(AdapterView<?> parentView) {
+
+            }
+        });
+
         period = (Spinner) view.findViewById(R.id.graphPeriod);
         String periods[] = {"Last hour", "Last day", "Last week"};
-        ArrayAdapter adapter = new ArrayAdapter(getActivity(), android.R.layout.simple_spinner_item, periods);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        period.setAdapter(adapter);
+        ArrayAdapter periodAdapter = new ArrayAdapter(getActivity(), android.R.layout.simple_spinner_item, periods);
+        periodAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        period.setAdapter(periodAdapter);
         period.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
@@ -130,11 +149,11 @@ public class GraphFragment extends Fragment {
             return;
         }
 
-        ArrayList<Double> temperatures = state.getTemperatures().get("Sitting room");
+        ArrayList<Double> temperatures = state.getTemperatures().get(zone.getSelectedItem());
         period.setEnabled(true);
         graphView.setVisibility(View.VISIBLE);
         graphView.removeAllSeries();
-                
+
         dataLength = Math.min(temperatures.size(), minutes);
         GraphView.GraphViewData[] data = new GraphView.GraphViewData[dataLength];
         ArrayList<Double> maf = new ArrayList<Double>();
@@ -152,7 +171,7 @@ public class GraphFragment extends Fragment {
             }
             data[i] = new GraphView.GraphViewData(i, v);
         }
-        
+
         graphView.addSeries(new GraphViewSeries(data));
     }
 }

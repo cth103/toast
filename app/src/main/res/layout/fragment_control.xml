@@ -18,17 +18,17 @@
       <TextView
           android:layout_height="fill_parent"
           android:layout_width="0dp"
-	  android:gravity="center_vertical"
+          android:gravity="center_vertical"
           android:textSize="10pt"
           android:paddingLeft="16dp"
-	  android:text="Heating"/>
+	      android:text="Heating"
+          android:layout_span="2"/>
 
       <ToggleButton
           android:layout_height="fill_parent"
           android:layout_width="0dp"
           android:text="On"
           android:id="@+id/enabled"
-          android:layout_span="2"
           android:layout_marginLeft="8pt">
       </ToggleButton>
 
