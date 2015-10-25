@@ -70,8 +70,8 @@ def handler(json):
     elif json['type'] == 'get':
         server.send({'temperature': get_temperature()})
     elif json['type'] == 'set':
-        if 'on' in json and have_gpio:
-            RPi.GPIO.output(RADIATOR, json['on'])
+        if 'radiator_on' in json and have_gpio:
+            RPi.GPIO.output(RADIATOR, json['radiator_on'])
 
 if have_gpio:
     RPi.GPIO.setwarnings(False)
