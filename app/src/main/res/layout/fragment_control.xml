@@ -44,7 +44,7 @@
             android:textSize="10pt"
             android:paddingLeft="16dp"
             android:text="..."
-	    android:layout_span="2" />
+	    android:layout_span="3" />
     </TableRow>
 
     <TableRow>
@@ -56,7 +56,7 @@
             android:textSize="8pt"
             android:paddingLeft="16dp"
             android:text="..."
-	    android:layout_span="2" />
+	    android:layout_span="3" />
     </TableRow>
 
 </TableLayout>
