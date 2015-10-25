@@ -33,7 +33,7 @@ public class Fragment extends android.support.v4.app.Fragment {
         if (activity == null) {
             return null;
         }
-        
+
         return activity.getState();
     }
 
@@ -45,9 +45,4 @@ public class Fragment extends android.support.v4.app.Fragment {
 
         return activity.getConnected();
     }
-
-    protected boolean getHeatingEnabled() {
-        return getState() != null && getState().getHeatingEnabled();
-    }
 }
-                    

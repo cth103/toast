@@ -233,7 +233,17 @@ public class ControlFragment extends Fragment {
             } else {
                 boilerOn.setText("Boiler is off");
                 if (getHeatingEnabled()) {
-                    explanation.setText("Target temperatures reached");
+                    boolean zone_enabled = false;
+                    for (Map.Entry<String, Boolean> i: getState().getZoneEnabled().entrySet()) {
+                        if (i.getValue()) {
+                            zone_enabled = true;
+                        }
+                    }
+                    if (zone_enabled) {
+                        explanation.setText("Target temperatures reached");
+                    } else {
+                        explanation.setText("All rooms switched off");
+                    }
                 } else {
                     explanation.setText("Heating is switched off");
                 }
@@ -248,5 +258,9 @@ public class ControlFragment extends Fragment {
             boilerOn.setText("Not connected");
             explanation.setText("Check that you have a WiFi connection");
         }
+    }
+
+    private boolean getHeatingEnabled() {
+        return getState() != null && getState().getHeatingEnabled();
     }
 };
