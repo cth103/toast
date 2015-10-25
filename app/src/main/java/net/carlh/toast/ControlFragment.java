@@ -171,6 +171,11 @@ public class ControlFragment extends Fragment {
             }
         });
 
+        /* On second and subsequent calls we will have stuff in zones
+           but no UI, so force the UI to be recreated.
+         */
+        zones.clear();
+
         update();
         return view;
     }
