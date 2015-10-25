@@ -103,6 +103,15 @@ server = None
 write_logs = True
 # List of currently-active rules
 current_rules = []
+# Condition variable which when notified will cause
+# an update of our state
+update_condition = threading.Condition()
+
+def request_update():
+    global update_condition
+    update_condition.acquire()
+    update_condition.notify()
+    update_condition.release()
 
 def zone_by_name(name):
     """Return the zone object which has a particular name"""
@@ -228,6 +237,7 @@ class State:
                 changed = True
         if changed:
             server.send(self.as_dict("heating_enabled"))
+            request_update()
 
     def set_zone_enabled(self, zone, enabled):
         changed = False
@@ -237,6 +247,7 @@ class State:
                 changed = True
         if changed:
             server.send(self.as_dict("zone_enabled"))
+            request_update()
 
     def set_target(self, zone, target):
         changed = False
@@ -246,6 +257,7 @@ class State:
                 changed = True
         if changed:
             server.send(self.as_dict("target"))
+            request_update()
 
     def set_boiler_on(self, on):
         changed = False
@@ -445,9 +457,12 @@ def update():
 def check():
     global state
     global stop
+    global update_condition
     while not stop:
         update()
-        time.sleep(CHECK_INTERVAL)
+        update_condition.acquire()
+        update_condition.wait(CHECK_INTERVAL)
+        update_condition.release()
 
 def log():
     global state
