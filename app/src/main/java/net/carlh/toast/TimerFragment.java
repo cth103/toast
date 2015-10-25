@@ -38,6 +38,8 @@ import android.widget.ListView;
 import android.widget.TableLayout;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 /** Fragment to see all `timer' rules, edit them and add new ones */
 public class TimerFragment extends Fragment {
@@ -53,7 +55,7 @@ public class TimerFragment extends Fragment {
     private Rule lastClickRule = null;
 
     public static final int ADD_OR_UPDATE_RULE = 0;
-    
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_timer, container, false);
@@ -70,6 +72,8 @@ public class TimerFragment extends Fragment {
                 Rule rule = (Rule) parent.getItemAtPosition(position);
                 Intent intent = new Intent(getActivity(), RuleActivity.class);
                 intent.putExtra("rule", rule);
+                Set<String> zones = getState().getZoneEnabled().keySet();
+                intent.putExtra("zones", zones.toArray(new String[zones.size()]));
                 getActivity().startActivityForResult(intent, ADD_OR_UPDATE_RULE);
             }
         });
@@ -81,13 +85,19 @@ public class TimerFragment extends Fragment {
                 return false;
             }
         });
-        
+
         addRule = (Button) view.findViewById(R.id.addRule);
         addRule.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Rule rule = new Rule(0, 8, 0, 18, 0);
+                Set<String> zones = getState().getZoneEnabled().keySet();
+                String zone = "";
+                if (!zones.isEmpty()) {
+                    zone = zones.iterator().toString();
+                }
+                Rule rule = new Rule(0, 8, 0, 18, 0, zone, 20);
                 Intent intent = new Intent(getActivity(), RuleActivity.class);
                 intent.putExtra("rule", rule);
+                intent.putExtra("zones", zones.toArray(new String[zones.size()]));
                 getActivity().startActivityForResult(intent, ADD_OR_UPDATE_RULE);
             }
         });
@@ -107,7 +117,7 @@ public class TimerFragment extends Fragment {
 
         addRule.setEnabled(getConnected());
         rulesList.setEnabled(getConnected());
-            
+
         /* State.rules is modified by other threads, so we can't use it in an ArrayAdapter */
         rules.clear();
         if (getState() != null) {
@@ -116,7 +126,7 @@ public class TimerFragment extends Fragment {
                 rules.add(new Rule(r));
             }
         }
-        
+
         adapter.notifyDataSetChanged();
     }
 
@@ -125,12 +135,12 @@ public class TimerFragment extends Fragment {
         if (v.getId() != R.id.rulesList) {
             return;
         }
-        
+
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) menuInfo;
         menu.setHeaderTitle(lastClickRule.toString());
         menu.add(Menu.NONE, 0, 0, "Remove");
     }
-    
+
     @Override
     public boolean onContextItemSelected(MenuItem item) {
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();

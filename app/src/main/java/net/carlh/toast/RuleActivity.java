@@ -25,13 +25,18 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.Spinner;
 import android.widget.TimePicker;
 
+import java.util.Set;
+
 /** Activity to edit a single `rule', i.e. a specification of a time period
- *  on one or more days when the heating should be on.
+ *  on one or more days when a zone should be at a target temperature.
  */
 public class RuleActivity extends Activity {
 
@@ -40,6 +45,34 @@ public class RuleActivity extends Activity {
         setContentView(R.layout.activity_rule);
 
         final Rule rule = (Rule) getIntent().getSerializableExtra("rule");
+        final String[] zones = getIntent().getStringArrayExtra("zones");
+
+        Spinner zone = (Spinner) findViewById(R.id.zone);
+        ArrayAdapter zoneAdapter = new ArrayAdapter(this, android.R.layout.simple_spinner_item, zones);
+        zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        zone.setAdapter(zoneAdapter);
+        zone.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                rule.setZone(parentView.getItemAtPosition(position).toString());
+            }
+
+            public void onNothingSelected(AdapterView<?> parentView) {}
+        });
+
+        Spinner target = (Spinner) findViewById(R.id.target);
+        String[] targets = { "16", "17", "18", "19", "20", "21", "22", "23", "24", "25" };
+        ArrayAdapter targetAdapter = new ArrayAdapter(this, android.R.layout.simple_spinner_item, targets);
+        targetAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        target.setAdapter(targetAdapter);
+        target.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                rule.setTarget(Integer.parseInt(parentView.getItemAtPosition(position).toString()));
+            }
+
+            public void onNothingSelected(AdapterView<?> parentView) {}
+        });
 
         for (int i = 0; i < 7; i++) {
             int id = getResources().getIdentifier("day" + Integer.toString(i), "id", getPackageName());
@@ -112,4 +145,3 @@ public class RuleActivity extends Activity {
         });
     }
 }
-

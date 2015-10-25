@@ -30,7 +30,7 @@
     </TableRow>
 
     <TableRow android:paddingTop="10pt">
-        <Button android:text="Add time"
+        <Button android:text="Add target"
             android:layout_width="0dp"
             android:id="@+id/addRule"/>
     </TableRow>

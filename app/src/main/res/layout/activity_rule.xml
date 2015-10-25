@@ -10,6 +10,24 @@
     android:stretchColumns="*"
     tools:context=".RuleActivity">
 
+    <TableRow android:gravity="center_vertical">
+        <TextView android:text="Room" android:id="@+id/zoneLabel"/>
+        <Spinner
+            android:id="@+id/zone"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="left"/>
+    </TableRow>
+
+    <TableRow android:gravity="center_vertical">
+        <TextView android:text="Temperature" android:id="@+id/targetLabel"/>
+        <Spinner
+            android:id="@+id/target"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="left"/>
+    </TableRow>
+
     <TableRow>
         <CheckBox android:id="@+id/day0" android:text="Monday"/>
         <CheckBox android:id="@+id/day4" android:text="Friday"/>
@@ -26,17 +44,16 @@
         <CheckBox android:id="@+id/day3" android:text="Thursday"/>
     </TableRow>
 
-    <TableRow android:paddingTop="6pt">
-        <TextView android:text="On" android:id="@+id/onLabel" android:textSize="10pt"/>
+    <TableRow>
+        <TextView android:text="From" android:id="@+id/onLabel"/>
         <Button android:id="@+id/on"/>
     </TableRow>
     <TableRow>
-        <TextView android:text="Off" android:id="@+id/offLabel" android:textSize="10pt"/>
+        <TextView android:text="Until" android:id="@+id/offLabel"/>
         <Button android:id="@+id/off"/>
     </TableRow>
 
-    <TableRow
-	android:paddingTop="10pt">
+    <TableRow>
       <Button android:id="@+id/cancel" android:text="Cancel"/>
       <Button android:id="@+id/ok" android:text="OK"/>
     </TableRow>

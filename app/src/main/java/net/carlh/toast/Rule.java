@@ -37,13 +37,17 @@ public class Rule implements Serializable {
     private int onMinute;
     private int offHour;
     private int offMinute;
+    private String zone;
+    private double target;
 
-    public Rule(int days, int onHour, int onMinute, int offHour, int offMinute) {
+    public Rule(int days, int onHour, int onMinute, int offHour, int offMinute, String zone, double target) {
         this.days = days;
         this.onHour = onHour;
         this.onMinute = onMinute;
         this.offHour = offHour;
         this.offMinute = offMinute;
+        this.zone = zone;
+        this.target = target;
     }
 
     public Rule(JSONObject json) {
@@ -54,6 +58,8 @@ public class Rule implements Serializable {
             onMinute = json.getInt("on_minute");
             offHour = json.getInt("off_hour");
             offMinute = json.getInt("off_minute");
+            zone = json.getString("zone");
+            target = json.getDouble("target");
         } catch (JSONException e) {
             Log.e("Toast", "Exception", e);
         }
@@ -70,6 +76,8 @@ public class Rule implements Serializable {
         onMinute = r.onMinute;
         offHour = r.offHour;
         offMinute = r.offMinute;
+        zone = r.zone;
+        target = r.target;
     }
 
     JSONObject asJSON() {
@@ -83,6 +91,8 @@ public class Rule implements Serializable {
             json.put("on_minute", onMinute);
             json.put("off_hour", offHour);
             json.put("off_minute", offMinute);
+            json.put("zone", zone);
+            json.put("target", target);
         } catch (JSONException e) {
             Log.e("Toast", "Exception", e);
         }
@@ -156,6 +166,8 @@ public class Rule implements Serializable {
         /* Time */
         s += " " + twelveHour(onHour, onMinute) + "-" + twelveHour(offHour, offMinute);
 
+        s += " " + zone + " to " + target + "°C";
+
         return s;
     }
 
@@ -191,6 +203,14 @@ public class Rule implements Serializable {
         return twelveHour(offHour, offMinute);
     }
 
+    String getZone() {
+        return zone;
+    }
+
+    double getTarget() {
+        return target;
+    }
+
     void setOnTime(int h, int m) {
         onHour = h;
         onMinute = m;
@@ -207,5 +227,13 @@ public class Rule implements Serializable {
         } else {
             days &= ~(1 << day);
         }
+    }
+
+    void setZone(String z) {
+        zone = z;
+    }
+
+    void setTarget(double t) {
+        target = t;
     }
 };
