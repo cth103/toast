@@ -58,7 +58,7 @@ public class MainActivity extends FragmentActivity {
     public State getState() {
         return state;
     }
-    
+
     private MenuItem menuTimer;
     private ViewPager pager;
     private Adapter adapter;
@@ -94,7 +94,7 @@ public class MainActivity extends FragmentActivity {
                     state.addAsJSON(json, property);
                     client.send(json);
                 }
-                
+
                 /* Update the whole UI */
                 update();
             }
@@ -112,7 +112,7 @@ public class MainActivity extends FragmentActivity {
         client.stop();
         client = null;
     }
-    
+
     /* Must be called from UI thread */
     private void startClient() {
         if (client != null) {
@@ -151,9 +151,6 @@ public class MainActivity extends FragmentActivity {
                             } catch (JSONException e) {
                             }
                         }
-
-                        /* Update UI */
-                        update();
                     }
                 }
             });
@@ -188,7 +185,7 @@ public class MainActivity extends FragmentActivity {
             return null;
         }
     }
-        
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);

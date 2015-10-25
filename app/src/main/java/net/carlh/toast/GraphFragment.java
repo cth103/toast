@@ -130,7 +130,7 @@ public class GraphFragment extends Fragment {
             return;
         }
 
-        ArrayList<Double> temperatures = state.getTemperatures();
+        ArrayList<Double> temperatures = state.getTemperatures().get("Sitting room");
         period.setEnabled(true);
         graphView.setVisibility(View.VISIBLE);
         graphView.removeAllSeries();

@@ -94,7 +94,7 @@ public class Client {
                         /* This is probably because the socket has been closed in order to make
                            this thread terminate.
                         */
-                        Log.e("Toast", "SocketException in client.getData");
+                        Log.e("Toast", "SocketException in client.getData", e);
                         break;
                     } catch (IOException e) {
                         Log.e("Toast", "IOException in Client.getData()", e);

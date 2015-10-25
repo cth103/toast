@@ -19,6 +19,8 @@
 
 import threading
 import socket
+import traceback
+import sys
 
 import util
 
@@ -74,7 +76,9 @@ class Server:
             while True:
                 json = util.receive_json(conn)
                 self.handler(json)
-        except:
+        except Exception as e:
+            util.warning('Server handler threw "%s"' % e)
+            traceback.print_exc(file=sys.stdout)
             pass
 
         with self.mutex:

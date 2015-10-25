@@ -46,8 +46,8 @@ public class Fragment extends android.support.v4.app.Fragment {
         return activity.getConnected();
     }
 
-    protected boolean getEnabled() {
-        return getState() != null && getState().getEnabled();
+    protected boolean getHeatingEnabled() {
+        return getState() != null && getState().getHeatingEnabled();
     }
 }
                     

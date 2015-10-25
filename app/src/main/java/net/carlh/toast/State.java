@@ -30,26 +30,36 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 public class State {
 
-    public static final int TARGET = 0;
-    public static final int ON = 1;
-    public static final int ENABLED = 2;
-    public static final int RULES = 3;
+    /** Whether or not heating is `enabled' (i.e. switched on) */
+    public static final int HEATING_ENABLED = 0;
+    /** Whether or not each zone is enabled */
+    public static final int ZONE_ENABLED = 1;
+    /** Target for each zone */
+    public static final int TARGET = 2;
+    /** Whether or not the boiler is on */
+    public static final int BOILER_ON = 3;
+    /** Temperatures (current and historic) in each zone */
     public static final int TEMPERATURES = 4;
+    /** Rules (programmed targets at particular times) */
+    public static final int RULES = 5;
 
     /** Our context */
     private Context context;
     /** Handlers that will be notified when there is a change in state */
     private ArrayList<Handler> handlers;
 
-    private double target = 0;
-    private boolean on = false;
-    private boolean enabled = false;
+    private boolean heatingEnabled = false;
+    private HashMap<String, Boolean> zoneEnabled = new HashMap<String, Boolean>();
+    private HashMap<String, Double> target = new HashMap<String, Double>();
+    private boolean boilerOn = false;
+    private HashMap<String, ArrayList<Double> > temperatures = new HashMap<String, ArrayList<Double> >();
     private ArrayList<Rule> rules = new ArrayList<Rule>();
-    private ArrayList<Double> temperatures = new ArrayList<Double>();
 
     public State(Context context) {
         this.context = context;
@@ -72,52 +82,85 @@ public class State {
 
     /* Get */
 
-    public synchronized double getTarget() {
+    public synchronized boolean getHeatingEnabled() {
+        return heatingEnabled;
+    }
+
+    public synchronized HashMap<String, Boolean> getZoneEnabled() {
+        return zoneEnabled;
+    }
+
+    public synchronized HashMap<String, Double> getTarget() {
         return target;
     }
 
-    public synchronized boolean getOn() {
-        return on;
+    public synchronized boolean getBoilerOn() {
+        return boilerOn;
     }
 
-    public synchronized boolean getEnabled() {
-        return enabled;
+    public synchronized HashMap<String, ArrayList<Double> > getTemperatures() {
+        return temperatures;
     }
 
     public synchronized ArrayList<Rule> getRules() {
         return rules;
     }
 
-    public synchronized ArrayList<Double> getTemperatures() {
-        return temperatures;
-    }
-
     public synchronized void addAsJSON(JSONObject json, int id) {
         try {
             switch (id) {
-                case TARGET:
-                    json.put("target", target);
+                case HEATING_ENABLED:
+                    json.put("heating_enabled", heatingEnabled);
                     break;
-                case ON:
-                    json.put("on", on);
+                case ZONE_ENABLED: {
+                    JSONArray a = new JSONArray();
+                    for (Map.Entry<String, Boolean> i : zoneEnabled.entrySet()) {
+                        JSONObject o = new JSONObject();
+                        o.put("zone", i.getKey());
+                        o.put("zone_enabled", i.getValue());
+                        a.put(o);
+                    }
+                    json.put("zone_enabled", a);
                     break;
-                case ENABLED:
-                    json.put("enabled", enabled);
+                }
+                case TARGET: {
+                    JSONArray a = new JSONArray();
+                    for (Map.Entry<String, Double> i : target.entrySet()) {
+                        JSONObject o = new JSONObject();
+                        o.put("zone", i.getKey());
+                        o.put("target", i.getValue());
+                        a.put(o);
+                    }
+                    json.put("target", a);
                     break;
-                case RULES:
+                }
+                case BOILER_ON:
+                    json.put("boiler_on", boilerOn);
+                    break;
+                case TEMPERATURES:
+                {
+                    JSONArray a = new JSONArray();
+                    for (Map.Entry<String, ArrayList<Double>> i : temperatures.entrySet()) {
+                        JSONObject o = new JSONObject();
+                        o.put("zone", i.getKey());
+                        JSONArray t = new JSONArray();
+                        for (Double j : i.getValue()) {
+                            t.put(j);
+                        }
+                        o.put("temperatures", t);
+                        a.put(o);
+                    }
+                    json.put("temperatures", a);
+                    break;
+                }
+                case RULES: {
                     JSONArray a = new JSONArray();
                     for (Rule r : rules) {
                         a.put(r.asJSON());
                     }
                     json.put("rules", a);
                     break;
-                case TEMPERATURES:
-                    a = new JSONArray();
-                    for (Double t : temperatures) {
-                        a.put(t);
-                    }
-                    json.put("temperatures", a);
-                    break;
+                }
             }
         } catch (JSONException e) {
         }
@@ -126,37 +169,47 @@ public class State {
 
     /* Set */
 
-    public synchronized void colder() {
-        target -= 0.5;
-        changed(TARGET);
+    public synchronized void setHeatingEnabled(boolean e) {
+        if (heatingEnabled != e) {
+            heatingEnabled = e;
+            changed(HEATING_ENABLED);
+        }
     }
 
-    public synchronized void warmer() {
-        target += 0.5;
-        changed(TARGET);
+    public synchronized void setZoneEnabled(String zone, boolean e) {
+        zoneEnabled.put(zone, e);
+        changed(ZONE_ENABLED);
     }
 
-    public synchronized void setTarget(double t) {
-        if (Math.abs(target - t) > 1e-6) {
-            target = t;
+    public synchronized void setTarget(String zone, double t) {
+        if (!target.containsKey(zone) || Math.abs(target.get(zone) - t) > 1e-6) {
+            target.put(zone, t);
             changed(TARGET);
         }
     }
 
-    public synchronized void setOn(boolean o) {
-        if (on != o) {
-            on = o;
-            changed(ON);
+    public synchronized void colder(String zone) {
+        target.put(zone, target.get(zone) - 0.5);
+        changed(TARGET);
+    }
+
+    public synchronized void warmer(String zone) {
+        target.put(zone, target.get(zone) + 0.5);
+        changed(TARGET);
+    }
+
+    public synchronized void setBoilerOn(boolean o) {
+        if (boilerOn != o) {
+            boilerOn = o;
+            changed(BOILER_ON);
         }
     }
 
-    public synchronized void setEnabled(boolean e) {
-        if (enabled != e) {
-            enabled = e;
-            changed(ENABLED);
-        }
+    public synchronized void setTemperatures(String zone, ArrayList<Double> t) {
+        temperatures.put(zone, t);
+        changed(TEMPERATURES);
     }
-    
+
     public synchronized void addOrReplace(Rule rule) {
         boolean done = false;
         for (Rule r : rules) {
@@ -191,25 +244,43 @@ public class State {
         }
     }
 
-    public synchronized void setTemperatures(ArrayList<Double> t) {
-        temperatures = t;
-        changed(TEMPERATURES);
-    }
-
     public synchronized void setFromJSON(JSONObject json) {
         try {
+            if (json.has("heating_enabled")) {
+                setHeatingEnabled(json.getBoolean("heating_enabled"));
+            }
+
+            if (json.has("zone_enabled")) {
+                JSONArray zones = json.getJSONArray("zone_enabled");
+                for (int i = 0; i < zones.length(); i++) {
+                    JSONObject o = zones.getJSONObject(i);
+                    setZoneEnabled(o.getString("zone"), o.getBoolean("zone_enabled"));
+                }
+            }
+
             if (json.has("target")) {
-                setTarget(json.getDouble("target"));
+                JSONArray j = json.getJSONArray("target");
+                for (int i = 0; i < j.length(); i++) {
+                    setTarget(j.getJSONObject(i).getString("zone"), j.getJSONObject(i).getDouble("target"));
+                }
             }
-            
-            if (json.has("on")) {
-                setOn(json.getBoolean("on"));
+
+            if (json.has("boiler_on")) {
+                setBoilerOn(json.getBoolean("on"));
             }
-            
-            if (json.has("enabled")) {
-                setEnabled(json.getBoolean("enabled"));
+
+            if (json.has("temperatures")) {
+                JSONArray zones = json.getJSONArray("temperatures");
+                for (int i = 0; i < zones.length(); i++) {
+                    ArrayList<Double> t = new ArrayList<Double>();
+                    JSONArray k = zones.getJSONObject(i).getJSONArray("temperatures");
+                    for (int j = 0; j < k.length(); j++) {
+                        t.add(k.getDouble(j));
+                    }
+                    setTemperatures(zones.getJSONObject(i).getString("zone"), t);
+                }
             }
-            
+
             if (json.has("rules")) {
                 ArrayList<Rule> r = new ArrayList<Rule>();
                 JSONArray j = json.getJSONArray("rules");
@@ -218,15 +289,7 @@ public class State {
                 }
                 setRules(r);
             }
-            
-            if (json.has("temperatures")) {
-                ArrayList<Double> t = new ArrayList<Double>();
-                JSONArray j = json.getJSONArray("temperatures");
-                for (int i = 0; i < j.length(); i++) {
-                    t.add(j.getDouble(i));
-                }
-                setTemperatures(t);
-            }
+
         } catch (JSONException e) {
         }
     }

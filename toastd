@@ -38,8 +38,8 @@ import traceback
 import json_server
 import util
 
-# GPIO pin of heating relay
-HEATING = 2
+# GPIO pin of boiler relay
+BOILER_GPIO = 2
 # Hysteresis in degrees
 HYSTERESIS = 0.2
 # Interval in seconds to check state and update hardware
@@ -54,11 +54,16 @@ AUTO_OFF_END = 6
 AUTO_OFF_INTERVAL = 30
 
 class Zone:
+    """
+    Representation of a heating zone.  Used to keep track of the zones
+    in the system (their names and ip addresses etc.) and to communicate
+    with the zone servers.
+    """
     def __init__(self, name, ip, port=9142):
         self.name = name
         self.ip = ip
         self.port = port
-        self.on = False
+        self.radiator_on = False
 
     def __str__(self):
         return self.name
@@ -72,13 +77,15 @@ class Zone:
     def __hash__(self):
         return hash(self.name)
 
-    def set_on(self, on):
+    def set_radiator_on(self, on):
+        """Tell the zone to turn its radiator on"""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.ip, self.port))
-        util.send_json(s, {'type': 'set', 'on': on})
-        self.on = on
+        util.send_json(s, {'type': 'set', 'radiator_on': on})
+        self.radiator_on = on
 
     def get_temperature(self):
+        """Ask the zone what its current temperature is"""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.ip, self.port))
         util.send_json(s, {'type': 'get'})
@@ -94,18 +101,19 @@ stop = False
 server = None
 # True to write logs, false if not
 write_logs = True
-current_rule = None
+# List of currently-active rules
+current_rules = []
 
 def zone_by_name(name):
+    """Return the zone object which has a particular name"""
     for z in ZONES:
         if z.name == name:
             return z
 
     return None
 
-# Rule to specify a target to aim for during a particular time range
 class Rule:
-
+    """Specification of a target to aim for in a particular zone during a particular time range"""
     MONDAY = 1 << 0
     TUESDAY = 1 << 1
     WEDNESDAY = 1 << 2
@@ -152,6 +160,10 @@ class Rule:
                 "zone": str(self.zone)}
 
     def active(self, time=None):
+        """
+        Return true if this rule is active at the given time (the current
+        time is used if time=None).
+        """
         if time is None:
             time = datetime.datetime.now()
         if (self.days & (1 << time.weekday())) == 0:
@@ -186,24 +198,45 @@ class State:
     def __init__(self):
         global args
 
-        # Whether the boiler is on
-        self.on = False
         # Whether the whole thing is enabled (i.e. checking temperatures and maybe heating)
-        self.enabled = False
-        self.rules = []
-        # Temperatures in each zone
-        self.temperatures = {}
+        self.heating_enabled = False
+        # Whether each zone is enabled
+        self.zone_enabled = {}
         # Target for each zone
         self.target = {}
+        # Whether the boiler is on
+        self.boiler_on = False
+        # Temperatures in each zone
+        self.temperatures = {}
+        self.rules = []
 
         for z in ZONES:
-            self.temperatures[z] = []
+            self.zone_enabled[z] = False
             self.target[z] = 21
+            self.temperatures[z] = []
 
         self.mutex = threading.Lock()
 
 
     # Set methods for use by the server
+
+    def set_heating_enabled(self, enabled):
+        changed = False
+        with self.mutex:
+            if enabled != self.heating_enabled:
+                self.heating_enabled = enabled
+                changed = True
+        if changed:
+            server.send(self.as_dict("heating_enabled"))
+
+    def set_zone_enabled(self, zone, enabled):
+        changed = False
+        with self.mutex:
+            if self.zone_enabled[zone] != enabled:
+                self.zone_enabled[zone] = enabled
+                changed = True
+        if changed:
+            server.send(self.as_dict("zone_enabled"))
 
     def set_target(self, zone, target):
         changed = False
@@ -214,25 +247,16 @@ class State:
         if changed:
             server.send(self.as_dict("target"))
 
-    def set_on(self, on):
+    def set_boiler_on(self, on):
         changed = False
         with self.mutex:
-            if on != self.on:
-                self.on = on
+            if on != self.boiler_on:
+                self.boiler_on = on
                 if have_gpio:
-                    RPi.GPIO.output(HEATING, self.on)
+                    RPi.GPIO.output(BOILER_GPIO, self.boiler_on)
                 changed = True
         if changed:
-            server.send(self.as_dict("on"))
-
-    def set_enabled(self, enabled):
-        changed = False
-        with self.mutex:
-            if enabled != self.enabled:
-                self.enabled = enabled
-                changed = True
-        if changed:
-            server.send(self.as_dict("enabled"))
+            server.send(self.as_dict("boiler_on"))
 
     def set_temperatures(self, zone, temperatures):
         with self.mutex:
@@ -256,7 +280,24 @@ class State:
         if changed:
             server.send(self.as_dict("rules"))
 
+
     # Get methods for use by the server
+
+    def get_heating_enabled(self):
+        with self.mutex:
+            return self.heating_enabled
+
+    def get_zone_enabled(self, zone):
+        with self.mutex:
+            return self.zone_enabled[zone]
+
+    def get_target(self, zone):
+        with self.mutex:
+            return self.target[zone]
+
+    def get_boiler_on(self):
+        with self.mutex:
+            return self.boiler_on
 
     def get_current_temperature(self, zone):
         t = 0.0
@@ -265,38 +306,39 @@ class State:
                 t = self.temperatures[zone][-1]
         return t
 
-    def get_target(self, zone):
+    def get_active_rules(self):
         with self.mutex:
-            return self.target[zone]
+            return [r for r in self.rules if r.active()]
 
-    def get_active_rule(self):
-        with self.mutex:
-            active_rules = [r for r in self.rules if r.active()]
-            # XXX: multiple active rules?
-            if len(active_rules) > 0:
-                return active_rules[0]
-
-            return None
-
-    def get_enabled(self):
-        with self.mutex:
-            return self.enabled
-
-    def get_on(self):
-        with self.mutex:
-            return self.on
 
     # Misc
 
     def as_dict(self, key=None):
+        """
+        Return some or all state as dict; all state is returned
+        if key is None.
+        """
+        zone_enabled = []
+        for k, v in self.zone_enabled.iteritems():
+            zone_enabled.append({"zone": k.name, "zone_enabled": v})
+
+        target = []
+        for k, v in self.target.iteritems():
+            target.append({"zone": k.name, "target": v})
+
+        temperatures = []
+        for k, v in self.temperatures.iteritems():
+            temperatures.append({"zone": k.name, "temperatures": v})
+
         rules = []
         for r in self.rules:
             rules.append(r.as_dict())
 
-        all = {"temperatures": self.temperatures,
-               "target": self.target,
-               "on": self.on,
-               "enabled": self.enabled,
+        all = {"heating_enabled": self.heating_enabled,
+               "zone_enabled": zone_enabled,
+               "target": target,
+               "boiler_on": self.boiler_on,
+               "temperatures": temperatures,
                "rules": rules}
 
         if key is not None:
@@ -307,16 +349,20 @@ class State:
         return out
 
     def set_from_dict(self, c):
+        """Set up this object from a dict"""
+        if 'heating_enabled' in c:
+            self.set_heating_enabled(c['heating_enabled'])
+        if 'zone_enabled' in c:
+            for z in c['zone_enabled']:
+                self.set_zone_enabled(zone_by_name(z['zone']), z['zone_enabled'])
         if 'target' in c:
-            for z in ZONES:
-                self.set_target(z, c['target'][z.name])
-        if 'on' in c:
-            self.set_on(c['on'])
-        if 'enabled' in c:
-            self.set_enabled(c['enabled'])
+            for z in c['target']:
+                self.set_target(zone_by_name(z['zone']), z['target'])
+        if 'boiler_on' in c:
+            self.set_boiler_on(c['boiler_on'])
         if 'temperatures' in c:
-            for z in ZONES:
-                self.set_temperatures(z, c['temperatures'][z.name])
+            for z in c['temperatures']:
+                self.set_temperatures(zone_by_name(z['zone']), z['temperatures'])
         if 'rules' in c:
             rules = []
             for dr in c['rules']:
@@ -348,19 +394,21 @@ def setup():
 
 def update():
     global state
-    global current_rule
+    global current_rules
 
     # Apply rules first
-    active_rule = state.get_active_rule()
-    if active_rule != current_rule:
-        state.set_target(active_rule.zone, active_rule.target)
-        state.set_enabled(active_rule is not None)
-        current_rule = active_rule
+    # XXX: needs fixing
+    active_rules = state.get_active_rules()
+    if active_rules != current_rules:
+        if len(active_rules) > 0:
+            state.set_target(active_rules[0].zone, active_rules[0].target)
+            state.set_heating_enabled(True)
+        current_rules = active_rules
 
     # Apply auto-off
     time = datetime.datetime.now()
     if time.hour >= AUTO_OFF_START and time.hour <= AUTO_OFF_END and (time.minute % AUTO_OFF_INTERVAL) == 0 and state.enabled:
-        state.set_enabled(False)
+        state.set_heating_enabled(False)
         util.verbose('Turned off automatically at %d:%02d' % (time.hour, time.minute))
 
     note = ''
@@ -368,25 +416,30 @@ def update():
     # Zone radiators on or off
     for z in ZONES:
         try:
-            t = state.get_current_temperature(z)
-            if t > (state.get_target(z) + HYSTERESIS):
-                z.set_on(False)
-                note += '%s off ' % z
-            elif t < (state.get_target(z) - HYSTERESIS):
-                z.set_on(True)
-                note += '%s on ' % z
+            if state.get_zone_enabled(z):
+                t = state.get_current_temperature(z)
+                if t > (state.get_target(z) + HYSTERESIS):
+                    z.set_radiator_on(False)
+                    note += '%s off ' % z
+                elif t < (state.get_target(z) - HYSTERESIS):
+                    z.set_radiator_on(True)
+                    heat_required = True
+                    note += '%s on ' % z
+            else:
+                print '%s off => rad off' % z
+                z.set_radiator_on(False)
         except (socket.error, util.Error) as e:
             util.warning('could not instruct zone %s (%s)' % (z, e))
+            pass
 
-    # Now check zone radiator state and decide whether we need heat
     heat_required = False
     for z in ZONES:
-        if z.on:
+        if z.radiator_on:
             heat_required = True
 
     # Then turn the boiler on or off
-    state.set_on(heat_required and state.get_enabled())
-    note += 'and boiler %d (heat_required %d)' % (heat_required and state.get_enabled(), heat_required)
+    state.set_boiler_on(heat_required and state.get_heating_enabled())
+    note += 'and boiler %d' % (heat_required and state.get_heating_enabled())
     util.verbose(note)
 
 def check():
@@ -410,12 +463,13 @@ def log():
 
                 if write_logs:
                     f = open(log_file, 'a')
-                    print>>f,'%s %f %f %d %d' % (time.strftime("%H:%M:%S"), temp, state.get_target(z), state.get_on(), state.get_enabled())
+                    print>>f,'%s %f %f %d %d' % (time.strftime("%H:%M:%S"), temp, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
                     f.close()
 
                 state.add_temperature(z, temp)
             except Exception as e:
-                util.warning('could not get temperature from %s' % z)
+                traceback.print_exc(file=sys.stdout)
+                util.warning('could not get temperature from %s (%s)' % (z, e))
 
         time.sleep(args.log_interval)
 
