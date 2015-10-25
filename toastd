@@ -380,7 +380,7 @@ def setup():
     if have_gpio:
         RPi.GPIO.setwarnings(False)
         RPi.GPIO.setmode(RPi.GPIO.BCM)
-        RPi.GPIO.setup(HEATING, RPi.GPIO.OUT)
+        RPi.GPIO.setup(BOILER_GPIO, RPi.GPIO.OUT)
     else:
         util.warning('GPIO library not found; running without GPIO')
 
