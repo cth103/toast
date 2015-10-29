@@ -150,6 +150,10 @@ public class GraphFragment extends Fragment {
         }
 
         ArrayList<Double> temperatures = state.getTemperatures().get(zone.getSelectedItem());
+        if (temperatures == null) {
+            return;
+        }
+        
         period.setEnabled(true);
         graphView.setVisibility(View.VISIBLE);
         graphView.removeAllSeries();
