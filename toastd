@@ -464,7 +464,10 @@ def check():
     global stop
     global update_condition
     while not stop:
-        update()
+        try:
+            update()
+        except Exception as e:
+            util.warning('%s' % e)
         update_condition.acquire()
         update_condition.wait(CHECK_INTERVAL)
         update_condition.release()
