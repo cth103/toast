@@ -408,6 +408,12 @@ def update():
     global state
     global current_rules
 
+    # Apply auto-off
+    time = datetime.datetime.now()
+    if time.hour >= AUTO_OFF_START and time.hour <= AUTO_OFF_END and (time.minute % AUTO_OFF_INTERVAL) == 0 and state.get_heating_enabled():
+        state.set_heating_enabled(False)
+        util.verbose('Turned off automatically at %d:%02d' % (time.hour, time.minute))
+
     # Work out whether each zone is enabled and what its temperature should be
     # Start with current state
     heating_enabled = state.get_heating_enabled()
@@ -423,12 +429,6 @@ def update():
         heating_enabled = True
         zone_enabled[r.zone] = True
         target[r.zone] = r.target
-
-    # Apply auto-off
-    time = datetime.datetime.now()
-    if time.hour >= AUTO_OFF_START and time.hour <= AUTO_OFF_END and (time.minute % AUTO_OFF_INTERVAL) == 0 and state.enabled:
-        state.set_heating_enabled(False)
-        util.verbose('Turned off automatically at %d:%02d' % (time.hour, time.minute))
 
     note = ''
 
