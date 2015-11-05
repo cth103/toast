@@ -221,7 +221,7 @@ class State:
 
         for z in ZONES:
             self.zone_enabled[z] = False
-            self.target[z] = 21
+            self.target[z] = 19
             self.temperatures[z] = []
 
         self.mutex = threading.Lock()
