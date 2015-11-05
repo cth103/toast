@@ -232,18 +232,21 @@ public class ControlFragment extends Fragment {
                 }
             }
 
+            boolean zone_enabled = false;
+            for (Map.Entry<String, Boolean> i: getState().getZoneEnabled().entrySet()) {
+                if (i.getValue()) {
+                    zone_enabled = true;
+                }
+            }
+
             if (state.getBoilerOn()) {
                 boilerOn.setText("Boiler is on");
-                explanation.setText("");
+                if (!zone_enabled || !getHeatingEnabled()) {
+                    explanation.setText("Heating to programmed target");
+                }
             } else {
                 boilerOn.setText("Boiler is off");
                 if (getHeatingEnabled()) {
-                    boolean zone_enabled = false;
-                    for (Map.Entry<String, Boolean> i: getState().getZoneEnabled().entrySet()) {
-                        if (i.getValue()) {
-                            zone_enabled = true;
-                        }
-                    }
                     if (zone_enabled) {
                         explanation.setText("Target temperatures reached");
                     } else {
