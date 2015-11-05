@@ -59,6 +59,11 @@ public class RuleActivity extends Activity {
 
             public void onNothingSelected(AdapterView<?> parentView) {}
         });
+        for (int i = 0; i < zones.length; ++i) {
+            if (zones[i].equals(rule.getZone())) {
+                zone.setSelection(i);
+            }
+        }
 
         Spinner target = (Spinner) findViewById(R.id.target);
         String[] targets = { "16", "17", "18", "19", "20", "21", "22", "23", "24", "25" };
@@ -73,6 +78,7 @@ public class RuleActivity extends Activity {
 
             public void onNothingSelected(AdapterView<?> parentView) {}
         });
+        target.setSelection((int) (rule.getTarget() - 16));
 
         for (int i = 0; i < 7; i++) {
             int id = getResources().getIdentifier("day" + Integer.toString(i), "id", getPackageName());
