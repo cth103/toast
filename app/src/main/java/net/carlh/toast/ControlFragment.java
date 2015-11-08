@@ -243,6 +243,8 @@ public class ControlFragment extends Fragment {
                 boilerOn.setText("Boiler is on");
                 if (!zone_enabled || !getHeatingEnabled()) {
                     explanation.setText("Heating to programmed target");
+                } else {
+                    explanation.setText("");
                 }
             } else {
                 boilerOn.setText("Boiler is off");
