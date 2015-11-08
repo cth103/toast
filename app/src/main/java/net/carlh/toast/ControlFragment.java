@@ -20,7 +20,11 @@
 package net.carlh.toast;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Typeface;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -265,8 +269,18 @@ public class ControlFragment extends Fragment {
                 z.clearTarget();
             }
             heatingEnabled.setText("");
-            boilerOn.setText("Not connected");
-            explanation.setText("Check that you have a WiFi connection");
+
+            boolean wifiConnected = false;
+            if (getActivity() != null) {
+                ConnectivityManager cm = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+                if (!cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI).isConnected()) {
+                    WifiManager wm = (WifiManager) getActivity().getSystemService(Context.WIFI_SERVICE);
+                    wm.setWifiEnabled(true);
+                }
+            }
+
+            boilerOn.setText("Connecting...");
+            explanation.setText("");
         }
     }
 

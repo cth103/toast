@@ -46,9 +46,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Client {
     /** True if all threads should stop */
-    AtomicBoolean stop = new AtomicBoolean(false);
+    private AtomicBoolean stop = new AtomicBoolean(false);
     /** True if we're fairly sure we're connected */
-    AtomicBoolean connected = new AtomicBoolean(false);
+    private AtomicBoolean connected = new AtomicBoolean(false);
     /** Mutex to protect changes to the value of socket */
     private final Object mutex = new Object();
     /** Socket that we are talking to the server with */
@@ -64,11 +64,11 @@ public class Client {
     private ArrayList<String> toWrite = new ArrayList<String>();
     /** Thread to ping the server */
     private Thread pingThread;
-    AtomicBoolean ping = new AtomicBoolean(false);
+    private AtomicBoolean ping = new AtomicBoolean(false);
     /** True if we have received a pong reply to our last ping */
-    AtomicBoolean pong = new AtomicBoolean(false);
+    private AtomicBoolean pong = new AtomicBoolean(false);
     /** Handlers that will be told about incoming commands */
-    ArrayList<Handler> handlers = new ArrayList<Handler>();
+    private ArrayList<Handler> handlers = new ArrayList<Handler>();
 
     /** Ping interval in ms (must be less than timeout) */
     private int pingInterval = 4000;
@@ -131,7 +131,7 @@ public class Client {
                             }
 
                             byte[] d = getData(socket, length);
-                            
+
                             if (d.length != length) {
                                 break;
                             }
@@ -329,4 +329,3 @@ public class Client {
         return connected.get();
     }
 }
-
