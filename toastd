@@ -52,6 +52,8 @@ AUTO_OFF_START = 0
 AUTO_OFF_END = 6
 # Auto-off check interval (minutes)
 AUTO_OFF_INTERVAL = 30
+# Default target temperature
+DEFAULT_TARGET = 19
 
 class Zone:
     """
@@ -221,7 +223,7 @@ class State:
 
         for z in ZONES:
             self.zone_enabled[z] = False
-            self.target[z] = 19
+            self.target[z] = DEFAULT_TARGET
             self.temperatures[z] = []
 
         self.mutex = threading.Lock()
@@ -415,9 +417,15 @@ def update():
         util.verbose('Turned off automatically at %d:%02d' % (time.hour, time.minute))
 
     # Work out whether each zone is enabled and what its temperature should be
+
     heating_enabled = False
     zone_enabled = {}
     target = {}
+
+    for z in ZONES:
+        zone_enabled[z] = False
+        target[z] = DEFAULT_TARGET
+
     rules = state.get_active_rules()
     if len(rules) > 0:
         # If there are active rules they dictate everything
@@ -470,7 +478,7 @@ def check():
         try:
             update()
         except Exception as e:
-            util.warning('%s' % e)
+            traceback.print_exc()
         update_condition.acquire()
         update_condition.wait(CHECK_INTERVAL)
         update_condition.release()
