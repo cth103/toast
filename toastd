@@ -238,7 +238,7 @@ class State:
                 self.heating_enabled = enabled
                 changed = True
         if changed:
-            server.send(self.as_dict("heating_enabled"))
+            server.send(self.as_dict(["heating_enabled"]))
             request_update()
 
     def set_zone_enabled(self, zone, enabled):
@@ -248,7 +248,7 @@ class State:
                 self.zone_enabled[zone] = enabled
                 changed = True
         if changed:
-            server.send(self.as_dict("zone_enabled"))
+            server.send(self.as_dict(["zone_enabled"]))
             request_update()
 
     def set_target(self, zone, target):
@@ -258,7 +258,7 @@ class State:
                 self.target[zone] = target
                 changed = True
         if changed:
-            server.send(self.as_dict("target"))
+            server.send(self.as_dict(["target"]))
             request_update()
 
     def set_boiler_on(self, on):
@@ -270,19 +270,19 @@ class State:
                     RPi.GPIO.output(BOILER_GPIO, self.boiler_on)
                 changed = True
         if changed:
-            server.send(self.as_dict("boiler_on"))
+            server.send(self.as_dict(["boiler_on"]))
 
     def set_temperatures(self, zone, temperatures):
         with self.mutex:
             self.temperatures[zone] = temperatures
-        server.send(self.as_dict("temperatures"))
+        server.send(self.as_dict(["temperatures"]))
 
     def add_temperature(self, zone, t):
         with self.mutex:
             self.temperatures[zone].append(t)
             if len(self.temperatures[zone]) > MEMORY_LOG_MINUTES:
                 state.temperatures[zone].pop(0)
-        server.send(self.as_dict("temperatures"))
+        server.send(self.as_dict(["temperatures"]))
 
     def set_rules(self, r):
         assert(type(r) is list)
@@ -292,7 +292,7 @@ class State:
                 self.rules = r
                 changed = True
         if changed:
-            server.send(self.as_dict("rules"))
+            server.send(self.as_dict(["rules"]))
 
 
     # Get methods for use by the server
@@ -327,10 +327,10 @@ class State:
 
     # Misc
 
-    def as_dict(self, key=None):
+    def as_dict(self, keys=[]):
         """
         Return some or all state as dict; all state is returned
-        if key is None.
+        if key is an empty array.
         """
         zone_enabled = []
         for k, v in self.zone_enabled.iteritems():
@@ -355,8 +355,10 @@ class State:
                "temperatures": temperatures,
                "rules": rules}
 
-        if key is not None:
-            out = { key: all[key] }
+        if len(keys) > 0:
+            out = dict()
+            for k in keys:
+                out[k] = all[k]
         else:
             out = all
 
@@ -525,6 +527,9 @@ def test():
 def handler(json):
     if json['type'] == 'ping':
         server.send({'type': 'pong'})
+    elif json['type'] == 'send_basic':
+        global state
+        server.send(state.as_dict(["heating_enabled", "zone_enabled", "target", "boiler_on", "rules"]))
     elif json['type'] == 'send_all':
         global state
         server.send(state.as_dict())
