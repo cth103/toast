@@ -143,9 +143,15 @@ public class MainActivity extends FragmentActivity {
 
                         /* Connected or disconnected */
                         if (getConnected()) {
-                            /* Newly connected: ask the server to tell us everything */
+                            /* Newly connected: ask the server to tell us the basics
+                               and then the full temperature history.  The full history
+                               can be moderately slow to parse as it can be a few
+                               hundred kilobytes.
+                            */
                             try {
                                 JSONObject json = new JSONObject();
+                                json.put("type", "send_basic");
+                                client.send(json);
                                 json.put("type", "send_all");
                                 client.send(json);
                             } catch (JSONException e) {
