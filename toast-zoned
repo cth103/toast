@@ -30,7 +30,7 @@ import json_server
 import util
 
 # 1-wire bus sensor ID for temperature
-SENSOR = '28-000006c833aa'
+SENSOR = '28-0000063fb15e'
 # GPIO pin of radiator relay
 RADIATOR = 7
 

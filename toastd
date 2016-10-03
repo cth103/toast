@@ -344,7 +344,7 @@ class State:
         for k, v in self.temperatures.iteritems():
             if all_temperatures:
                 temperatures.append({"zone": k.name, "temperatures": v})
-            else:
+            elif len(v) > 0:
                 temperatures.append({"zone": k.name, "temperatures": [v[-1]]})
 
         rules = []
@@ -470,8 +470,6 @@ def update():
 
     # Then turn the boiler on or off
     state.set_boiler_on(heat_required and heating_enabled)
-    note += 'boiler %d' % (heat_required and heating_enabled)
-    util.verbose(note)
 
 def check():
     global state
