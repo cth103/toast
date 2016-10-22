@@ -1,7 +1,7 @@
 CH_PD active-low power-down: tie high for normal operation
 VCC 3.3v
 
-https://github.com/guibom/ESPTempLogger
+https://github.com/guibom/ESPTempLogger>
 
 Attiny85 board (Adafruit 1501 "trinket"?)
   pimoroni
@@ -16,4 +16,13 @@ Fuse
 Fuse holder e.g. RS 765-2973
 Terminal block e.g. RS 193-0564
 
-Relay something like RS 800-4502 (£1.55) 
+Relay something like RS 800-4502 (£1.55)
+
+The trinket 3.3V rated current is 150mA but some people have the 8266
+as drawing 215mA... may need another regulator.
+
+Trinket is about 9mA
+
+Could use LD1117V33 3.3v regulator; max output current 800mA, 1V-ish drop-out
+RECOM POWER RAC02-05SC 5V, 400mA; enough for 8266 + trinket + loss
+
