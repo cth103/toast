@@ -1,7 +1,7 @@
 CH_PD active-low power-down: tie high for normal operation
 VCC 3.3v
 
-https://github.com/guibom/ESPTempLogger>
+https://github.com/guibom/ESPTempLogger
 
 Attiny85 board (Adafruit 1501 "trinket"?)
   pimoroni
@@ -26,3 +26,5 @@ Trinket is about 9mA
 Could use LD1117V33 3.3v regulator; max output current 800mA, 1V-ish drop-out
 RECOM POWER RAC02-05SC 5V, 400mA; enough for 8266 + trinket + loss
 
+Arduino UI can program reliably; copy.sh can't (I think, or maybe it was adding
+a USB hub that fixed it): go figure.
