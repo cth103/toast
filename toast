@@ -1,0 +1,78 @@
+#!/usr/bin/python
+
+import socket
+import argparse
+import util
+
+SERVER = '192.168.1.1'
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--summary', action='store_true', help='display system state')
+parser.add_argument('--on', action='store_true', help='turn whole system or zone on')
+parser.add_argument('--off', action='store_true', help='turn whole system or zone off')
+parser.add_argument('-z', '--zone', help='zone to control')
+parser.add_argument('-t', '--target', help='target temperature')
+args = parser.parse_args()
+
+def on_off(v):
+    if v:
+        return 'on'
+    else:
+        return 'off'
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((SERVER, 80))
+
+if (args.on or args.off) and args.zone is None:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((SERVER, 80))
+    util.send_json(s, {'type': 'change', 'heating_enabled': args.on}, False)
+    s.close()
+
+if (args.on or args.off) and args.zone is not None:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((SERVER, 80))
+    util.send_json(s, {'type': 'change', 'zone_enabled': [{'zone': args.zone, 'zone_enabled': args.on}]}, False)
+    s.close()
+
+if args.target is not None and args.zone is None:
+    print>>sys.stderr,'You must specify a zone to set the target temperature for'
+    sys.exit(1)
+
+if args.target is not None:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((SERVER, 80))
+    util.send_json(s, {'type': 'change', 'zone': args.zone, 'target': args.target}, False)
+    s.close()
+
+if args.summary:
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((SERVER, 80))
+    util.send_json(s, {'type': 'send_basic'}, False)
+    json = util.receive_json(s, False)
+
+    if json['heating_enabled']:
+        print 'Heating is on.'
+    else:
+        print 'Heating is off.'
+
+    longest = 0
+    for t in json['target']:
+        longest = max(longest, len(t['zone']))
+
+    for t in json['target']:
+
+        enabled = False
+        for e in json['zone_enabled']:
+            if e['zone'] == t['zone']:
+                enabled = e['zone_enabled']
+
+        temperature = None
+        for e in json['temperatures']:
+            if e['zone'] == t['zone']:
+                temperature = e['temperatures'][0]
+
+        print '%s %.2f %s [%s]' % (t['zone'].ljust(longest + 2), temperature, t['target'], on_off(enabled))
+
+    s.close()
