@@ -42,7 +42,7 @@ if args.target is not None and args.zone is None:
 if args.target is not None:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((SERVER, 80))
-    util.send_json(s, {'type': 'change', 'zone': args.zone, 'target': args.target}, False)
+    util.send_json(s, {'type': 'change', 'target': [{'zone': args.zone, 'target': float(args.target)}]}, False)
     s.close()
 
 if args.summary:
@@ -73,6 +73,6 @@ if args.summary:
             if e['zone'] == t['zone']:
                 temperature = e['temperatures'][0]
 
-        print '%s %.2f %s [%s]' % (t['zone'].ljust(longest + 2), temperature, t['target'], on_off(enabled))
+        print '%s %.2f %.1f [%s]' % (t['zone'].ljust(longest + 2), temperature, float(t['target']), on_off(enabled))
 
     s.close()
