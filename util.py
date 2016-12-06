@@ -30,7 +30,10 @@ class Error(Exception):
 def warning(w):
     print 'WARNING: %s' % w
 
-def send_json(socket, data, verbose=True):
+def verbose(v):
+    print v
+
+def send_json(socket, data, verbose=False):
     """Send a dict as JSON to a socket"""
     s = json.dumps(data)
     length = bytearray(4)
@@ -56,7 +59,7 @@ def get_data(sock, length):
 
     return all
 
-def receive_json(socket, verbose=True):
+def receive_json(socket, verbose=False):
     """Receive some JSON from a socket"""
     s = get_data(socket, 4)
     if len(s) < 4:

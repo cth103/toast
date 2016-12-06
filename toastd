@@ -46,12 +46,9 @@ HYSTERESIS = 0.2
 CHECK_INTERVAL = 1
 # Minutes to keep temperatures in memory
 MEMORY_LOG_MINUTES = 60 * 24 * 7
-# Auto-off start hour
-AUTO_OFF_START = 0
-# Auto-off end hour
-AUTO_OFF_END = 6
-# Auto-off check interval (minutes)
-AUTO_OFF_INTERVAL = 30
+# Hours of the day to turn off heating automatically in
+# case somebody has forgotten
+AUTO_OFF_HOURS = [0, 1, 2, 3, 4, 5, 6, 10]
 # Default target temperature
 DEFAULT_TARGET = 19
 
@@ -388,7 +385,6 @@ class State:
                 rules.append(r)
             self.set_rules(rules)
 
-
 def setup():
     global args
     global have_gpio
@@ -415,7 +411,7 @@ def update():
 
     # Apply auto-off
     time = datetime.datetime.now()
-    if time.hour >= AUTO_OFF_START and time.hour <= AUTO_OFF_END and (time.minute % AUTO_OFF_INTERVAL) == 0 and state.get_heating_enabled():
+    if time.minute == 0 and time.hour in AUTO_OFF_HOURS and state.get_heating_enabled():
         state.set_heating_enabled(False)
         util.verbose('Turned off automatically at %d:%02d' % (time.hour, time.minute))
 
