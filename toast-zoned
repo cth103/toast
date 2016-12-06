@@ -61,7 +61,6 @@ def get_temperature():
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--port', help='port to bind to', type=int, default=9142)
-parser.add_argument('-l', '--log-directory', help='directory to log to', type=str, default='/var/log/toast')
 args = parser.parse_args()
 
 def handler(json):
