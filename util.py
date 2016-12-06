@@ -18,6 +18,7 @@
 #
 
 import json
+import datetime
 
 class Error(Exception):
     def __init__(self, value):
@@ -28,10 +29,10 @@ class Error(Exception):
         return str(self)
 
 def warning(w):
-    print 'WARNING: %s' % w
+    print '%s WARNING: %s' % (datetime.datetime.now(), w)
 
 def verbose(v):
-    print v
+    print '%s: %s' % (datetime.datetime.now(), v)
 
 def send_json(socket, data, verbose=False):
     """Send a dict as JSON to a socket"""
