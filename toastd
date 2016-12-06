@@ -413,7 +413,7 @@ def update():
     time = datetime.datetime.now()
     if time.minute == 0 and time.hour in AUTO_OFF_HOURS and state.get_heating_enabled():
         state.set_heating_enabled(False)
-        util.verbose('Turned off automatically at %d:%02d' % (time.hour, time.minute))
+        util.verbose('turned off automatically at %d:%02d' % (time.hour, time.minute))
 
     # Work out whether each zone is enabled and what its temperature should be
 
@@ -429,7 +429,7 @@ def update():
     if len(rules) > 0:
         # If there are active rules they dictate everything
         for r in state.get_active_rules():
-            util.verbose('Rule makes %s target %f' % (r.zone, r.target))
+            util.verbose('rule makes %s target %f' % (r.zone, r.target))
             heating_enabled = True
             zone_enabled[r.zone] = True
             target[r.zone] = r.target
