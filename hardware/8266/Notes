@@ -41,3 +41,23 @@ minicom -b 9600 -D /dev/ttyUSB0 with FTDI connected to RX->3.
 
 Turn HW flow control off in minicom main prefs.
 Do ^J,Enter at the end of AT commands when talking direct to the ESP8266.
+
+TRINKET USB NEGOTATION RELIABILITY
+
+Just trinket & mouse connected to USB, nothing connected to trinket: 90%
++FTDI connected to another USB port: 70%
+-FTDI connected to another USB port: 40%
+
+Looks random.
+
+Connected to USB 2.0 hub: 100%
++FTDI connected to computer USB port: 100%
++all circuit: 100%
+
+Looks more reliable.
+
+$ cat 96-usbtiny.rules
+ATTRS{idProduct}=="0c9f", ATTRS{idVendor}=="1781", MODE="0660", GROUP="dialout"
+$ sudo udevadm trigger
+
+bash make.sh && bash copy.sh
