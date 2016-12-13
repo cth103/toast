@@ -3,6 +3,7 @@
 import socket
 import argparse
 import util
+import sys
 
 SERVER = '192.168.1.1'
 
@@ -19,6 +20,28 @@ def on_off(v):
         return 'on'
     else:
         return 'off'
+
+if args.zone is not None:
+    # Get zones and correct args.zone if necessary
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((SERVER, 80))
+    util.send_json(s, {'type': 'send_basic'}, False)
+    json = util.receive_json(s, False)
+    candidates = []
+    for t in json['target']:
+        if t['zone'].lower().startswith(args.zone):
+            candidates.append(t['zone'])
+
+    if len(candidates) > 1:
+        print 'Not sure which zone you mean, either:'
+        for c in candidates:
+            print '\t%s' % c
+        sys.exit(1)
+    elif len(candidates) == 0:
+        print 'Unrecognised zone `%s\'' % (args.zone)
+        sys.exit(1)
+
+    args.zone = candidates[0]
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((SERVER, 80))
