@@ -1,4 +1,4 @@
-/* -*- c-basic-offset: 2; default-tab-width: 2 -*-; indent-tabs-mode: nil; */
+/* -*- c-basic-offset: 2; tab-width: 2 -*-; indent-tabs-mode: nil; */
 
 #include <SoftwareSerial.h>
 
@@ -13,43 +13,6 @@
 
 SoftwareSerial wifi(ESP8266_RX_PIN, ESP8266_TX_PIN);
 SoftwareSerial debug(DEBUG_RX_PIN, DEBUG_TX_PIN);
-
-char buffer[128];
-
-void
-readLine(unsigned int timeout)
-{
-  unsigned long const end_time = millis() + timeout;
-  char* p = buffer;
-  while (millis() < end_time && ((p - buffer + 2) < sizeof(buffer))) {
-    int const b = wifi.read();
-    debug.print((char) b);
-    if (b != -1) {
-      *p++ = (char) b;
-    }
-    if (((char) b) == '\n') {
-      break;
-    }
-  }
-  *p = '\0';
-}
-
-/** @param timeout timeout in milliseconds */
-bool
-waitForString(char const * input, unsigned int timeout)
-{
-  unsigned long const end_time = millis() + timeout;
-  while (millis() < end_time) {
-    readLine(timeout);
-    debug.println(buffer);
-    debug.flush();
-    if (strcmp(buffer, input) == 0) {
-      return true;
-    }
-  }
-
-  return false;
-}
 
 void
 resetWifi()
@@ -70,55 +33,62 @@ setup()
   pinMode(ESP8266_RX_PIN, INPUT);
   pinMode(DEBUG_TX_PIN, OUTPUT);
 
+  OSCCAL = 82;
+
   debug.begin(9600);
-  debug.print("Hello world!\r\n");
+  debug.println("Hello world!");
   debug.flush();
 
   wifi.begin(9600);
   wifi.listen();
 
-  debug.print("Resetting ESP8266.\r\n");
+  debug.println("Resetting ESP8266.");
   resetWifi();
   delay(2000);
 
-  if (waitForString("WIFI CONNECTED\r\n", 5000)) {
-    debug.print("ESP8266 already connected.\r\n");
+  wifi.setTimeout(5000);
+  if (wifi.find("WIFI GOT IP")) {
+    debug.println("ESP8266 already connected.");
     debug.flush();
     return;
   }
 
   while (true) {
 
-    debug.print("Talking to ESP8266... ");
+    wifi.setTimeout(5000);
+    debug.println("Talking to ESP8266.");
     debug.flush();
     wifi.print("AT+CWMODE=1\r\n");
     wifi.flush();
-    if (!waitForString("OK\r\n", 5000)) {
-      debug.print("failed.\r\n");
+    if (!wifi.find("OK")) {
+      debug.println("failed.");
       debug.flush();
       continue;
     }
 
-    return;
-    debug.print("ok.\r\nConnecting to network... ");
+    wifi.setTimeout(25000);
+    debug.println("ok");
+    debug.println("Connecting to network.");
     debug.flush();
     wifi.print("AT+CWJAP=\"" SSID "\",\"" PASS "\"\r\n");
     wifi.flush();
-    if (!waitForString("OK\r\n", 25000)) {
-      debug.print("failed.\r\n");
+    if (!wifi.find("OK")) {
+      debug.println("failed.");
       continue;
     }
 
-    debug.print("ok.\r\nEnabling DHCP... ");
+    wifi.setTimeout(1000);
+    debug.println("ok.");
+    debug.println("Enabling DHCP.");
     debug.flush();
     wifi.print("AT+CWDHCP=1,1\r\n");
     wifi.flush();
-    if (!waitForString("OK\r\n", 1000)) {
-      debug.print("failed.\r\n");
+    if (!wifi.find("OK")) {
+      debug.println("failed.");
       continue;
     }
 
-    debug.print("ok.\r\n");
+    debug.println("ok.");
     break;
   }
 }
@@ -126,20 +96,20 @@ setup()
 void
 loop()
 {
-  return;
+  wifi.print(F("AT+CIPSTART=\"TCP\",\"192.168.1.1\",4024\r\n"));
+  wifi.find("OK");
 
-  wifi.print(F("AT+CIPSTART=\"UDP\",\"192.168.1.1\",4024\r\n"));
-
-  wifi.print("AT+CIPSEND=1,14\r\n");
+  wifi.print("AT+CIPSEND=14\r\n");
+  wifi.find("OK");
+  wifi.find(">");
   wifi.print("Hello Dolly.\r\n");
-  if (!waitForString("OK", 1000)) {
-    debug.print("UDP send failed.\r\n");
-    return;
+  if (!wifi.find("OK")) {
+    debug.println("UDP send failed.");
   }
 
-  wifi.print("AT+CIPCLOSE=1\r\n");
-  if (!waitForString("OK", 1000)) {
-    debug.print("UDP close failed.\r\n");
+  wifi.print("AT+CIPCLOSE\r\n");
+  if (!wifi.find("OK")) {
+    debug.println("UDP close failed.");
     return;
   }
 

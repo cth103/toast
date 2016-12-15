@@ -1,3 +1,10 @@
+#!/bin/bash -e
+
+if [ "$1" == "" ]; then
+    echo "Syntax: $0 <.ino>"
+    exit 1
+fi
+
 ARDUINO=/opt/arduino-1.6.12
 
 BUILD=/tmp/arduino_build_$$
@@ -9,6 +16,7 @@ $ARDUINO/arduino-builder -compile -logger=machine -hardware $ARDUINO/hardware -h
 			 -fqbn=adafruit:avr:trinket3 -ide-version=10612 -build-path $BUILD \
 			 -warnings=none -prefs=build.warn_data_percentage=75 -prefs=runtime.tools.avrdude.path=$ARDUINDO/hardware/tools/avr \
 			 -prefs=runtime.tools.avr-gcc.path=$ARDUINO/hardware/tools/avr -verbose \
-			 fw.ino
+			 $1
 
-mv $BUILD/fw.ino.hex .
+mv $BUILD/$1.hex .
+rm -r $BUILD

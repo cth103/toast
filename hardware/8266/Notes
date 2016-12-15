@@ -41,6 +41,7 @@ minicom -b 9600 -D /dev/ttyUSB0 with FTDI connected to RX->3.
 
 Turn HW flow control off in minicom main prefs.
 Do ^J,Enter at the end of AT commands when talking direct to the ESP8266.
+***NOT*** ENTER,^J!!
 
 TRINKET USB NEGOTATION RELIABILITY
 
@@ -61,3 +62,11 @@ ATTRS{idProduct}=="0c9f", ATTRS{idVendor}=="1781", MODE="0660", GROUP="dialout"
 $ sudo udevadm trigger
 
 bash make.sh && bash copy.sh
+
+No setting: 100.9uS
+50: 126.5
+80: 106.3
+82: 104.7
+90: 99.36
+100: 92.54uS
+200: 71.04uS
