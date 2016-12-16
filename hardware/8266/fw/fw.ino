@@ -21,7 +21,7 @@ DallasTemperature sensor(&oneWire);
 
 uint8_t scratchPad[9];
 uint8_t const sensorAddress[8] = { 0x28, 0xee, 0xe1, 0xe2, 0x12, 0x16, 0x1, 0x60 };
-char* connect[] = { "AT+CWMODE=1\r\n", "AT+CWJAP=\"" SSID "\",\"" PASS "\"\r\n", "AT+CWDHCP=1,1\r\n" };
+char* connect[] = { "AT+CWMODE=1", "AT+CWJAP=\"" SSID "\",\"" PASS "\"", "AT+CWDHCP=1,1" };
 
 void
 resetWifi()
@@ -38,6 +38,7 @@ bool
 sendWithOk(char const * message)
 {
   wifi.print(message);
+  wifi.print("\r\n");
   return wifi.find("OK");
 }
 
@@ -86,14 +87,13 @@ setup()
 void
 loop()
 {
-  sensor.requestTemperatures();
-
-  sendWithOk("AT+CIPSTART=\"TCP\",\"192.168.1.1\",4024\r\n");
-  sendWithOk("AT+CIPSEND=7\r\n");
+  sendWithOk("AT+CIPMUX=1");
+  sendWithOk("AT+CIPSERVER=1");
+  while (!wifi.find("S")) {}
+  sendWithOk("AT+CIPSEND=0,7");
   wifi.find(">");
+  sensor.requestTemperatures();
   wifi.print(sensor.getTempC(sensorAddress), 2);
-  sendWithOk("\r\n");
-  sendWithOk("AT+CIPCLOSE\r\n");
-
-  delay(1000);
+  sendWithOk("");
+  sendWithOk("AT+CIPCLOSE=0");
 }
