@@ -21,6 +21,7 @@ DallasTemperature sensor(&oneWire);
 
 uint8_t scratchPad[9];
 uint8_t const sensorAddress[8] = { 0x28, 0xee, 0xe1, 0xe2, 0x12, 0x16, 0x1, 0x60 };
+char* connect[] = { "AT+CWMODE=1\r\n", "AT+CWJAP=\"" SSID "\",\"" PASS "\"\r\n", "AT+CWDHCP=1,1\r\n" };
 
 void
 resetWifi()
@@ -31,6 +32,13 @@ resetWifi()
   delay(1000);
   digitalWrite(ESP8266_CH_PD_PIN, HIGH);
   //wifi.print("AT+RST\r\n");
+}
+
+bool
+sendWithOk(char const * message)
+{
+  wifi.print(message);
+  return wifi.find("OK");
 }
 
 void
@@ -60,29 +68,18 @@ setup()
   }
 
   while (true) {
-
+ 
     wifi.setTimeout(5000);
-    wifi.print("AT+CWMODE=1\r\n");
-    wifi.flush();
-    if (!wifi.find("OK")) {
-      continue;
+    int i;
+    for (i = 0; i < 3; ++i) {
+      if (!sendWithOk(connect[i])) {
+        break;
+      }
     }
 
-    wifi.setTimeout(25000);
-    wifi.print("AT+CWJAP=\"" SSID "\",\"" PASS "\"\r\n");
-    wifi.flush();
-    if (!wifi.find("OK")) {
-      continue;
+    if (i == 3) {
+      return;
     }
-
-    wifi.setTimeout(1000);
-    wifi.print("AT+CWDHCP=1,1\r\n");
-    wifi.flush();
-    if (!wifi.find("OK")) {
-      continue;
-    }
-
-    break;
   }
 }
 
@@ -90,18 +87,13 @@ void
 loop()
 {
   sensor.requestTemperatures();
-  
-  wifi.print("AT+CIPSTART=\"TCP\",\"192.168.1.1\",4024\r\n");
-  wifi.find("OK");
 
-  wifi.print("AT+CIPSEND=7\r\n");
-  wifi.find("OK");
+  sendWithOk("AT+CIPSTART=\"TCP\",\"192.168.1.1\",4024\r\n");
+  sendWithOk("AT+CIPSEND=7\r\n");
   wifi.find(">");
   wifi.print(sensor.getTempC(sensorAddress), 2);
-  wifi.print("\r\n");
-  wifi.find("OK");
-  wifi.print("AT+CIPCLOSE\r\n");
-  wifi.find("OK");
+  sendWithOk("\r\n");
+  sendWithOk("AT+CIPCLOSE\r\n");
 
   delay(1000);
 }
