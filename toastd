@@ -76,23 +76,49 @@ class Zone:
     def __hash__(self):
         return hash(self.name)
 
-    def set_radiator_on(self, on):
-        """Tell the zone to turn its radiator on"""
+    def connect(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.ip, self.port))
+        return s
+
+    def set_radiator_on(self, on):
+        """Tell the zone to turn its radiator on or off"""
+        pass
+
+    def get_temperature(self):
+        """Ask the zone what its current temperature is"""
+        pass
+
+class JSONZone(Zone):
+    def set_radiator_on(self, on):
+        s = self.connect()
         util.send_json(s, {'type': 'set', 'radiator_on': on})
         self.radiator_on = on
 
     def get_temperature(self):
-        """Ask the zone what its current temperature is"""
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self.ip, self.port))
+        s = self.connect()
         util.send_json(s, {'type': 'get'})
         return util.receive_json(s)['temperature']
 
+class ASCIIZone(Zone):
+    def set_radiator_on(self, on):
+        s = self.connect()
+        if on:
+            s.sendall('p')
+        else:
+            s.sendall('q')
+
+    def get_temperature(self):
+        s = self.connect()
+        s.sendall('s')
+        r = s.recv(64)
+        return float(r)
+
+
 ZONES = []
-ZONES.append(Zone('Sitting room', 'localhost'))
-ZONES.append(Zone('Bathroom', 'zone1'))
+ZONES.append(JSONZone('Sitting room', 'localhost'))
+ZONES.append(JSONZone('Bathroom', 'zone1'))
+ZONES.append(ASCIIZone('Test', '192.168.1.7'))
 
 # True to stop all threads
 stop = False
