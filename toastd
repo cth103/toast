@@ -85,10 +85,13 @@ class Zone:
 
     def get_temperature(self):
         """Ask the zone what its current temperature is"""
+        util.verbose("Connecting for temperature of %s" % self.name)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.ip, self.port))
         util.send_json(s, {'type': 'get'})
-        return util.receive_json(s)['temperature']
+        j = util.receive_json(s)['temperature']
+        util.verbose("Received temperature of %s" % self.name)
+        return j
 
 ZONES = []
 ZONES.append(Zone('Sitting room', 'localhost'))
