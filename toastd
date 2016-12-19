@@ -52,7 +52,7 @@ AUTO_OFF_HOURS = [0, 1, 2, 3, 4, 5, 6, 10]
 # Default target temperature
 DEFAULT_TARGET = 19
 
-class Zone:
+class Zone(object):
     """
     Representation of a heating zone.  Used to keep track of the zones
     in the system (their names and ip addresses etc.) and to communicate
@@ -100,28 +100,51 @@ class JSONZone(Zone):
         s = self.connect()
         util.send_json(s, {'type': 'get'})
         j = util.receive_json(s)['temperature']
-        util.verbose("Received temperature of %s" % self.name)
+        util.verbose("Received temperature of %f of %s" % (j, self.name))
         return j
 
 class ASCIIZone(Zone):
+    def __init__(self, name, ip, port=9142):
+        super(ASCIIZone, self).__init__(name, ip, port)
+        self.lock = threading.Lock()
+
     def set_radiator_on(self, on):
-        s = self.connect()
-        if on:
-            s.sendall('p')
-        else:
-            s.sendall('q')
+        try:
+            self.lock.acquire()
+            s = self.connect()
+            if on:
+                s.send('p')
+            else:
+                s.send('q')
+            # The 8266 firmware likes to close the socket, rather than us
+            # doing it (for reasons that are not yet clear) so give it 
+            # time to do that.
+            time.sleep(1)
+            s.close()
+        finally:
+            self.lock.release()
 
     def get_temperature(self):
-        s = self.connect()
-        s.sendall('s')
-        r = s.recv(64)
-        return float(r)
-
+        try:
+            self.lock.acquire()
+            util.verbose("Connecting for temperature of %s" % self.name)
+            s = self.connect()
+            s.send('s')
+            r = float(s.recv(64))
+            util.verbose("Received temperature %f of %s" % (r, self.name))
+            # The 8266 firmware likes to close the socket, rather than us
+            # doing it (for reasons that are not yet clear) so give it 
+            # time to do that.
+            time.sleep(1)
+            s.close()
+            return r
+        finally:
+            self.lock.release()
 
 ZONES = []
 ZONES.append(JSONZone('Sitting room', 'localhost'))
 ZONES.append(JSONZone('Bathroom', 'zone1'))
-ZONES.append(ASCIIZone('Test', '192.168.1.7'))
+ZONES.append(ASCIIZone('Thomas', '192.168.1.7'))
 
 # True to stop all threads
 stop = False
