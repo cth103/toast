@@ -21,7 +21,7 @@ CORE_OBJS += wiring_shift.o CDC.o HardwareSerial.o HardwareSerial0.o HardwareSer
 CORE_OBJS += IPAddress.o PluggableUSB.o Print.o Stream.o Tone.o USBCore.o WMath.o WString.o abi.o main.o new.o
 
 summary:       fw.ino.hex
-       @echo "Used" $(shell $(AVR_SIZE) $< | tail -n 1 | awk '{print $$2;}') "(of 5310)"
+	@echo "Used" $(shell $(AVR_SIZE) $< | tail -n 1 | awk '{print $$2;}') "(of 5310)"
 
 fw.ino.hex:	fw.ino.elf
 	$(AVR_OBJCOPY) -O ihex -R .eeprom $< $@
