@@ -17,3 +17,5 @@ Fuse holder e.g. RS 765-2973
 Terminal block e.g. RS 193-0564
 
 Relay something like RS 800-4502 (£1.55) 
+
+stty -F /dev/ttyUSB0 -crtscts ixon ixoff
