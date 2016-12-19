@@ -43,7 +43,7 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensor(&oneWire);
 
 uint8_t scratchPad[9];
-char* connect[] = { "CWMODE=1", "CWJAP=\"" SSID "\",\"" PASS "\"", "CIPSTA=\"" LISTEN_IP "\"" };
+char* connect[] = { "WMODE=1", "WJAP=\"" SSID "\",\"" PASS "\"", "IPSTA=\"" LISTEN_IP "\"" };
 
 /** Reset the Wifi board by pulling its CH_PD pin low */
 void
@@ -60,7 +60,7 @@ resetWifi()
 bool
 sendWithOk(char const * message)
 {
-  wifi.print("AT+");
+  wifi.print("AT+C");
   wifi.print(message);
   wifi.print("\r\n");
   return wifi.find("OK");
@@ -69,8 +69,8 @@ sendWithOk(char const * message)
 void
 startServer()
 {
-  sendWithOk("CIPMUX=1");
-  sendWithOk("CIPSERVER=1," LISTEN_PORT);
+  sendWithOk("IPMUX=1");
+  sendWithOk("IPSERVER=1," LISTEN_PORT);
 }
 
 void
@@ -117,7 +117,7 @@ loop()
     char c = wifi.read();
     if (c == 's') {
       /* Send temperature */
-      sendWithOk("CIPSEND=0,7");
+      sendWithOk("IPSEND=0,7");
       wifi.find(">");
       sensor.requestTemperatures();
       wifi.println(sensor.getTempC(sensorAddress), 2);
@@ -134,5 +134,5 @@ loop()
     }
   }
 
-  sendWithOk("CIPCLOSE=0");
+  sendWithOk("IPCLOSE=0");
 }
