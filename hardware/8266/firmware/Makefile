@@ -1,6 +1,8 @@
 ARDUINO = /opt/arduino-1.6.12
-SSID = my_wireless_ssid
-PASSWORD = my_wireless_password
+# There must be a file called 'secret' containing two lines:
+# SSID = my_ssid
+# PASSWORD = my_password
+include secret
 
 AVR_BIN = $(ARDUINO)/hardware/tools/avr/bin
 AVR_GCC = $(AVR_BIN)/avr-gcc
