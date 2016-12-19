@@ -14,7 +14,7 @@
 #define RELAY 3
 #define ONE_WIRE_BUS 4
 #define LISTEN_IP "192.168.1.7"
-#define LISTEN_PORT "4024"
+#define LISTEN_PORT "9142"
 
 SoftwareSerial wifi(ESP8266_RX_PIN, ESP8266_TX_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
