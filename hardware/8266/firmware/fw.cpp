@@ -1,4 +1,3 @@
-/* -*- c-basic-offset: 2; tab-width: 2; indent-tabs-mode: nil; */
 /*
     Copyright (C) 2016 Carl Hetherington <cth@carlh.net>
 
@@ -51,109 +50,109 @@ unsigned long int lastActivity = millis();
 bool
 sendWithOk(char const * message)
 {
-  wifi.print("AT+C");
-  wifi.print(message);
-  wifi.print("\r\n");
-  return wifi.find("OK");
+	wifi.print("AT+C");
+	wifi.print(message);
+	wifi.print("\r\n");
+	return wifi.find("OK");
 }
 
 void
 setup()
 {
-  pinMode(ESP8266_TX_PIN, OUTPUT);
-  pinMode(ESP8266_CH_PD_PIN, OUTPUT);
-  pinMode(ESP8266_RX_PIN, INPUT);
-  pinMode(ONE_WIRE_BUS, OUTPUT);
-  pinMode(RELAY, OUTPUT);
+	pinMode(ESP8266_TX_PIN, OUTPUT);
+	pinMode(ESP8266_CH_PD_PIN, OUTPUT);
+	pinMode(ESP8266_RX_PIN, INPUT);
+	pinMode(ONE_WIRE_BUS, OUTPUT);
+	pinMode(RELAY, OUTPUT);
 
-  wdt_disable();
-  delay(2000);
-  wdt_enable(WDTO_8S);
+	wdt_disable();
+	delay(2000);
+	wdt_enable(WDTO_8S);
 
-  /* Empirically derived to give accurate 9600 baud with SoftwareSerial;
-   * I'm not sure if this is necessary.
-   */
-  OSCCAL = 82;
+	/* Empirically derived to give accurate 9600 baud with SoftwareSerial;
+	 * I'm not sure if this is necessary.
+	 */
+	OSCCAL = 82;
 
-  wifi.begin(9600);
-  wifi.listen();
-  wifi.setTimeout(5000);
+	wifi.begin(9600);
+	wifi.listen();
+	wifi.setTimeout(5000);
 
-  wdt_reset();
+	wdt_reset();
 }
 
 void initWifi()
 {
-  /* Reset the Wifi board by pulling its CH_PD pin low */
-  digitalWrite(ESP8266_CH_PD_PIN, HIGH);
-  delay(100);
-  digitalWrite(ESP8266_CH_PD_PIN, LOW);
-  delay(1000);
-  digitalWrite(ESP8266_CH_PD_PIN, HIGH);
+	/* Reset the Wifi board by pulling its CH_PD pin low */
+	digitalWrite(ESP8266_CH_PD_PIN, HIGH);
+	delay(100);
+	digitalWrite(ESP8266_CH_PD_PIN, LOW);
+	delay(1000);
+	digitalWrite(ESP8266_CH_PD_PIN, HIGH);
 
-  delay(2000);
+	delay(2000);
 
-  wdt_reset();
+	wdt_reset();
 
-  while (true) {
-    wdt_reset();
+	while (true) {
+		wdt_reset();
 
-    int i;
-    for (i = 0; i < 3; ++i) {
-      if (!sendWithOk(connect[i])) {
-        break;
-      }
-    }
+		int i;
+		for (i = 0; i < 3; ++i) {
+			if (!sendWithOk(connect[i])) {
+				break;
+			}
+		}
 
-    if (i == 3) {
-      sendWithOk("IPMUX=1");
-      sendWithOk("IPSERVER=1," LISTEN_PORT);
-      return;
-    }
-  }
+		if (i == 3) {
+			sendWithOk("IPMUX=1");
+			sendWithOk("IPSERVER=1," LISTEN_PORT);
+			return;
+		}
+	}
 }
 
 void
 loop()
 {
-  while (true) {
+	while (true) {
 
-    wdt_reset();
+		wdt_reset();
 
-    if (millis() > (lastActivity + 10000)) {
-      /* See if the Wifi module is still with us */
-      wifi.print("AT\r\n");
-      if (!wifi.find("OK")) {
-        initWifi();
-      }
-    }
+		if (millis() > (lastActivity + 10000)) {
+			/* See if the Wifi module is still with us */
+			wifi.print("AT\r\n");
+			if (!wifi.find("OK")) {
+				initWifi();
+			}
+		}
 
-    char c = wifi.read();
-    if (c != -1) {
-      lastActivity = millis();
-    }
+		char c = wifi.read();
+		if (c != -1) {
+			lastActivity = millis();
+		}
 
-    if (c == 's') {
-      /* Send temperature */
-      sendWithOk("IPSEND=0,7");
-      wifi.find(">");
-      sensor.requestTemperatures();
-      /* Send temperature as a raw value to avoid pulling in the FP libraries
-	 (I think); program size is about 2k larger if you do getTempC here.
-      */
-      wifi.println(sensor.getTemp(sensorAddress), 2);
-      wifi.find("OK");
-      break;
-    } else if (c == 'p') {
-      /* Radiator on */
-      digitalWrite(RELAY, true);
-      break;
-    } else if (c == 'q') {
-      /* Radiator off */
-      digitalWrite(RELAY, false);
-      break;
-    }
-  }
+		if (c == 's') {
+			/* Send temperature */
+			sendWithOk("IPSEND=0,7");
+			wifi.find(">");
+			sensor.requestTemperatures();
+			/* Send temperature as a raw value to avoid pulling in the FP libraries
+			   (I think); program size is about 2k larger if you do getTempC here.
+			*/
+			wifi.println(sensor.getTemp(sensorAddress), 2);
+			wifi.find("OK");
+			break;
+		} else if (c == 'p') {
+			/* Radiator on */
+			digitalWrite(RELAY, true);
+			break;
+		} else if (c == 'q') {
+			/* Radiator off */
+			digitalWrite(RELAY, false);
+			break;
+		}
+	}
 
-  sendWithOk("IPCLOSE=0");
+	sendWithOk("IPCLOSE=0");
 }
