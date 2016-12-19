@@ -23,6 +23,7 @@
 #include <SoftwareSerial.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <avr/wdt.h>
 
 /* Pins on the trinket that things are connected to */
 #define ESP8266_RX_PIN 0
@@ -65,6 +66,10 @@ setup()
   pinMode(ONE_WIRE_BUS, OUTPUT);
   pinMode(RELAY, OUTPUT);
 
+  wdt_disable();
+  delay(2000);
+  wdt_enable(WDTO_8S);
+
   /* Empirically derived to give accurate 9600 baud with SoftwareSerial;
    * I'm not sure if this is necessary.
    */
@@ -73,6 +78,8 @@ setup()
   wifi.begin(9600);
   wifi.listen();
   wifi.setTimeout(5000);
+
+  wdt_reset();
 }
 
 void initWifi()
@@ -86,7 +93,11 @@ void initWifi()
 
   delay(2000);
 
+  wdt_reset();
+
   while (true) {
+    wdt_reset();
+
     int i;
     for (i = 0; i < 3; ++i) {
       if (!sendWithOk(connect[i])) {
@@ -106,6 +117,8 @@ void
 loop()
 {
   while (true) {
+
+    wdt_reset();
 
     if (millis() > (lastActivity + 10000)) {
       /* See if the Wifi module is still with us */
