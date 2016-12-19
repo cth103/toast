@@ -44,17 +44,6 @@ DallasTemperature sensor(&oneWire);
 
 char* connect[] = { "WMODE=1", "WJAP=\"" SSID "\",\"" PASS "\"", "IPSTA=\"" LISTEN_IP "\"" };
 
-/** Reset the Wifi board by pulling its CH_PD pin low */
-void
-resetWifi()
-{
-  digitalWrite(ESP8266_CH_PD_PIN, HIGH);
-  delay(100);
-  digitalWrite(ESP8266_CH_PD_PIN, LOW);
-  delay(1000);
-  digitalWrite(ESP8266_CH_PD_PIN, HIGH);
-}
-
 /** Send an AT command and wait for "OK" to come back */
 bool
 sendWithOk(char const * message)
@@ -88,11 +77,16 @@ setup()
 
   wifi.begin(9600);
   wifi.listen();
-
-  resetWifi();
-  delay(2000);
-
   wifi.setTimeout(5000);
+
+  /* Reset the Wifi board by pulling its CH_PD pin low */
+  digitalWrite(ESP8266_CH_PD_PIN, HIGH);
+  delay(100);
+  digitalWrite(ESP8266_CH_PD_PIN, LOW);
+  delay(1000);
+  digitalWrite(ESP8266_CH_PD_PIN, HIGH);
+
+  delay(2000);
 
   while (true) {
     int i;
