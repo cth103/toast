@@ -42,7 +42,6 @@ SoftwareSerial wifi(ESP8266_RX_PIN, ESP8266_TX_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensor(&oneWire);
 
-uint8_t scratchPad[9];
 char* connect[] = { "WMODE=1", "WJAP=\"" SSID "\",\"" PASS "\"", "IPSTA=\"" LISTEN_IP "\"" };
 
 /** Reset the Wifi board by pulling its CH_PD pin low */
