@@ -55,13 +55,6 @@ sendWithOk(char const * message)
 }
 
 void
-startServer()
-{
-  sendWithOk("IPMUX=1");
-  sendWithOk("IPSERVER=1," LISTEN_PORT);
-}
-
-void
 setup()
 {
   pinMode(ESP8266_TX_PIN, OUTPUT);
@@ -97,7 +90,8 @@ setup()
     }
 
     if (i == 3) {
-      startServer();
+      sendWithOk("IPMUX=1");
+      sendWithOk("IPSERVER=1," LISTEN_PORT);
       return;
     }
   }
