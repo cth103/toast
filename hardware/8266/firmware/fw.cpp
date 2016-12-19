@@ -53,7 +53,16 @@ sendWithOk(char const * message)
 	wifi.print("AT+C");
 	wifi.print(message);
 	wifi.print("\r\n");
-	return wifi.find("OK");
+	bool const r = wifi.find("OK");
+	wdt_reset ();
+	return r;
+}
+
+bool safeFind(char* message)
+{
+	wdt_reset();
+	wifi.find(message);
+	wdt_reset();
 }
 
 void
@@ -65,6 +74,7 @@ setup()
 	pinMode(ONE_WIRE_BUS, OUTPUT);
 	pinMode(RELAY, OUTPUT);
 
+	/* Give ourselves 2s of sanity in case the watchdog goes crazy */
 	wdt_disable();
 	delay(2000);
 	wdt_enable(WDTO_8S);
@@ -91,11 +101,9 @@ void initWifi()
 	digitalWrite(ESP8266_CH_PD_PIN, HIGH);
 
 	delay(2000);
-
 	wdt_reset();
 
 	while (true) {
-		wdt_reset();
 
 		int i;
 		for (i = 0; i < 3; ++i) {
@@ -122,7 +130,7 @@ loop()
 		if (millis() > (lastActivity + 10000)) {
 			/* See if the Wifi module is still with us */
 			wifi.print("AT\r\n");
-			if (!wifi.find("OK")) {
+			if (!safeFind("OK")) {
 				initWifi();
 			}
 		}
@@ -139,14 +147,13 @@ loop()
 		if (c == 's') {
 			/* Send temperature */
 			sendWithOk("IPSEND=0,7");
-			wifi.find(">");
-			wdt_reset();
+			safeFind(">");
 			sensor.requestTemperatures();
 			/* Send temperature as a raw value to avoid pulling in the FP libraries
 			   (I think); program size is about 2k larger if you do getTempC here.
 			*/
 			wifi.println(sensor.getTemp(sensorAddress), 2);
-			wifi.find("OK");
+			safeFind("OK");
 			break;
 		} else if (c == 'p') {
 			/* Radiator on */
@@ -157,8 +164,6 @@ loop()
 			digitalWrite(RELAY, false);
 			break;
 		}
-
-		wdt_reset();
 	}
 
 	sendWithOk("IPCLOSE=0");
