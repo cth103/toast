@@ -9,6 +9,7 @@ AVR_GCC = $(AVR_BIN)/avr-gcc
 AVR_GXX = $(AVR_BIN)/avr-g++
 AVR_AR = $(AVR_BIN)/avr-gcc-ar
 AVR_OBJCOPY = $(AVR_BIN)/avr-objcopy
+AVR_SIZE = $(AVR_BIN)/avr-size
 AVRDUDE = $(AVR_BIN)/avrdude
 
 AVR_FLAGS = -g -Os -w -std=gnu++11 -fpermissive -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics
@@ -18,6 +19,9 @@ AVR_INCLUDES = -I$(ARDUINO)/hardware/arduino/avr/cores/arduino -I$(ARDUINO)/hard
 CORE_OBJS =  wiring_pulse.S.o WInterrupts.o hooks.o wiring.o wiring_analog.o wiring_digital.o wiring_pulse.o
 CORE_OBJS += wiring_shift.o CDC.o HardwareSerial.o HardwareSerial0.o HardwareSerial1.o HardwareSerial2.o HardwareSerial3.o
 CORE_OBJS += IPAddress.o PluggableUSB.o Print.o Stream.o Tone.o USBCore.o WMath.o WString.o abi.o main.o new.o
+
+summary:       fw.ino.hex
+       @echo "Used" $(shell $(AVR_SIZE) $< | tail -n 1 | awk '{print $$2;}') "(of 5310)"
 
 fw.ino.hex:	fw.ino.elf
 	$(AVR_OBJCOPY) -O ihex -R .eeprom $< $@
