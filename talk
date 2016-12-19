@@ -1,0 +1,18 @@
+#!/usr/bin/python
+
+import sys
+import argparse
+import json
+import socket
+import util
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-p', '--port', help='port to send to', type=int, default=9142)
+parser.add_argument('--host', help='host to send to', type=str, default='localhost')
+args = parser.parse_args()
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((args.host, args.port))
+util.send_json(s, json.loads(sys.stdin.read()))
+print util.receive_json(s)
+s.close()

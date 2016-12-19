@@ -18,6 +18,7 @@
 #
 
 import json
+import datetime
 
 class Error(Exception):
     def __init__(self, value):
@@ -28,12 +29,12 @@ class Error(Exception):
         return str(self)
 
 def warning(w):
-    print 'WARNING: %s' % w
+    print '%s WARNING: %s' % (datetime.datetime.now(), w)
 
 def verbose(v):
-    print v
+    print '%s: %s' % (datetime.datetime.now(), v)
 
-def send_json(socket, data):
+def send_json(socket, data, verbose=False):
     """Send a dict as JSON to a socket"""
     s = json.dumps(data)
     length = bytearray(4)
@@ -43,7 +44,8 @@ def send_json(socket, data):
     length[3] = (len(s) >>  0) & 0xff
     socket.sendall(length)
     socket.sendall(s)
-    verbose('-> %s' % data)
+    if verbose:
+        print '-> %s' % data
 
 def get_data(sock, length):
     """Get some data from a socket"""
@@ -58,7 +60,7 @@ def get_data(sock, length):
 
     return all
 
-def receive_json(socket):
+def receive_json(socket, verbose=False):
     """Receive some JSON from a socket"""
     s = get_data(socket, 4)
     if len(s) < 4:
@@ -69,5 +71,6 @@ def receive_json(socket):
     if len(s) != size:
         raise Error('could not get data from socket (got %d instead of %d)' % (len(s), size))
 
-    verbose('<- %s' % s)
+    if verbose:
+        print '<- %s' % s
     return json.loads(s);

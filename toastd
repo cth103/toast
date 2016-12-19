@@ -46,16 +46,13 @@ HYSTERESIS = 0.2
 CHECK_INTERVAL = 1
 # Minutes to keep temperatures in memory
 MEMORY_LOG_MINUTES = 60 * 24 * 7
-# Auto-off start hour
-AUTO_OFF_START = 0
-# Auto-off end hour
-AUTO_OFF_END = 6
-# Auto-off check interval (minutes)
-AUTO_OFF_INTERVAL = 30
+# Hours of the day to turn off heating automatically in
+# case somebody has forgotten
+AUTO_OFF_HOURS = [0, 1, 2, 3, 4, 5, 6, 10]
 # Default target temperature
 DEFAULT_TARGET = 19
 
-class Zone:
+class Zone(object):
     """
     Representation of a heating zone.  Used to keep track of the zones
     in the system (their names and ip addresses etc.) and to communicate
@@ -79,23 +76,81 @@ class Zone:
     def __hash__(self):
         return hash(self.name)
 
-    def set_radiator_on(self, on):
-        """Tell the zone to turn its radiator on"""
+    def connect(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.ip, self.port))
+        return s
+
+    def set_radiator_on(self, on):
+        """Tell the zone to turn its radiator on or off"""
+        pass
+
+    def get_temperature(self):
+        """Ask the zone what its current temperature is"""
+        pass
+
+class JSONZone(Zone):
+    def set_radiator_on(self, on):
+        if on == self.radiator_on:
+            return
+        s = self.connect()
         util.send_json(s, {'type': 'set', 'radiator_on': on})
         self.radiator_on = on
 
     def get_temperature(self):
-        """Ask the zone what its current temperature is"""
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self.ip, self.port))
+        util.verbose("Connecting for temperature of %s" % self.name)
+        s = self.connect()
         util.send_json(s, {'type': 'get'})
-        return util.receive_json(s)['temperature']
+        j = util.receive_json(s)['temperature']
+        util.verbose("Received temperature of %f of %s" % (j, self.name))
+        return j
+
+class ASCIIZone(Zone):
+    def __init__(self, name, ip, port=9142):
+        super(ASCIIZone, self).__init__(name, ip, port)
+        self.lock = threading.Lock()
+
+    def set_radiator_on(self, on):
+        if on == self.radiator_on:
+            return
+        try:
+            self.lock.acquire()
+            s = self.connect()
+            if on:
+                s.send('p')
+            else:
+                s.send('q')
+            # The 8266 firmware likes to close the socket, rather than us
+            # doing it (for reasons that are not yet clear) so give it 
+            # time to do that.
+            time.sleep(1)
+            s.close()
+        finally:
+            self.lock.release()
+
+        self.radiator_on = on
+
+    def get_temperature(self):
+        try:
+            self.lock.acquire()
+            util.verbose("Connecting for temperature of %s" % self.name)
+            s = self.connect()
+            s.send('s')
+            r = float(s.recv(64))
+            util.verbose("Received temperature %f of %s" % (r, self.name))
+            # The 8266 firmware likes to close the socket, rather than us
+            # doing it (for reasons that are not yet clear) so give it 
+            # time to do that.
+            time.sleep(1)
+            s.close()
+            return r
+        finally:
+            self.lock.release()
 
 ZONES = []
-ZONES.append(Zone('Sitting room', 'localhost'))
-ZONES.append(Zone('Bathroom', 'zone1'))
+ZONES.append(JSONZone('Sitting room', 'localhost'))
+ZONES.append(JSONZone('Bathroom', 'zone1'))
+ZONES.append(ASCIIZone('Thomas', '192.168.1.7'))
 
 # True to stop all threads
 stop = False
@@ -388,7 +443,6 @@ class State:
                 rules.append(r)
             self.set_rules(rules)
 
-
 def setup():
     global args
     global have_gpio
@@ -415,9 +469,9 @@ def update():
 
     # Apply auto-off
     time = datetime.datetime.now()
-    if time.hour >= AUTO_OFF_START and time.hour <= AUTO_OFF_END and (time.minute % AUTO_OFF_INTERVAL) == 0 and state.get_heating_enabled():
+    if time.minute == 0 and time.hour in AUTO_OFF_HOURS and state.get_heating_enabled():
         state.set_heating_enabled(False)
-        util.verbose('Turned off automatically at %d:%02d' % (time.hour, time.minute))
+        util.verbose('turned off automatically at %d:%02d' % (time.hour, time.minute))
 
     # Work out whether each zone is enabled and what its temperature should be
 
@@ -433,7 +487,7 @@ def update():
     if len(rules) > 0:
         # If there are active rules they dictate everything
         for r in state.get_active_rules():
-            util.verbose('Rule makes %s target %f' % (r.zone, r.target))
+            util.verbose('rule makes %s target %f' % (r.zone, r.target))
             heating_enabled = True
             zone_enabled[r.zone] = True
             target[r.zone] = r.target

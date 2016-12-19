@@ -43,6 +43,8 @@ def get_temperature():
     global warned_about_owb
     global test_temperature
 
+    util.verbose("Getting temperature from 1wb")
+
     try:
         f = open('/sys/bus/w1/devices/%s/w1_slave' % SENSOR, 'r')
     except:
@@ -57,11 +59,12 @@ def get_temperature():
     l = f.readline()
     l = f.readline()
     f.close()
+
+    util.verbose("Got temperature from 1wb")
     return float(l.split()[9].split('=')[1]) / 1000
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--port', help='port to bind to', type=int, default=9142)
-parser.add_argument('-l', '--log-directory', help='directory to log to', type=str, default='/var/log/toast')
 args = parser.parse_args()
 
 def handler(json):
