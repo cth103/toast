@@ -120,7 +120,10 @@ loop()
       sendWithOk("IPSEND=0,7");
       wifi.find(">");
       sensor.requestTemperatures();
-      wifi.println(sensor.getTempC(sensorAddress), 2);
+      /* Send temperature as a raw value to avoid pulling in the FP libraries
+	 (I think); program size is about 2k larger if you do getTempC here.
+      */
+      wifi.println(sensor.getTemp(sensorAddress), 2);
       wifi.find("OK");
       break;
     } else if (c == 'p') {
