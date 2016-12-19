@@ -44,6 +44,8 @@ DallasTemperature sensor(&oneWire);
 
 char* connect[] = { "WMODE=1", "WJAP=\"" SSID "\",\"" PASS "\"", "IPSTA=\"" LISTEN_IP "\"" };
 
+unsigned long int lastActivity = millis();
+
 /** Send an AT command and wait for "OK" to come back */
 bool
 sendWithOk(char const * message)
@@ -71,7 +73,10 @@ setup()
   wifi.begin(9600);
   wifi.listen();
   wifi.setTimeout(5000);
+}
 
+void initWifi()
+{
   /* Reset the Wifi board by pulling its CH_PD pin low */
   digitalWrite(ESP8266_CH_PD_PIN, HIGH);
   delay(100);
@@ -101,7 +106,20 @@ void
 loop()
 {
   while (true) {
+
+    if (millis() > (lastActivity + 10000)) {
+      /* See if the Wifi module is still with us */
+      wifi.print("AT\r\n");
+      if (!wifi.find("OK")) {
+        initWifi();
+      }
+    }
+
     char c = wifi.read();
+    if (c != -1) {
+      lastActivity = millis();
+    }
+
     if (c == 's') {
       /* Send temperature */
       sendWithOk("IPSEND=0,7");
