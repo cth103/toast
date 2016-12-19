@@ -1,4 +1,4 @@
-/* -*- c-basic-offset: 2; tab-width: 2 -*-; indent-tabs-mode: nil; */
+/* -*- c-basic-offset: 2; tab-width: 2; indent-tabs-mode: nil; */
 /*
     Copyright (C) 2016 Carl Hetherington <cth@carlh.net>
 
@@ -82,9 +82,9 @@ setup()
   pinMode(ONE_WIRE_BUS, OUTPUT);
   pinMode(RELAY, OUTPUT);
 
-	/* Empirically derived to give accurate 9600 baud with SoftwareSerial;
-	 * I'm not sure if this is necessary.
-	 */
+  /* Empirically derived to give accurate 9600 baud with SoftwareSerial;
+   * I'm not sure if this is necessary.
+   */
   OSCCAL = 82;
 
   wifi.begin(9600);
@@ -116,7 +116,7 @@ loop()
   while (true) {
     char c = wifi.read();
     if (c == 's') {
-			/* Send temperature */
+      /* Send temperature */
       sendWithOk("CIPSEND=0,7");
       wifi.find(">");
       sensor.requestTemperatures();
@@ -124,11 +124,11 @@ loop()
       wifi.find("OK");
       break;
     } else if (c == 'p') {
-			/* Radiator on */
+      /* Radiator on */
       digitalWrite(RELAY, true);
       break;
     } else if (c == 'q') {
-			/* Radiator off */
+      /* Radiator off */
       digitalWrite(RELAY, false);
       break;
     }
