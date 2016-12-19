@@ -1,4 +1,6 @@
 ARDUINO = /opt/arduino-1.6.12
+SSID = my_wireless_ssid
+PASSWORD = my_wireless_password
 
 AVR_BIN = $(ARDUINO)/hardware/tools/avr/bin
 AVR_GCC = $(AVR_BIN)/avr-gcc
@@ -8,7 +10,7 @@ AVR_OBJCOPY = $(AVR_BIN)/avr-objcopy
 AVRDUDE = $(AVR_BIN)/avrdude
 
 AVR_FLAGS = -g -Os -w -std=gnu++11 -fpermissive -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics
-AVR_FLAGS += -MMD -flto -mmcu=attiny85 -DF_CPU=8000000L -DARDUINO=10612 -DARDUINO_AVR_TRINKET3 -DARDUINO_ARCH_AVR
+AVR_FLAGS += -MMD -flto -mmcu=attiny85 -DF_CPU=8000000L -DARDUINO=10612 -DARDUINO_AVR_TRINKET3 -DARDUINO_ARCH_AVR -DSSID="\"$(SSID)\"" -DPASS="\"$(PASSWORD)\""
 AVR_INCLUDES = -I$(ARDUINO)/hardware/arduino/avr/cores/arduino -I$(ARDUINO)/hardware/arduino/avr/libraries/SoftwareSerial/src -Itiny8 -IOneWire -IDallasTemperature
 
 CORE_OBJS =  wiring_pulse.S.o WInterrupts.o hooks.o wiring.o wiring_analog.o wiring_digital.o wiring_pulse.o

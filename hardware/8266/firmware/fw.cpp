@@ -1,12 +1,28 @@
 /* -*- c-basic-offset: 2; tab-width: 2 -*-; indent-tabs-mode: nil; */
+/*
+    Copyright (C) 2016 Carl Hetherington <cth@carlh.net>
+
+    This file is part of toast.
+
+    toast is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    toast is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with toast.  If not, see <http://www.gnu.org/licenses/>.
+
+*/
 
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-
-#define SSID "PlusnetWireless998FC7"
-#define PASS "E5383F2817"
 
 #define ESP8266_TX_PIN 2
 #define ESP8266_CH_PD_PIN 1
