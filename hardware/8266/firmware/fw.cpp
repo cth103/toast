@@ -127,15 +127,20 @@ loop()
 			}
 		}
 
+		wdt_reset();
+
 		char c = wifi.read();
 		if (c != -1) {
 			lastActivity = millis();
 		}
 
+		wdt_reset();
+
 		if (c == 's') {
 			/* Send temperature */
 			sendWithOk("IPSEND=0,7");
 			wifi.find(">");
+			wdt_reset();
 			sensor.requestTemperatures();
 			/* Send temperature as a raw value to avoid pulling in the FP libraries
 			   (I think); program size is about 2k larger if you do getTempC here.
@@ -152,6 +157,8 @@ loop()
 			digitalWrite(RELAY, false);
 			break;
 		}
+
+		wdt_reset();
 	}
 
 	sendWithOk("IPCLOSE=0");
