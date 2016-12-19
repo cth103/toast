@@ -16,6 +16,8 @@ Fuse
 Fuse holder e.g. RS 765-2973
 Terminal block e.g. RS 193-0564
 
+stty -F /dev/ttyUSB0 -crtscts ixon ixoff
+
 Relay something like RS 800-4502 (£1.55)
 
 The trinket 3.3V rated current is 150mA but some people have the 8266
