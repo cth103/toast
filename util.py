@@ -17,6 +17,7 @@
 #    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
 
+import sys
 import json
 import datetime
 
@@ -30,9 +31,11 @@ class Error(Exception):
 
 def warning(w):
     print '%s WARNING: %s' % (datetime.datetime.now(), w)
+    sys.stdout.flush()
 
 def verbose(v):
     print '%s: %s' % (datetime.datetime.now(), v)
+    sys.stdout.flush()
 
 def send_json(socket, data, verbose=False):
     """Send a dict as JSON to a socket"""

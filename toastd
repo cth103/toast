@@ -102,7 +102,7 @@ class JSONZone(Zone):
         s = self.connect()
         util.send_json(s, {'type': 'get'})
         j = util.receive_json(s)['temperature']
-        util.verbose("Received temperature of %f of %s" % (j, self.name))
+        util.verbose("Received temperature %f of %s" % (j, self.name))
         return j
 
 class ASCIIZone(Zone):
@@ -136,7 +136,7 @@ class ASCIIZone(Zone):
             util.verbose("Connecting for temperature of %s" % self.name)
             s = self.connect()
             s.send('s')
-            r = float(s.recv(64))
+            r = int(s.recv(64), 16) * 0.0078125
             util.verbose("Received temperature %f of %s" % (r, self.name))
             # The 8266 firmware likes to close the socket, rather than us
             # doing it (for reasons that are not yet clear) so give it 
