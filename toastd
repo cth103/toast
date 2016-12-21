@@ -78,6 +78,7 @@ class Zone(object):
 
     def connect(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(5)
         s.connect((self.ip, self.port))
         return s
 
@@ -121,7 +122,7 @@ class ASCIIZone(Zone):
             else:
                 s.send('q')
             # The 8266 firmware likes to close the socket, rather than us
-            # doing it (for reasons that are not yet clear) so give it 
+            # doing it (for reasons that are not yet clear) so give it
             # time to do that.
             time.sleep(1)
             s.close()
@@ -139,7 +140,7 @@ class ASCIIZone(Zone):
             r = int(s.recv(64), 16) * 0.0078125
             util.verbose("Received temperature %f of %s" % (r, self.name))
             # The 8266 firmware likes to close the socket, rather than us
-            # doing it (for reasons that are not yet clear) so give it 
+            # doing it (for reasons that are not yet clear) so give it
             # time to do that.
             time.sleep(1)
             s.close()

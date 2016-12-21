@@ -1,4 +1,3 @@
-/* -*- c-basic-offset: 2; tab-width: 2; indent-tabs-mode: nil; */
 /*
     Copyright (C) 2016 Carl Hetherington <cth@carlh.net>
 
@@ -23,6 +22,7 @@
 #include <SoftwareSerial.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <avr/wdt.h>
 
 /* Pins on the trinket that things are connected to */
 #define ESP8266_RX_PIN 0
@@ -42,97 +42,142 @@ SoftwareSerial wifi(ESP8266_RX_PIN, ESP8266_TX_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensor(&oneWire);
 
-uint8_t scratchPad[9];
-char* connect[] = { "CWMODE=1", "CWJAP=\"" SSID "\",\"" PASS "\"", "CIPSTA=\"" LISTEN_IP "\"" };
+char* connect[] = { "WMODE=1", "WJAP=\"" SSID "\",\"" PASS "\"", "IPSTA=\"" LISTEN_IP "\"" };
 
-/** Reset the Wifi board by pulling its CH_PD pin low */
-void
-resetWifi()
-{
-  digitalWrite(ESP8266_CH_PD_PIN, HIGH);
-  delay(100);
-  digitalWrite(ESP8266_CH_PD_PIN, LOW);
-  delay(1000);
-  digitalWrite(ESP8266_CH_PD_PIN, HIGH);
-}
+unsigned long int lastActivity = millis();
 
 /** Send an AT command and wait for "OK" to come back */
 bool
 sendWithOk(char const * message)
 {
-  wifi.print("AT+");
-  wifi.print(message);
-  wifi.print("\r\n");
-  return wifi.find("OK");
+	wifi.print("AT+C");
+	wifi.print(message);
+	wifi.print("\r\n");
+	wdt_reset();
+	bool const r = wifi.find("OK");
+	wdt_reset();
+	return r;
 }
 
-void
-startServer()
+bool safeFind(char* message)
 {
-  sendWithOk("CIPMUX=1");
-  sendWithOk("CIPSERVER=1," LISTEN_PORT);
+	wdt_reset();
+	bool r = wifi.find(message);
+	wdt_reset();
+	return r;
+}
+
+void initWifi()
+{
+	wdt_reset();
+
+	/* Reset the Wifi board by pulling its CH_PD pin low */
+	digitalWrite(ESP8266_CH_PD_PIN, HIGH);
+	delay(100);
+	digitalWrite(ESP8266_CH_PD_PIN, LOW);
+	delay(1000);
+	digitalWrite(ESP8266_CH_PD_PIN, HIGH);
+
+	delay(2000);
+	wdt_reset();
+
+	while (true) {
+
+		int i;
+		for (i = 0; i < 3; ++i) {
+			if (!sendWithOk(connect[i])) {
+				break;
+			}
+		}
+
+		if (i == 3) {
+			sendWithOk("IPMUX=1");
+			sendWithOk("IPSERVER=1," LISTEN_PORT);
+			return;
+		}
+	}
 }
 
 void
 setup()
 {
-  pinMode(ESP8266_TX_PIN, OUTPUT);
-  pinMode(ESP8266_CH_PD_PIN, OUTPUT);
-  pinMode(ESP8266_RX_PIN, INPUT);
-  pinMode(ONE_WIRE_BUS, OUTPUT);
-  pinMode(RELAY, OUTPUT);
+	pinMode(ESP8266_TX_PIN, OUTPUT);
+	pinMode(ESP8266_CH_PD_PIN, OUTPUT);
+	pinMode(ESP8266_RX_PIN, INPUT);
+	pinMode(ONE_WIRE_BUS, OUTPUT);
+	pinMode(RELAY, OUTPUT);
 
-  /* Empirically derived to give accurate 9600 baud with SoftwareSerial;
-   * I'm not sure if this is necessary.
-   */
-  OSCCAL = 82;
+	/* Give ourselves 2s of sanity in case the watchdog goes crazy */
+	wdt_disable();
+	delay(2000);
+	wdt_enable(WDTO_8S);
 
-  wifi.begin(9600);
-  wifi.listen();
+	/* Empirically derived to give accurate 9600 baud with SoftwareSerial;
+	 * I'm not sure if this is necessary.
+	 */
+	OSCCAL = 82;
 
-  resetWifi();
-  delay(2000);
+	wifi.begin(9600);
+	wifi.listen();
+	wifi.setTimeout(5000);
 
-  wifi.setTimeout(5000);
-
-  while (true) {
-    int i;
-    for (i = 0; i < 3; ++i) {
-      if (!sendWithOk(connect[i])) {
-        break;
-      }
-    }
-
-    if (i == 3) {
-      startServer();
-      return;
-    }
-  }
+	initWifi();
 }
 
 void
 loop()
 {
-  while (true) {
-    char c = wifi.read();
-    if (c == 's') {
-      /* Send temperature */
-      sendWithOk("CIPSEND=0,7");
-      wifi.find(">");
-      sensor.requestTemperatures();
-      wifi.println(sensor.getTempC(sensorAddress), 2);
-      wifi.find("OK");
-      break;
-    } else if (c == 'p') {
-      /* Radiator on */
-      digitalWrite(RELAY, true);
-      break;
-    } else if (c == 'q') {
-      /* Radiator off */
-      digitalWrite(RELAY, false);
-      break;
-    }
-  }
+	while (true) {
 
-  sendWithOk("CIPCLOSE=0");
+		wdt_reset();
+
+		if (millis() > (lastActivity + 10000)) {
+			/* See if the Wifi module is still with us */
+			wifi.print("AT\r\n");
+			if (!safeFind("OK")) {
+				initWifi();
+			}
+			lastActivity = millis ();
+		}
+
+		wdt_reset();
+		char c = wifi.read();
+		if (c != -1) {
+			lastActivity = millis();
+		}
+		wdt_reset();
+
+		if (c == 's') {
+			/* Send temperature */
+			sendWithOk("IPSEND=0,6");
+			safeFind(">");
+			sensor.requestTemperatures();
+			/* Send temperature as a raw value to avoid pulling in the FP libraries
+			   (I think); program size is about 2k larger if you do getTempC here.
+			*/
+			int16_t val = sensor.getTemp(sensorAddress);
+			if (val < 0x1000) {
+				wifi.print("0");
+			}
+			if (val < 0x100) {
+				wifi.print("0");
+			}
+			if (val < 0x10) {
+				wifi.print("0");
+			}
+			wifi.println(val, HEX);
+			safeFind("OK");
+			break;
+		} else if (c == 'p') {
+			/* Radiator on */
+			digitalWrite(RELAY, true);
+			break;
+		} else if (c == 'q') {
+			/* Radiator off */
+			digitalWrite(RELAY, false);
+			break;
+		}
+	}
+
+	sendWithOk("IPCLOSE=0");
 }
