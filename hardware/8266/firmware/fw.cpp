@@ -53,46 +53,24 @@ sendWithOk(char const * message)
 	wifi.print("AT+C");
 	wifi.print(message);
 	wifi.print("\r\n");
+	wdt_reset();
 	bool const r = wifi.find("OK");
-	wdt_reset ();
+	wdt_reset();
 	return r;
 }
 
 bool safeFind(char* message)
 {
 	wdt_reset();
-	wifi.find(message);
+	bool r = wifi.find(message);
 	wdt_reset();
-}
-
-void
-setup()
-{
-	pinMode(ESP8266_TX_PIN, OUTPUT);
-	pinMode(ESP8266_CH_PD_PIN, OUTPUT);
-	pinMode(ESP8266_RX_PIN, INPUT);
-	pinMode(ONE_WIRE_BUS, OUTPUT);
-	pinMode(RELAY, OUTPUT);
-
-	/* Give ourselves 2s of sanity in case the watchdog goes crazy */
-	wdt_disable();
-	delay(2000);
-	wdt_enable(WDTO_8S);
-
-	/* Empirically derived to give accurate 9600 baud with SoftwareSerial;
-	 * I'm not sure if this is necessary.
-	 */
-	OSCCAL = 82;
-
-	wifi.begin(9600);
-	wifi.listen();
-	wifi.setTimeout(5000);
-
-	wdt_reset();
+	return r;
 }
 
 void initWifi()
 {
+	wdt_reset();
+
 	/* Reset the Wifi board by pulling its CH_PD pin low */
 	digitalWrite(ESP8266_CH_PD_PIN, HIGH);
 	delay(100);
@@ -121,6 +99,32 @@ void initWifi()
 }
 
 void
+setup()
+{
+	pinMode(ESP8266_TX_PIN, OUTPUT);
+	pinMode(ESP8266_CH_PD_PIN, OUTPUT);
+	pinMode(ESP8266_RX_PIN, INPUT);
+	pinMode(ONE_WIRE_BUS, OUTPUT);
+	pinMode(RELAY, OUTPUT);
+
+	/* Give ourselves 2s of sanity in case the watchdog goes crazy */
+	wdt_disable();
+	delay(2000);
+	wdt_enable(WDTO_8S);
+
+	/* Empirically derived to give accurate 9600 baud with SoftwareSerial;
+	 * I'm not sure if this is necessary.
+	 */
+	OSCCAL = 82;
+
+	wifi.begin(9600);
+	wifi.listen();
+	wifi.setTimeout(5000);
+
+	initWifi();
+}
+
+void
 loop()
 {
 	while (true) {
@@ -133,26 +137,35 @@ loop()
 			if (!safeFind("OK")) {
 				initWifi();
 			}
+			lastActivity = millis ();
 		}
 
 		wdt_reset();
-
 		char c = wifi.read();
 		if (c != -1) {
 			lastActivity = millis();
 		}
-
 		wdt_reset();
 
 		if (c == 's') {
 			/* Send temperature */
-			sendWithOk("IPSEND=0,7");
+			sendWithOk("IPSEND=0,6");
 			safeFind(">");
 			sensor.requestTemperatures();
 			/* Send temperature as a raw value to avoid pulling in the FP libraries
 			   (I think); program size is about 2k larger if you do getTempC here.
 			*/
-			wifi.println(sensor.getTemp(sensorAddress), 2);
+			int16_t val = sensor.getTemp(sensorAddress);
+			if (val < 0x1000) {
+				wifi.print("0");
+			}
+			if (val < 0x100) {
+				wifi.print("0");
+			}
+			if (val < 0x10) {
+				wifi.print("0");
+			}
+			wifi.println(val, HEX);
 			safeFind("OK");
 			break;
 		} else if (c == 'p') {
