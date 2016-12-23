@@ -25,9 +25,9 @@
 #include <avr/wdt.h>
 
 /* Pins on the trinket that things are connected to */
-#define ESP8266_RX_PIN 0
-#define ESP8266_CH_PD_PIN 1
-#define ESP8266_TX_PIN 2
+#define ESP8266_RX_PIN 0     /* pin connected to ESP8266 TX */
+#define ESP8266_CH_PD_PIN 1  /*                  ESP8266 CH_PD */
+#define ESP8266_TX_PIN 2     /*                  ESP8266 RX */
 #define RELAY 3
 #define ONE_WIRE_BUS 4
 
@@ -42,7 +42,7 @@ SoftwareSerial wifi(ESP8266_RX_PIN, ESP8266_TX_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensor(&oneWire);
 
-char* connect[] = { "WMODE=1", "WJAP=\"" SSID "\",\"" PASS "\"", "IPSTA=\"" LISTEN_IP "\"" };
+char* setup_messages[] = { "WMODE=1", "WJAP=\"" SSID "\",\"" PASS "\"", "IPSTA=\"" LISTEN_IP "\"", "IPMUX=1", "IPSERVER=1," LISTEN_PORT };
 
 unsigned long int lastActivity = millis();
 
@@ -69,32 +69,32 @@ bool safeFind(char* message)
 
 void initWifi()
 {
-	wdt_reset();
-
-	/* Reset the Wifi board by pulling its CH_PD pin low */
-	digitalWrite(ESP8266_CH_PD_PIN, HIGH);
-	delay(100);
-	digitalWrite(ESP8266_CH_PD_PIN, LOW);
-	delay(1000);
-	digitalWrite(ESP8266_CH_PD_PIN, HIGH);
-
-	delay(2000);
-	wdt_reset();
-
 	while (true) {
+		wdt_reset();
+
+		/* Reset the Wifi board by pulling its CH_PD pin low */
+		digitalWrite(ESP8266_CH_PD_PIN, HIGH);
+		delay(100);
+		digitalWrite(ESP8266_CH_PD_PIN, LOW);
+		delay(1000);
+		digitalWrite(ESP8266_CH_PD_PIN, HIGH);
+
+		delay(2000);
+		wdt_reset();
 
 		int i;
-		for (i = 0; i < 3; ++i) {
-			if (!sendWithOk(connect[i])) {
+		for (i = 0; i < 5; ++i) {
+			if (!sendWithOk(setup_messages[i])) {
 				break;
 			}
 		}
 
-		if (i == 3) {
-			sendWithOk("IPMUX=1");
-			sendWithOk("IPSERVER=1," LISTEN_PORT);
+		if (i == 5) {
+			/* All ok */
 			return;
 		}
+
+		/* Something failed, go back round to reset the board and try again */
 	}
 }
 
@@ -127,6 +127,8 @@ setup()
 void
 loop()
 {
+	int lastTemperature = 0;
+
 	while (true) {
 
 		wdt_reset();
@@ -156,6 +158,10 @@ loop()
 			   (I think); program size is about 2k larger if you do getTempC here.
 			*/
 			int16_t val = sensor.getTemp(sensorAddress);
+			if (val == DEVICE_DISCONNECTED_RAW) {
+				val = lastTemperature;
+			}
+
 			if (val < 0x1000) {
 				wifi.print("0");
 			}
@@ -166,6 +172,7 @@ loop()
 				wifi.print("0");
 			}
 			wifi.println(val, HEX);
+			lastTemperature = val;
 			safeFind("OK");
 			break;
 		} else if (c == 'p') {
