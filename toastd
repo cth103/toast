@@ -159,8 +159,6 @@ stop = False
 server = None
 # True to write logs, false if not
 write_logs = True
-# List of currently-active rules
-current_rules = []
 # Condition variable which when notified will cause
 # an update of our state
 update_condition = threading.Condition()
@@ -466,7 +464,6 @@ def setup():
 
 def update():
     global state
-    global current_rules
 
     # Apply auto-off
     time = datetime.datetime.now()
