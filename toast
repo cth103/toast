@@ -96,6 +96,9 @@ if args.summary:
             if e['zone'] == t['zone']:
                 temperature = e['temperatures'][0]
 
-        print '%s %.2f %.1f [%s]' % (t['zone'].ljust(longest + 2), temperature, float(t['target']), on_off(enabled))
+        if temperature is None:
+            print '%s ?     %.1f [%s]' % (t['zone'].ljust(longest + 2), float(t['target']), on_off(enabled))
+        else:
+            print '%s %.2f %.1f [%s]' % (t['zone'].ljust(longest + 2), temperature, float(t['target']), on_off(enabled))
 
     s.close()
