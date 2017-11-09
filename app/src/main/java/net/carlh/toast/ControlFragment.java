@@ -245,23 +245,11 @@ public class ControlFragment extends Fragment {
 
             if (state.getBoilerOn()) {
                 boilerOn.setText("Boiler is on");
-                if (!zone_enabled || !getHeatingEnabled()) {
-                    explanation.setText("Heating to programmed target");
-                } else {
-                    explanation.setText("");
-                }
             } else {
                 boilerOn.setText("Boiler is off");
-                if (getHeatingEnabled()) {
-                    if (zone_enabled) {
-                        explanation.setText("Target temperatures reached");
-                    } else {
-                        explanation.setText("All rooms switched off");
-                    }
-                } else {
-                    explanation.setText("Heating is switched off");
-                }
             }
+
+            explanation.setText(state.getExplanation());
         } else {
             for (Map.Entry<String, Zone> i : zones.entrySet()) {
                 Zone z = i.getValue();

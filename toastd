@@ -405,12 +405,26 @@ class State:
         for r in self.rules:
             rules.append(r.as_dict())
 
+        explanation = ""
+        if self.boiler_on:
+            if !self.zone_enabled or !self.heating_enabled:
+                explanation = "Heating to programmed target"
+            else:
+                if self.heating_enabled:
+                    if self.zone_enabled:
+                        explanation = "Target temperatures reached"
+                    else:
+                        explanation = "All rooms switched off"
+                else:
+                    explanation = "Heating is switched off"
+
         all = {"heating_enabled": self.heating_enabled,
                "zone_enabled": zone_enabled,
                "target": target,
                "boiler_on": self.boiler_on,
                "temperatures": temperatures,
-               "rules": rules}
+               "rules": rules,
+               "explanation": explanation}
 
         if key is not None:
             out = { key: all[key] }
@@ -461,8 +475,11 @@ def setup():
             util.warning('could not create log directory `%s\'; logging disabled' % args.log_directory)
             write_logs = False
 
-
 def update():
+    """
+    The actual decision-making part: take inputs and decide which rads should be on and
+    whether or not the boiler should be on.
+    """
     global state
 
     # Apply auto-off
@@ -524,6 +541,7 @@ def update():
     state.set_boiler_on(heat_required and heating_enabled)
 
 def check():
+    """Body of the "check" thread which converts demand to "output" state."""
     global state
     global stop
     global update_condition
@@ -537,6 +555,7 @@ def check():
         update_condition.release()
 
 def log():
+    """Body of the "log" thread which logs various bits of state."""
     global state
     global stop
     global args
