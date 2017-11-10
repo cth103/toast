@@ -5,6 +5,7 @@
 #include "user_interface.h"
 #include "espconn.h"
 #include "driver/uart.h"
+#include "driver/ds18b20.h"
 
 char const ssid[32] = "TALKTALK227CC2-2G";
 char const password[32] = "3N7FEUR9";
@@ -12,22 +13,81 @@ char const server_ip[4] = {192, 168, 1, 5};
 int const server_port = 9999;
 
 LOCAL os_timer_t check_wifi_timer;
+LOCAL os_timer_t conversion_timer;
 
 struct station_config station_conf;
 struct espconn connection;
 struct _esp_tcp tcp;
+uint8_t ds18b20_addr[8];
+
+LOCAL void ICACHE_FLASH_ATTR check_wifi_cb(void* arg);
+
+LOCAL void ICACHE_FLASH_ATTR
+conversion_cb(void* arg)
+{
+	int i;
+	uint8_t data[12];
+	int tries = 5;
+
+	while (tries) {
+		reset();
+		select(ds18b20_addr);
+		write(DS1820_READ_SCRATCHPAD, 0);
+		for (i = 0; i < 9; ++i) {
+			data[i] = read();
+		}
+		if (crc8(data, 8) == data[8]) {
+			break;
+		}
+		--tries;
+	}
+
+        int rr = data[1] << 8 | data[0];
+        if (rr & 0x8000) {
+		/* sign extend */
+		rr |= 0xffff0000;
+	}
+	/* Each bit is 1/16th of a degree C */
+	rr = rr * 10000 / 16;
+	ets_uart_printf("Read %d\n", rr);
+}
 
 LOCAL void ICACHE_FLASH_ATTR
 connect_cb(void* arg)
 {
+	int r;
+
 	ets_uart_printf("Connected to server.\r\n");
+
+	ds_init();
+	while ((r = ds_search(ds18b20_addr))) {
+		if (crc8(ds18b20_addr, 7) != ds18b20_addr[7]) {
+			/* Bad CRC */
+			continue;
+		}
+		ets_uart_printf(
+			"Found 1wb device %02x%02x%02x%02x%02x%02x%02x%02x\r\n",
+			ds18b20_addr[0], ds18b20_addr[1], ds18b20_addr[2], ds18b20_addr[3], ds18b20_addr[4], ds18b20_addr[5], ds18b20_addr[6], ds18b20_addr[7]
+			);
+		if (ds18b20_addr[0] == 0x10 || ds18b20_addr[0] == 0x28) {
+			ets_uart_printf("Found DS18B20\r\n");
+			reset();
+			select(ds18b20_addr);
+			write(DS1820_CONVERT_T, 1);
+			os_timer_setfn(&conversion_timer, (os_timer_func_t *) conversion_cb, (void *) 0);
+			os_timer_arm(&conversion_timer, 750, 0);
+		}
+
+	}
+
 	espconn_send(&connection, "Cockwomble\r\n", 13);
 }
 
 LOCAL void ICACHE_FLASH_ATTR
 reconnect_cb(void* arg, sint8 err)
 {
-	/* Lost tcp connection */
+	os_timer_setfn(&check_wifi_timer, (os_timer_func_t *) check_wifi_cb, (void *) 0);
+	os_timer_arm(&check_wifi_timer, 100, 1);
 }
 
 LOCAL void ICACHE_FLASH_ATTR
