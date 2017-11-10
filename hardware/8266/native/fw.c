@@ -53,7 +53,7 @@ check_wifi_cb(void* arg)
 		connection.proto.tcp->remote_port = server_port;
 		connection.proto.tcp->local_port = espconn_port();
 		espconn_regist_connectcb(&connection, connect_cb);
-		espconn_regist_reconcb(&connection, reconnect_cb); // register reconnect callback as error handler
+		espconn_regist_reconcb(&connection, reconnect_cb);
 		espconn_connect(&connection);
 	} else {
 		if (wifi_station_get_connect_status() == STATION_WRONG_PASSWORD ||
