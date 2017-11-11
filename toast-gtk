@@ -10,15 +10,18 @@ import threading
 
 import util
 
+GUI_SPACING = 16
 SERVER = '192.168.1.1'
 
 class Client:
+    """A connection to a toast server"""
     def __init__(self):
         self.terminate = False
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
         self.handlers = []
         self.target = dict()
+        self.temperature = dict()
         self.heating_enabled = False
 
     def changed(self):
@@ -28,6 +31,11 @@ class Client:
     def take_target(self, d):
         for x in d:
             self.target[x['zone']] = x['target']
+
+    def take_temperature(self, d):
+        for x in d:
+            if len(x['temperatures']) > 0:
+                   self.temperature[x['zone']] = x['temperatures'][0]
 
     def run(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -41,11 +49,16 @@ class Client:
                         self.take_target(v)
                     elif k == 'heating_enabled':
                         self.heating_enabled = v
+                    elif k == 'temperatures':
+                        self.take_temperature(v)
                 self.changed()
         s.close()
 
-class Target:
-    pass
+class Room:
+    """A GUI representation of a room"""
+    def __init__(self):
+        self.target = Gtk.Label()
+        self.temperature = Gtk.Label()
 
 class Toast:
     def __init__(self, client):
@@ -53,12 +66,12 @@ class Toast:
         main_vbox = Gtk.VBox()
         window.add(main_vbox)
         self.heating_on = Gtk.CheckButton('On')
-        main_vbox.add(self.heating_on)
+        main_vbox.pack_start(self.heating_on, False, False, GUI_SPACING * 2)
         self.target_box = Gtk.VBox()
-        main_vbox.add(self.target_box)
+        main_vbox.pack_start(self.target_box, True, True, GUI_SPACING)
         window.show_all()
 
-        self.target = dict()
+        self.room = dict()
 
         client.handlers.append(self.state_changed)
         self.state_changed(client)
@@ -66,23 +79,27 @@ class Toast:
     def state_changed(self, client):
         self.heating_on.set_active(client.heating_enabled)
         for k, v in client.target.iteritems():
-            if not k in self.target:
-                target = Target()
+            if not k in self.room:
+                room = Room()
 
                 hbox = Gtk.HBox()
                 label = Gtk.Label('<b>%s</b>' % k)
                 label.set_use_markup(True)
                 label.set_xalign(0)
-                hbox.add(label)
+                hbox.pack_start(label, True, True, GUI_SPACING)
 
-                target.temperature = Gtk.Label()
-                hbox.add(target.temperature)
+                hbox.pack_start(room.target, False, False, GUI_SPACING)
+                hbox.pack_start(room.temperature, False, False, GUI_SPACING)
 
-                self.target_box.add(hbox)
+                self.target_box.pack_start(hbox, False, False, GUI_SPACING)
                 self.target_box.show_all()
 
-                self.target[k] = target
+                self.room[k] = room
 
+            self.room[k].temperature.set_text("%.1f" % v)
+
+        for k, v in client.temperature.iteritems():
+            self.room[k].target.set_text("%.1f" % v)
 
 c = Client()
 toast = Toast(c)
