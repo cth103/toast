@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-#    Copyright (C) 2014-2016 Carl Hetherington <cth@carlh.net>
+#    Copyright (C) 2014-2017 Carl Hetherington <cth@carlh.net>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -51,6 +51,10 @@ MEMORY_LOG_MINUTES = 60 * 24 * 7
 AUTO_OFF_HOURS = [0, 1, 2, 3, 4, 5, 6, 10]
 # Default target temperature
 DEFAULT_TARGET = 19.0
+# Port to talk to zones on
+ZONE_PORT = 9142
+# Port to listen for ESP8266 UDP broadcasts
+BROADCAST_PORT = 9143
 
 class Zone(object):
     """
@@ -58,7 +62,7 @@ class Zone(object):
     in the system (their names and ip addresses etc.) and to communicate
     with the zone servers.
     """
-    def __init__(self, name, ip, port=9142):
+    def __init__(self, name, ip, port=ZONE_PORT):
         self.name = name
         self.ip = ip
         self.port = port
@@ -106,9 +110,10 @@ class JSONZone(Zone):
         util.verbose("Received temperature %f of %s" % (j, self.name))
         return j
 
-class ASCIIZone(Zone):
-    def __init__(self, name, ip, port=9142):
-        super(ASCIIZone, self).__init__(name, ip, port)
+class ESP8266Zone(Zone):
+    def __init__(self, ip, mac):
+        super(ESP8266Zone, self).__init__("Unknown", ip, ZONE_PORT)
+        self.mac = mac
         self.lock = threading.Lock()
 
     def set_radiator_on(self, on):
@@ -118,13 +123,9 @@ class ASCIIZone(Zone):
             self.lock.acquire()
             s = self.connect()
             if on:
-                s.send('p')
+                s.send('on')
             else:
-                s.send('q')
-            # The 8266 firmware likes to close the socket, rather than us
-            # doing it (for reasons that are not yet clear) so give it
-            # time to do that.
-            time.sleep(1)
+                s.send('off')
             s.close()
         finally:
             self.lock.release()
@@ -136,22 +137,25 @@ class ASCIIZone(Zone):
             self.lock.acquire()
             util.verbose("Connecting for temperature of %s" % self.name)
             s = self.connect()
-            s.send('s')
-            r = int(s.recv(64), 16) * 0.0078125
+            s.send('temp')
+            r = int(s.recv(64)) / 10000.0
             util.verbose("Received temperature %f of %s" % (r, self.name))
-            # The 8266 firmware likes to close the socket, rather than us
-            # doing it (for reasons that are not yet clear) so give it
-            # time to do that.
-            time.sleep(1)
             s.close()
             return r
         finally:
             self.lock.release()
 
-ZONES = []
-ZONES.append(JSONZone('Sitting room', 'localhost'))
-ZONES.append(JSONZone('Bathroom', 'zone1'))
-ZONES.append(ASCIIZone('Thomas', '192.168.1.7'))
+FIXED_ZONES = []
+FIXED_ZONES.append(JSONZone('Sitting room', 'localhost'))
+#FIXED_ZONES.append(JSONZone('Bathroom', 'zone1'))
+
+dynamic_zones = []
+dynamic_zones_mutex = threading.Lock()
+
+def zones():
+    global FIXED_ZONES
+    global dynamic_zones
+    return FIXED_ZONES + dynamic_zones
 
 # True to stop all threads
 stop = False
@@ -171,7 +175,7 @@ def request_update():
 
 def zone_by_name(name):
     """Return the zone object which has a particular name"""
-    for z in ZONES:
+    for z in zones():
         if z.name == name:
             return z
 
@@ -275,11 +279,6 @@ class State:
         self.temperatures = {}
         self.rules = []
 
-        for z in ZONES:
-            self.zone_enabled[z] = False
-            self.target[z] = DEFAULT_TARGET
-            self.temperatures[z] = []
-
         self.mutex = threading.Lock()
 
 
@@ -298,6 +297,8 @@ class State:
     def set_zone_enabled(self, zone, enabled):
         changed = False
         with self.mutex:
+            if not zone in self.zone_enabled:
+                self.zone_enabled[zone] = False
             if self.zone_enabled[zone] != enabled:
                 self.zone_enabled[zone] = enabled
                 changed = True
@@ -333,6 +334,8 @@ class State:
 
     def add_temperature(self, zone, t):
         with self.mutex:
+            if not zone in self.temperatures:
+                self.temperatures[zone] = []
             self.temperatures[zone].append(t)
             if len(self.temperatures[zone]) > MEMORY_LOG_MINUTES:
                 state.temperatures[zone].pop(0)
@@ -357,10 +360,14 @@ class State:
 
     def get_zone_enabled(self, zone):
         with self.mutex:
+            if not zone in self.zone_enabled:
+                self.zone_enabled[zone] = False
             return self.zone_enabled[zone]
 
     def get_target(self, zone):
         with self.mutex:
+            if not zone in self.target:
+                self.target[zone] = DEFAULT_TARGET
             return self.target[zone]
 
     def get_boiler_on(self):
@@ -370,6 +377,8 @@ class State:
     def get_current_temperature(self, zone):
         t = 0.0
         with self.mutex:
+            if not zone in self.temperatures:
+                self.temperatures[zone] = []
             if len(self.temperatures[zone]) > 0:
                 t = self.temperatures[zone][-1]
         return t
@@ -477,7 +486,7 @@ def update():
     zone_enabled = {}
     target = {}
 
-    for z in ZONES:
+    for z in zones():
         zone_enabled[z] = False
         target[z] = DEFAULT_TARGET
 
@@ -492,14 +501,14 @@ def update():
     else:
         # Use current state as there are no active rules
         heating_enabled = state.get_heating_enabled()
-        for z in ZONES:
+        for z in zones():
             zone_enabled[z] = state.get_zone_enabled(z)
             target[z] = state.get_target(z)
 
     note = ''
 
     # Zone radiators on or off
-    for z in ZONES:
+    for z in zones():
         try:
             if zone_enabled[z]:
                 t = state.get_current_temperature(z)
@@ -516,12 +525,31 @@ def update():
             pass
 
     heat_required = False
-    for z in ZONES:
+    for z in zones():
         if z.radiator_on:
             heat_required = True
 
     # Then turn the boiler on or off
     state.set_boiler_on(heat_required and heating_enabled)
+
+def broadcast_listen():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(("0.0.0.0", BROADCAST_PORT))
+    while True:
+        data, addr = sock.recvfrom(64)
+        if data.startswith('Hello heating'):
+            mac = data[14:]
+            try:
+                dynamic_zones_mutex.acquire()
+                got = False
+                for z in dynamic_zones:
+                    if z.mac == mac:
+                        got = True
+                if not got:
+                    util.verbose('Adding dynamic zone at %s %s' % (addr[0], mac))
+                    dynamic_zones.append(ESP8266Zone(addr[0], mac))
+            finally:
+                dynamic_zones_mutex.release()
 
 def check():
     global state
@@ -544,7 +572,7 @@ def log():
     while not stop:
         log_file = os.path.join(args.log_directory, time.strftime("%d-%m-%Y.log"))
 
-        for z in ZONES:
+        for z in zones():
             try:
                 temp = z.get_temperature()
 
@@ -609,6 +637,9 @@ else:
 
     log_thread = threading.Thread(target=log)
     log_thread.start()
+
+    broadcast_listen_thread = threading.Thread(target=broadcast_listen)
+    broadcast_listen_thread.start()
 
     while True:
         time.sleep(60)
