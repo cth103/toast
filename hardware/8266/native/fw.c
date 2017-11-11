@@ -80,6 +80,10 @@ receive_cb(void* arg, char* data, unsigned short length)
 				os_timer_arm(&conversion_timer, 750, false);
 			}
 		}
+	} else if (os_strncmp(data, "off", 3) == 0) {
+		gpio_output_set(1, 0, 1, 0);
+	} else if (os_strncmp(data, "on", 2) == 0) {
+		gpio_output_set(0, 1, 1, 0);
 	}
 }
 
@@ -145,6 +149,7 @@ check_wifi_cb(void* arg)
 void ICACHE_FLASH_ATTR user_init()
 {
 	uart_init(BIT_RATE_115200, BIT_RATE_115200);
+	gpio_init();
 
 	wifi_set_opmode(STATIONAP_MODE);
 	os_memcpy(&station_conf.ssid, ssid, 32);
