@@ -50,7 +50,6 @@ conversion_cb(void* arg)
 	}
 	/* Each bit is 1/16th of a degree C */
 	rr = rr * 10000 / 16;
-	ets_uart_printf("Read %d\n", rr);
 	os_sprintf(reply, "%d\r\n", rr);
 	espconn_sent(conn, reply, os_strlen(reply));
 }
@@ -60,8 +59,6 @@ receive_cb(void* arg, char* data, unsigned short length)
 {
 	int r;
 
-	ets_uart_printf("Received %d bytes.\r\n", length);
-
 	ds_init();
 	while ((r = ds_search(ds18b20_addr))) {
 		if (crc8(ds18b20_addr, 7) != ds18b20_addr[7]) {
@@ -69,7 +66,7 @@ receive_cb(void* arg, char* data, unsigned short length)
 			continue;
 		}
 		ets_uart_printf(
-			"Found 1wb device %02x%02x%02x%02x%02x%02x%02x%02x\r\n",
+			"Found device %02x%02x%02x%02x%02x%02x%02x%02x\r\n",
 			ds18b20_addr[0], ds18b20_addr[1], ds18b20_addr[2], ds18b20_addr[3], ds18b20_addr[4], ds18b20_addr[5], ds18b20_addr[6], ds18b20_addr[7]
 			);
 		if (ds18b20_addr[0] == 0x10 || ds18b20_addr[0] == 0x28) {
@@ -86,13 +83,13 @@ receive_cb(void* arg, char* data, unsigned short length)
 LOCAL void ICACHE_FLASH_ATTR
 reconnect_cb(void* arg, sint8 error)
 {
-	ets_uart_printf("reconnect_cb\r\n");
+
 }
 
 LOCAL void ICACHE_FLASH_ATTR
 disconnect_cb(void* arg)
 {
-	ets_uart_printf("disconnect_cb\r\n");
+
 }
 
 LOCAL void ICACHE_FLASH_ATTR
@@ -129,7 +126,6 @@ check_wifi_cb(void* arg)
 		connection.proto.tcp->local_port = port;
 		espconn_regist_connectcb(&connection, connect_cb);
 		ret = espconn_accept(&connection);
-		ets_uart_printf("accept said %d\n", ret);
 	} else {
 		if (wifi_station_get_connect_status() == STATION_WRONG_PASSWORD ||
 		    wifi_station_get_connect_status() == STATION_NO_AP_FOUND ||
