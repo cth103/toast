@@ -114,18 +114,26 @@ LOCAL void ICACHE_FLASH_ATTR
 check_wifi_cb(void* arg)
 {
 	sint8 ret;
+	uint8_t mac_address[6];
 
 	os_timer_disarm(&check_wifi_timer);
 
 	struct ip_info ipi;
 	wifi_get_ip_info(0, &ipi);
 	if (wifi_station_get_connect_status() == STATION_GOT_IP && ipi.ip.addr != 0) {
+		wifi_get_macaddr(0, mac_address);
 		ets_uart_printf(
-			"Hello world: connected with IP %d.%d.%d.%d.\r\n",
+			"Hello world: connected with IP %d.%d.%d.%d, MAC %02x:%02x:%02x:%02x:%02x:%02x.\r\n",
 			ipi.ip.addr & 0xff,
 			(ipi.ip.addr & 0xff00) >> 8,
 			(ipi.ip.addr & 0xff0000) >> 16,
-			(ipi.ip.addr & 0xff000000) >> 24
+			(ipi.ip.addr & 0xff000000) >> 24,
+			mac_address[0],
+			mac_address[1],
+			mac_address[2],
+			mac_address[3],
+			mac_address[4],
+			mac_address[5]
 			);
 		connection.type = ESPCONN_TCP;
 		connection.state = ESPCONN_NONE;
