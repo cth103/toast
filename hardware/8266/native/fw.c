@@ -59,23 +59,26 @@ receive_cb(void* arg, char* data, unsigned short length)
 {
 	int r;
 
-	ds_init();
-	while ((r = ds_search(ds18b20_addr))) {
-		if (crc8(ds18b20_addr, 7) != ds18b20_addr[7]) {
-			/* Bad CRC */
-			continue;
-		}
-		ets_uart_printf(
-			"Found device %02x%02x%02x%02x%02x%02x%02x%02x\r\n",
-			ds18b20_addr[0], ds18b20_addr[1], ds18b20_addr[2], ds18b20_addr[3], ds18b20_addr[4], ds18b20_addr[5], ds18b20_addr[6], ds18b20_addr[7]
-			);
-		if (ds18b20_addr[0] == 0x10 || ds18b20_addr[0] == 0x28) {
-			ets_uart_printf("Found DS18B20\r\n");
-			reset();
-			select(ds18b20_addr);
-			write(DS1820_CONVERT_T, 1);
-			os_timer_setfn(&conversion_timer, (os_timer_func_t *) conversion_cb, arg);
-			os_timer_arm(&conversion_timer, 750, 0);
+	if (os_strncmp(data, "temp", 4) == 0) {
+		/* Report current temperature */
+		ds_init();
+		while ((r = ds_search(ds18b20_addr))) {
+			if (crc8(ds18b20_addr, 7) != ds18b20_addr[7]) {
+				/* Bad CRC */
+				continue;
+			}
+			ets_uart_printf(
+				"Found device %02x%02x%02x%02x%02x%02x%02x%02x\r\n",
+				ds18b20_addr[0], ds18b20_addr[1], ds18b20_addr[2], ds18b20_addr[3], ds18b20_addr[4], ds18b20_addr[5], ds18b20_addr[6], ds18b20_addr[7]
+				);
+			if (ds18b20_addr[0] == 0x10 || ds18b20_addr[0] == 0x28) {
+				ets_uart_printf("Found DS18B20\r\n");
+				reset();
+				select(ds18b20_addr);
+				write(DS1820_CONVERT_T, 1);
+				os_timer_setfn(&conversion_timer, (os_timer_func_t *) conversion_cb, arg);
+				os_timer_arm(&conversion_timer, 750, false);
+			}
 		}
 	}
 }
@@ -134,7 +137,7 @@ check_wifi_cb(void* arg)
 			ets_uart_printf("Connection to wireless failed.\r\n");
 		} else {
 			os_timer_setfn(&check_wifi_timer, (os_timer_func_t *) check_wifi_cb, (void *) 0);
-			os_timer_arm(&check_wifi_timer, 100, 1);
+			os_timer_arm(&check_wifi_timer, 100, true);
 		}
 	}
 }
@@ -150,5 +153,5 @@ void ICACHE_FLASH_ATTR user_init()
 
 	os_timer_disarm(&check_wifi_timer);
 	os_timer_setfn(&check_wifi_timer, (os_timer_func_t *) check_wifi_cb, (void *) 0);
-	os_timer_arm(&check_wifi_timer, 100, 1);
+	os_timer_arm(&check_wifi_timer, 100, true);
 }
