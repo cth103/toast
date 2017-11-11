@@ -9,8 +9,7 @@
 
 char const ssid[32] = "TALKTALK227CC2-2G";
 char const password[32] = "3N7FEUR9";
-char const server_ip[4] = {192, 168, 1, 5};
-int const server_port = 9999;
+int const port = 9999;
 
 LOCAL os_timer_t check_wifi_timer;
 LOCAL os_timer_t conversion_timer;
@@ -28,6 +27,8 @@ conversion_cb(void* arg)
 	int i;
 	uint8_t data[12];
 	int tries = 5;
+	char reply[16];
+	struct espconn* conn = arg;
 
 	while (tries) {
 		reset();
@@ -50,14 +51,16 @@ conversion_cb(void* arg)
 	/* Each bit is 1/16th of a degree C */
 	rr = rr * 10000 / 16;
 	ets_uart_printf("Read %d\n", rr);
+	os_sprintf(reply, "%d\r\n", rr);
+	espconn_sent(conn, reply, os_strlen(reply));
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-connect_cb(void* arg)
+receive_cb(void* arg, char* data, unsigned short length)
 {
 	int r;
 
-	ets_uart_printf("Connected to server.\r\n");
+	ets_uart_printf("Received %d bytes.\r\n", length);
 
 	ds_init();
 	while ((r = ds_search(ds18b20_addr))) {
@@ -74,25 +77,40 @@ connect_cb(void* arg)
 			reset();
 			select(ds18b20_addr);
 			write(DS1820_CONVERT_T, 1);
-			os_timer_setfn(&conversion_timer, (os_timer_func_t *) conversion_cb, (void *) 0);
+			os_timer_setfn(&conversion_timer, (os_timer_func_t *) conversion_cb, arg);
 			os_timer_arm(&conversion_timer, 750, 0);
 		}
-
 	}
-
-	espconn_send(&connection, "Cockwomble\r\n", 13);
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-reconnect_cb(void* arg, sint8 err)
+reconnect_cb(void* arg, sint8 error)
 {
-	os_timer_setfn(&check_wifi_timer, (os_timer_func_t *) check_wifi_cb, (void *) 0);
-	os_timer_arm(&check_wifi_timer, 100, 1);
+	ets_uart_printf("reconnect_cb\r\n");
+}
+
+LOCAL void ICACHE_FLASH_ATTR
+disconnect_cb(void* arg)
+{
+	ets_uart_printf("disconnect_cb\r\n");
+}
+
+LOCAL void ICACHE_FLASH_ATTR
+connect_cb(void* arg)
+{
+	int r;
+
+	struct espconn* conn = arg;
+	espconn_regist_recvcb(conn, receive_cb);
+	espconn_regist_reconcb(conn, reconnect_cb);
+	espconn_regist_disconcb(conn, disconnect_cb);
 }
 
 LOCAL void ICACHE_FLASH_ATTR
 check_wifi_cb(void* arg)
 {
+	sint8 ret;
+
 	os_timer_disarm(&check_wifi_timer);
 
 	struct ip_info ipi;
@@ -105,16 +123,13 @@ check_wifi_cb(void* arg)
 			(ipi.ip.addr & 0xff0000) >> 16,
 			(ipi.ip.addr & 0xff000000) >> 24
 			);
-		connection.proto.tcp = &tcp;
 		connection.type = ESPCONN_TCP;
 		connection.state = ESPCONN_NONE;
-
-		os_memcpy(connection.proto.tcp->remote_ip, server_ip, 4);
-		connection.proto.tcp->remote_port = server_port;
-		connection.proto.tcp->local_port = espconn_port();
+		connection.proto.tcp = &tcp;
+		connection.proto.tcp->local_port = port;
 		espconn_regist_connectcb(&connection, connect_cb);
-		espconn_regist_reconcb(&connection, reconnect_cb);
-		espconn_connect(&connection);
+		ret = espconn_accept(&connection);
+		ets_uart_printf("accept said %d\n", ret);
 	} else {
 		if (wifi_station_get_connect_status() == STATION_WRONG_PASSWORD ||
 		    wifi_station_get_connect_status() == STATION_NO_AP_FOUND ||
@@ -132,7 +147,7 @@ void ICACHE_FLASH_ATTR user_init()
 {
 	uart_init(BIT_RATE_115200, BIT_RATE_115200);
 
-	wifi_set_opmode(STATION_MODE);
+	wifi_set_opmode(STATIONAP_MODE);
 	os_memcpy(&station_conf.ssid, ssid, 32);
 	os_memcpy(&station_conf.password, password, 32);
 	wifi_station_set_config(&station_conf);
