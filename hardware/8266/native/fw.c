@@ -85,9 +85,9 @@ receive_cb(void* arg, char* data, unsigned short length)
 			}
 		}
 	} else if (os_strncmp(data, "off", 3) == 0) {
-		gpio_output_set(1, 0, 1, 0);
-	} else if (os_strncmp(data, "on", 2) == 0) {
 		gpio_output_set(0, 1, 1, 0);
+	} else if (os_strncmp(data, "on", 2) == 0) {
+		gpio_output_set(1, 0, 1, 0);
 	}
 }
 

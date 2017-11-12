@@ -2,3 +2,9 @@ To program; pull GPIO0 low and reset (e.g. cycle power) then make flash
 Using esp-open-sdk (from github/pfalcon)
 minicom -D /dev/ttyUSB0 -b 115200 to look at debug
 
+Prototype uses about 76mA on the 5V line i.e. 380mW.  
+8760 hours per year
+Total kWh for a year (assuming 100% mains converter efficiency) 0.38 * 8760 / 1000 = 3.33kWh
+@ 15p/unit this is 50p per year.
+
+
