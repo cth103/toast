@@ -1,3 +1,4 @@
 To program; pull GPIO0 low and reset (e.g. cycle power) then make flash
 Using esp-open-sdk (from github/pfalcon)
 minicom -D /dev/ttyUSB0 -b 115200 to look at debug
+
