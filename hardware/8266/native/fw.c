@@ -9,14 +9,18 @@
 
 char const ssid[32] = "TALKTALK227CC2-2G";
 char const password[32] = "3N7FEUR9";
-int const port = 9999;
+#define LISTEN_PORT 9142
+#define BROADCAST_PORT 9143
 
 LOCAL os_timer_t check_wifi_timer;
 LOCAL os_timer_t conversion_timer;
+LOCAL os_timer_t broadcast_timer;
 
 struct station_config station_conf;
-struct espconn connection;
+struct espconn listen_connection;
 struct _esp_tcp tcp;
+struct espconn broadcast_connection;
+struct _esp_udp udp;
 uint8_t ds18b20_addr[8];
 
 LOCAL void ICACHE_FLASH_ATTR check_wifi_cb(void* arg);
@@ -81,9 +85,9 @@ receive_cb(void* arg, char* data, unsigned short length)
 			}
 		}
 	} else if (os_strncmp(data, "off", 3) == 0) {
-		gpio_output_set(1, 0, 1, 0);
-	} else if (os_strncmp(data, "on", 2) == 0) {
 		gpio_output_set(0, 1, 1, 0);
+	} else if (os_strncmp(data, "on", 2) == 0) {
+		gpio_output_set(1, 0, 1, 0);
 	}
 }
 
@@ -111,28 +115,80 @@ connect_cb(void* arg)
 }
 
 LOCAL void ICACHE_FLASH_ATTR
+broadcast_cb(void* arg)
+{
+	struct ip_addr address;
+	struct ip_info ipi;
+	uint8_t mac_address[6];
+	char buffer[64];
+
+	wifi_get_ip_info(0, &ipi);
+	address.addr = ipi.ip.addr;
+	address.addr |= ~ipi.netmask.addr;
+
+	wifi_get_macaddr(0, mac_address);
+
+	broadcast_connection.type = ESPCONN_UDP;
+	broadcast_connection.state = ESPCONN_NONE;
+	broadcast_connection.proto.udp = &udp;
+	udp.remote_port = BROADCAST_PORT;
+	udp.local_port = BROADCAST_PORT;
+	memcpy(udp.remote_ip, &address,4);
+	broadcast_connection.reverse = 0;
+	espconn_create(&broadcast_connection);
+
+	os_sprintf(
+		buffer,
+		"Hello heating %02x%02x%02x%02x%02x%02x",
+		mac_address[0],
+		mac_address[1],
+		mac_address[2],
+		mac_address[3],
+		mac_address[4],
+		mac_address[5]
+		);
+
+	espconn_sent(&broadcast_connection, buffer, os_strlen(buffer));
+
+	espconn_delete(&broadcast_connection);
+}
+
+LOCAL void ICACHE_FLASH_ATTR
 check_wifi_cb(void* arg)
 {
 	sint8 ret;
+	uint8_t mac_address[6];
 
 	os_timer_disarm(&check_wifi_timer);
 
 	struct ip_info ipi;
 	wifi_get_ip_info(0, &ipi);
 	if (wifi_station_get_connect_status() == STATION_GOT_IP && ipi.ip.addr != 0) {
+		/* Start listening for requests */
+		wifi_get_macaddr(0, mac_address);
 		ets_uart_printf(
-			"Hello world: connected with IP %d.%d.%d.%d.\r\n",
+			"Hello world: connected with IP %d.%d.%d.%d, MAC %02x:%02x:%02x:%02x:%02x:%02x.\r\n",
 			ipi.ip.addr & 0xff,
 			(ipi.ip.addr & 0xff00) >> 8,
 			(ipi.ip.addr & 0xff0000) >> 16,
-			(ipi.ip.addr & 0xff000000) >> 24
+			(ipi.ip.addr & 0xff000000) >> 24,
+			mac_address[0],
+			mac_address[1],
+			mac_address[2],
+			mac_address[3],
+			mac_address[4],
+			mac_address[5]
 			);
-		connection.type = ESPCONN_TCP;
-		connection.state = ESPCONN_NONE;
-		connection.proto.tcp = &tcp;
-		connection.proto.tcp->local_port = port;
-		espconn_regist_connectcb(&connection, connect_cb);
-		ret = espconn_accept(&connection);
+		listen_connection.type = ESPCONN_TCP;
+		listen_connection.state = ESPCONN_NONE;
+		listen_connection.proto.tcp = &tcp;
+		listen_connection.proto.tcp->local_port = LISTEN_PORT;
+		espconn_regist_connectcb(&listen_connection, connect_cb);
+		ret = espconn_accept(&listen_connection);
+
+		/* Start broadcasting to announce our presence */
+		os_timer_setfn(&broadcast_timer, (os_timer_func_t *) broadcast_cb, (void *) 0);
+		os_timer_arm(&broadcast_timer, 6000, true);
 	} else {
 		if (wifi_station_get_connect_status() == STATION_WRONG_PASSWORD ||
 		    wifi_station_get_connect_status() == STATION_NO_AP_FOUND ||
