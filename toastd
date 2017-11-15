@@ -262,7 +262,7 @@ class Rule:
         on_same = self.on_hour == other.on_hour and self.on_minute == other.on_minute
         off_same = self.off_hour == other.off_hour and self.off_minute == other.off_minute
 
-        return self.id == other.id and self.days == other.days and on_same and off_same and self.zone == other.zone
+        return self.id == other.id and self.days == other.days and on_same and off_same and self.zone == other.zone and self.target == other.target
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -500,7 +500,6 @@ def update():
     if len(rules) > 0:
         # If there are active rules they dictate everything
         for r in state.get_active_rules():
-            util.verbose('rule makes %s target %f' % (r.zone, r.target))
             heating_enabled = True
             zone_enabled[r.zone] = True
             target[r.zone] = r.target
