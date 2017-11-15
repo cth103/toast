@@ -18,7 +18,7 @@
             android:gravity="center_vertical"
             android:id="@+id/on"
             android:textSize="10pt"
-            android:text="Heating on:"
+            android:text="Heating targets:"
             android:layout_span="2" />
     </TableRow>
 
@@ -29,9 +29,10 @@
             android:id="@+id/rulesList"/>
     </TableRow>
 
-    <TableRow android:paddingTop="10pt">
+    <TableRow android:paddingTop="10pt" android:layout_width="wrap_content">
         <Button android:text="Add target"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:id="@+id/addRule"/>
+
     </TableRow>
 </TableLayout>
