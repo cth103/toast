@@ -50,7 +50,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends FragmentActivity {
+    public class MainActivity extends FragmentActivity {
 
     private State state;
     private Client client;
