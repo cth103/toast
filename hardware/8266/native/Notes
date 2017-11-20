@@ -7,4 +7,8 @@ Prototype uses about 76mA on the 5V line i.e. 380mW.
 Total kWh for a year (assuming 100% mains converter efficiency) 0.38 * 8760 / 1000 = 3.33kWh
 @ 15p/unit this is 50p per year.
 
+Ideas for improvements: swap GPIO0 with 2 so we don't need the PNP transistor dance; may fry DS18B20 if program link is made...?
 
+Latching relay
+
+3.3V relay & RAC01-3.3SC (100-240VAC -> 3.3V @ 300mA)
