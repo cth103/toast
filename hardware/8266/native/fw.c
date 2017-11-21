@@ -11,6 +11,9 @@ char const ssid[32] = "TALKTALK227CC2-2G";
 char const password[32] = "3N7FEUR9";
 #define LISTEN_PORT 9142
 #define BROADCAST_PORT 9143
+#define RELAY_GPIO 2
+
+/* DS18B20 GPIO defined in include/driver/ds18b20.h */
 
 LOCAL os_timer_t check_wifi_timer;
 LOCAL os_timer_t conversion_timer;
@@ -85,9 +88,9 @@ receive_cb(void* arg, char* data, unsigned short length)
 			}
 		}
 	} else if (os_strncmp(data, "off", 3) == 0) {
-		gpio_output_set(0, 1, 1, 0);
+		gpio_output_set(0, 1 << RELAY_GPIO, 1 << RELAY_GPIO, 0);
 	} else if (os_strncmp(data, "on", 2) == 0) {
-		gpio_output_set(1, 0, 1, 0);
+		gpio_output_set(1 << RELAY_GPIO, 0, 1 << RELAY_GPIO, 0);
 	}
 }
 

@@ -5,9 +5,9 @@
 #include "osapi.h"
 #include "gpio.h"
 
-#define DS18B20_MUX		PERIPHS_IO_MUX_GPIO2_U
-#define DS18B20_FUNC	FUNC_GPIO2
-#define DS18B20_PIN		2
+#define DS18B20_MUX	PERIPHS_IO_MUX_GPIO0_U
+#define DS18B20_FUNC	FUNC_GPIO0
+#define DS18B20_PIN	0
 
 #define DS1820_WRITE_SCRATCHPAD 	0x4E
 #define DS1820_READ_SCRATCHPAD      0xBE
