@@ -16,4 +16,4 @@ flash: fw-0x00000.bin
 	esptool.py write_flash 0 fw-0x00000.bin 0x10000 fw-0x10000.bin
 
 clean:
-	rm -f fw fw.o fw-0x00000.bin fw-0x10000.bin
+	rm -f fw fw.o fw-0x00000.bin fw-0x10000.bin driver/uart.o driver/ds18b20.o fw.o
