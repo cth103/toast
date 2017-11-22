@@ -56,7 +56,7 @@ ZONE_PORT = 9142
 # Port to listen for ESP8266 UDP broadcasts
 BROADCAST_PORT = 9143
 # MAC addresses of zones with names
-zone_names = { '600194189ed3': 'Test' }
+zone_names = { '600194189ed3': 'Bathroom' }
 
 class Zone(object):
     """
@@ -153,7 +153,6 @@ class ESP8266Zone(Zone):
 
 FIXED_ZONES = []
 FIXED_ZONES.append(JSONZone('Sitting room', 'localhost'))
-FIXED_ZONES.append(JSONZone('Bathroom', 'zone1'))
 
 dynamic_zones = []
 dynamic_zones_mutex = threading.Lock()
