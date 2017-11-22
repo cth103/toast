@@ -60,6 +60,7 @@ public class State {
     private boolean boilerOn = false;
     private HashMap<String, ArrayList<Double> > temperatures = new HashMap<String, ArrayList<Double> >();
     private ArrayList<Rule> rules = new ArrayList<Rule>();
+    private String explanation;
 
     public State(Context context) {
         this.context = context;
@@ -106,6 +107,11 @@ public class State {
         return rules;
     }
 
+    public synchronized String getExplanation() {
+        return explanation;
+    }
+
+    /** Add that state which goes from client to server as JSON */
     public synchronized void addAsJSON(JSONObject json, int id) {
         try {
             switch (id) {
@@ -288,6 +294,10 @@ public class State {
                     r.add(new Rule(j.getJSONObject(i)));
                 }
                 setRules(r);
+            }
+
+            if (json.has("explanation")) {
+                explanation = json.getString("explanation");
             }
 
         } catch (JSONException e) {
