@@ -1,0 +1,5 @@
+1	As built for bathroom; 5V/3.3V rails, PNP arrangement to ensure GPIO0 works for both program and relay
+2	3.3V regulator & relay, sensor on GPIO0 for simpler GPIO-side circuitry
+	maybe broken as it seems GPIO0 AND 2 have to be H to boot from flash
+3	Separate ebay PSU module, 5V/3.3V rails
+4?	3.3V regulator & relay, old-style PNP arrangement
