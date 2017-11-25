@@ -1,74 +1,14 @@
-CH_PD active-low power-down: tie high for normal operation
-VCC 3.3v
+To program; pull GPIO0 low and reset (e.g. cycle power) then make flash
+Using esp-open-sdk (from github/pfalcon)
+minicom -D /dev/ttyUSB0 -b 115200 to look at debug
 
-https://github.com/guibom/ESPTempLogger
+Prototype uses about 76mA on the 5V line i.e. 380mW.  
+8760 hours per year
+Total kWh for a year (assuming 100% mains converter efficiency) 0.38 * 8760 / 1000 = 3.33kWh
+@ 15p/unit this is 50p per year.
 
-Attiny85 board (Adafruit 1501 "trinket"?)
-  pimoroni
+Ideas for improvements: swap GPIO0 with 2 so we don't need the PNP transistor dance; may fry DS18B20 if program link is made...?
 
-0.1uF caps x 2
-ESP8266
-1wb sensor + pull up
-Board
-Case
-RECOM POWER RAC01-3.3SC 240V -> 3.3V max 300mA output Farnell 1903054
-Fuse
-Fuse holder e.g. RS 765-2973
-Terminal block e.g. RS 193-0564
+Latching relay
 
-stty -F /dev/ttyUSB0 -crtscts ixon ixoff
-
-Relay something like RS 800-4502 (£1.55)
-
-The trinket 3.3V rated current is 150mA but some people have the 8266
-as drawing 215mA... may need another regulator.
-
-Trinket is about 9mA
-
-Could use LD1117V33 3.3v regulator; max output current 800mA, 1V-ish drop-out
-RECOM POWER RAC02-05SC 5V, 400mA; enough for 8266 + trinket + loss
-
-Arduino UI can program reliably; copy.sh can't (I think, or maybe it was adding
-a USB hub that fixed it): go figure.
-
-Doesn't seem to work with both FTDI and trinket plugged into RHS USB ports on
-laptop; trinket USB negotiation fails.  When you push the reset button the trinket
-should appear in dmesg and the red light should start pulsing.  Then you can program.
-Programmer: USBtinyISP.  Doesn't work as non-root; I tried adding a udev rule but
-it didn't seem to work.
-
-Push the button on the trinket and then press go on the programmer.
-
-minicom -b 9600 -D /dev/ttyUSB0 with FTDI connected to RX->3.
-
-Turn HW flow control off in minicom main prefs.
-Do ^J,Enter at the end of AT commands when talking direct to the ESP8266.
-***NOT*** ENTER,^J!!
-
-TRINKET USB NEGOTATION RELIABILITY
-
-Just trinket & mouse connected to USB, nothing connected to trinket: 90%
-+FTDI connected to another USB port: 70%
--FTDI connected to another USB port: 40%
-
-Looks random.
-
-Connected to USB 2.0 hub: 100%
-+FTDI connected to computer USB port: 100%
-+all circuit: 100%
-
-Looks more reliable.
-
-$ cat 96-usbtiny.rules
-ATTRS{idProduct}=="0c9f", ATTRS{idVendor}=="1781", MODE="0660", GROUP="dialout"
-$ sudo udevadm trigger
-
-bash make.sh && bash copy.sh
-
-No setting: 100.9uS
-50: 126.5
-80: 106.3
-82: 104.7
-90: 99.36
-100: 92.54uS
-200: 71.04uS
+3.3V relay & RAC01-3.3SC (100-240VAC -> 3.3V @ 300mA)
