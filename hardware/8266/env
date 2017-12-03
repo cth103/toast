@@ -1,0 +1,1 @@
+export PATH=$PATH:$HOME/src/esp-open-sdk/xtensa-lx106-elf/bin/

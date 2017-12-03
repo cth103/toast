@@ -6,11 +6,25 @@
 #include "espconn.h"
 #include "driver/uart.h"
 #include "driver/ds18b20.h"
+#include "driver/gpiolib.h"
+#include "driver/dht11_lib.h"
 
 char const ssid[32] = "TALKTALK227CC2-2G";
 char const password[32] = "3N7FEUR9";
 #define LISTEN_PORT 9142
 #define BROADCAST_PORT 9143
+#define RELAY_GPIO 2
+/* DS18B20 GPIO defined in include/driver/ds18b20.h */
+#define DHT11_GPIO 0
+
+#define WITH_DHT11 1
+#define WITH_DS18B20 0
+
+#define DHT11_TASK 0
+#define DHT11_TASK_QUEUE_LENGTH 10
+#define DHT11_SIGNAL_START 0
+#define DHT11_SIGNAL_END_READ 1
+os_event_t dht11_task_queue[DHT11_TASK_QUEUE_LENGTH];
 
 LOCAL os_timer_t check_wifi_timer;
 LOCAL os_timer_t conversion_timer;
@@ -21,10 +35,16 @@ struct espconn listen_connection;
 struct _esp_tcp tcp;
 struct espconn broadcast_connection;
 struct _esp_udp udp;
+
+#ifdef WITH_DS18B20
 uint8_t ds18b20_addr[8];
+#endif
+
+struct espconn* dht11_connection;
 
 LOCAL void ICACHE_FLASH_ATTR check_wifi_cb(void* arg);
 
+#ifdef WITH_DS18B20
 LOCAL void ICACHE_FLASH_ATTR
 conversion_cb(void* arg)
 {
@@ -57,12 +77,14 @@ conversion_cb(void* arg)
 	os_sprintf(reply, "%d\r\n", rr);
 	espconn_sent(conn, reply, os_strlen(reply));
 }
+#endif
 
 LOCAL void ICACHE_FLASH_ATTR
 receive_cb(void* arg, char* data, unsigned short length)
 {
 	int r;
 
+#ifdef WITH_DS18B20
 	if (os_strncmp(data, "temp", 4) == 0) {
 		/* Report current temperature */
 		ds_init();
@@ -84,11 +106,19 @@ receive_cb(void* arg, char* data, unsigned short length)
 				os_timer_arm(&conversion_timer, 750, false);
 			}
 		}
-	} else if (os_strncmp(data, "off", 3) == 0) {
-		gpio_output_set(0, 1, 1, 0);
+	} else
+#endif
+	if (os_strncmp(data, "off", 3) == 0) {
+		gpio_output_set(0, 1 << RELAY_GPIO, 1 << RELAY_GPIO, 0);
 	} else if (os_strncmp(data, "on", 2) == 0) {
-		gpio_output_set(1, 0, 1, 0);
+		gpio_output_set(1 << RELAY_GPIO, 0, 1 << RELAY_GPIO, 0);
 	}
+#ifdef WITH_DHT11
+	else if (os_strncmp(data, "humidity", 8) == 0) {
+		dht11_connection = (struct espconn*) arg;
+		system_os_post(DHT11_TASK, DHT11_SIGNAL_START, 0);
+	}
+#endif
 }
 
 LOCAL void ICACHE_FLASH_ATTR
@@ -202,10 +232,54 @@ check_wifi_cb(void* arg)
 	}
 }
 
+#ifdef WITH_DHT11
+LOCAL void ICACHE_FLASH_ATTR
+dht11_intr_handler()
+{
+	uint32 gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
+
+	// if the interrupt was by GPIO_DHT11 -> Execute dht11 handler
+	if (gpio_status & GPIO_Pin(DHT11_GPIO)) {
+		dht11_gpio_intr_handler(gpio_status);
+	}
+}
+
+LOCAL void ICACHE_FLASH_ATTR
+dht11_loop(os_event_t *events)
+{
+	char reply[16];
+	switch (events->sig) {
+        case DHT11_SIGNAL_START:
+		dht11_start_read(events->par);
+		break;
+	case DHT11_SIGNAL_END_READ:
+		if (!dht11_error()) {
+			os_sprintf(reply, "%d\r\n", dht11_get_rh());
+		} else {
+			os_sprintf(reply, "error\r\n");
+		}
+		espconn_sent(dht11_connection, reply, strlen(reply));
+		break;
+	}
+}
+#endif
+
 void ICACHE_FLASH_ATTR user_init()
 {
 	uart_init(BIT_RATE_115200, BIT_RATE_115200);
 	gpio_init();
+
+#if (RELAY_GPIO==2)
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
+#endif
+
+#ifdef WITH_DHT11
+	dht11_init(DHT11_GPIO, DHT11_TASK, DHT11_SIGNAL_END_READ);
+	ETS_GPIO_INTR_DISABLE();
+	ETS_GPIO_INTR_ATTACH(dht11_intr_handler, DHT11_GPIO);
+	ETS_GPIO_INTR_ENABLE();
+	system_os_task(dht11_loop, DHT11_TASK, dht11_task_queue, DHT11_TASK_QUEUE_LENGTH);
+#endif
 
 	wifi_set_opmode(STATIONAP_MODE);
 	os_memcpy(&station_conf.ssid, ssid, 32);
