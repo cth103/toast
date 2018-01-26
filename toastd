@@ -300,6 +300,7 @@ class State:
             request_update()
 
     def set_zone_enabled(self, zone, enabled):
+        assert(zone is not None)
         changed = False
         with self.mutex:
             if not zone in self.zone_enabled:
@@ -364,6 +365,7 @@ class State:
             return self.heating_enabled
 
     def get_zone_enabled(self, zone):
+        assert(Zone is not None)
         with self.mutex:
             if not zone in self.zone_enabled:
                 self.zone_enabled[zone] = False
@@ -419,18 +421,23 @@ class State:
         for r in self.rules:
             rules.append(r.as_dict())
 
+        any_zone_enabled = False
+        for k, v in self.zone_enabled.iteritems():
+            if v:
+                any_zone_enabled = True
+
         explanation = ""
-        if self.boiler_on:
-            if !self.zone_enabled or !self.heating_enabled:
-                explanation = "Heating to programmed target"
-            else:
-                if self.heating_enabled:
-                    if self.zone_enabled:
-                        explanation = "Target temperatures reached"
-                    else:
-                        explanation = "All rooms switched off"
+
+        if self.boiler_on and (not self.heating_enabled):
+            explanation = "Heating to programmed target"
+        elif not self.boiler_on:
+            if self.heating_enabled:
+                if any_zone_enabled:
+                    explanation = "Target temperatures reached"
                 else:
-                    explanation = "Heating is switched off"
+                    explanation = "All rooms switched off"
+            else:
+                explanation = "Heating is switched off"
 
         all = {"heating_enabled": self.heating_enabled,
                "zone_enabled": zone_enabled,
