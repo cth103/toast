@@ -19,12 +19,10 @@
 
 package net.carlh.toast;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
@@ -35,19 +33,11 @@ import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TableLayout;
-import android.widget.TextView;
-import android.widget.ToggleButton;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
     public class MainActivity extends FragmentActivity {
