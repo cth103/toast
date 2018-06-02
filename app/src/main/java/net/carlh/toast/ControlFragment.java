@@ -99,7 +99,7 @@ public class ControlFragment extends Fragment {
 
             target.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    ControlFragment.this.getState().setZoneEnabled(name, target.isChecked());
+                    ControlFragment.this.getState().setZoneHeatingEnabled(name, target.isChecked());
                 }
             });
 
@@ -211,7 +211,7 @@ public class ControlFragment extends Fragment {
 
             heatingEnabled.setChecked(getHeatingEnabled());
 
-            for (Map.Entry<String, Boolean> i: state.getZoneEnabled().entrySet()) {
+            for (Map.Entry<String, Boolean> i: state.getZoneHeatingEnabled().entrySet()) {
                 zones.get(i.getKey()).setZoneEnabled(i.getValue());
             }
 
@@ -227,13 +227,6 @@ public class ControlFragment extends Fragment {
                 Zone z = zones.get(i.getKey());
                 if (z != null) {
                     z.setTarget(i.getValue());
-                }
-            }
-
-            boolean zone_enabled = false;
-            for (Map.Entry<String, Boolean> i: getState().getZoneEnabled().entrySet()) {
-                if (i.getValue()) {
-                    zone_enabled = true;
                 }
             }
 
@@ -256,7 +249,7 @@ public class ControlFragment extends Fragment {
             if (getActivity() != null) {
                 ConnectivityManager cm = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
                 if (!cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI).isConnected()) {
-                    WifiManager wm = (WifiManager) getActivity().getSystemService(Context.WIFI_SERVICE);
+                    WifiManager wm = (WifiManager) getActivity().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                     wm.setWifiEnabled(true);
                 }
             }

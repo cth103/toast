@@ -58,7 +58,7 @@ public class GraphFragment extends Fragment {
 
         zone = (Spinner) view.findViewById(R.id.graphZone);
         Map<String, ArrayList<Double> > temps = getState().getTemperatures();
-        ArrayAdapter zoneAdapter = new ArrayAdapter(getActivity(), android.R.layout.simple_spinner_item, temps.keySet().toArray());
+        ArrayAdapter zoneAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, temps.keySet().toArray(new String[0]));
         zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         zone.setAdapter(zoneAdapter);
         zone.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -74,7 +74,7 @@ public class GraphFragment extends Fragment {
 
         period = (Spinner) view.findViewById(R.id.graphPeriod);
         String periods[] = {"Last hour", "Last day", "Last week"};
-        ArrayAdapter periodAdapter = new ArrayAdapter(getActivity(), android.R.layout.simple_spinner_item, periods);
+        ArrayAdapter periodAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, periods);
         periodAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         period.setAdapter(periodAdapter);
         period.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {

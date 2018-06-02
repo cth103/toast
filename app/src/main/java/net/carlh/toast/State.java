@@ -38,16 +38,18 @@ public class State {
 
     /** Whether or not heating is `enabled' (i.e. switched on) */
     public static final int HEATING_ENABLED = 0;
-    /** Whether or not each zone is enabled */
-    public static final int ZONE_ENABLED = 1;
+    /** Whether or not the heating in each zone is enabled */
+    public static final int ZONE_HEATING_ENABLED = 1;
     /** Target for each zone */
     public static final int TARGET = 2;
     /** Whether or not the boiler is on */
     public static final int BOILER_ON = 3;
     /** Temperatures (current and historic) in each zone */
     public static final int TEMPERATURES = 4;
+    /** Humidities (current and historic) in each zone */
+    public static final int HUMIDITIES = 5;
     /** Rules (programmed targets at particular times) */
-    public static final int RULES = 5;
+    public static final int RULES = 6;
 
     /** Our context */
     private Context context;
@@ -55,10 +57,11 @@ public class State {
     private ArrayList<Handler> handlers;
 
     private boolean heatingEnabled = false;
-    private HashMap<String, Boolean> zoneEnabled = new HashMap<String, Boolean>();
+    private HashMap<String, Boolean> zoneHeatingEnabled = new HashMap<String, Boolean>();
     private HashMap<String, Double> target = new HashMap<String, Double>();
     private boolean boilerOn = false;
     private HashMap<String, ArrayList<Double> > temperatures = new HashMap<String, ArrayList<Double> >();
+    private HashMap<String, ArrayList<Integer> > humidities = new HashMap<String, ArrayList<Integer> >();
     private ArrayList<Rule> rules = new ArrayList<Rule>();
     private String explanation;
 
@@ -87,8 +90,8 @@ public class State {
         return heatingEnabled;
     }
 
-    public synchronized HashMap<String, Boolean> getZoneEnabled() {
-        return zoneEnabled;
+    public synchronized HashMap<String, Boolean> getZoneHeatingEnabled() {
+        return zoneHeatingEnabled;
     }
 
     public synchronized HashMap<String, Double> getTarget() {
@@ -101,6 +104,10 @@ public class State {
 
     public synchronized HashMap<String, ArrayList<Double> > getTemperatures() {
         return temperatures;
+    }
+
+    public synchronized HashMap<String, ArrayList<Integer> > getHumidities() {
+        return humidities;
     }
 
     public synchronized ArrayList<Rule> getRules() {
@@ -118,15 +125,15 @@ public class State {
                 case HEATING_ENABLED:
                     json.put("heating_enabled", heatingEnabled);
                     break;
-                case ZONE_ENABLED: {
+                case ZONE_HEATING_ENABLED: {
                     JSONArray a = new JSONArray();
-                    for (Map.Entry<String, Boolean> i : zoneEnabled.entrySet()) {
+                    for (Map.Entry<String, Boolean> i : zoneHeatingEnabled.entrySet()) {
                         JSONObject o = new JSONObject();
                         o.put("zone", i.getKey());
-                        o.put("zone_enabled", i.getValue());
+                        o.put("zone_heating_enabled", i.getValue());
                         a.put(o);
                     }
-                    json.put("zone_enabled", a);
+                    json.put("zone_heating_enabled", a);
                     break;
                 }
                 case TARGET: {
@@ -159,6 +166,22 @@ public class State {
                     json.put("temperatures", a);
                     break;
                 }
+                case HUMIDITIES:
+                {
+                    JSONArray a = new JSONArray();
+                    for (Map.Entry<String, ArrayList<Integer>> i : humidities.entrySet()) {
+                        JSONObject o = new JSONObject();
+                        o.put("zone", i.getKey());
+                        JSONArray t = new JSONArray();
+                        for (Integer j : i.getValue()) {
+                            t.put(j);
+                        }
+                        o.put("humidities", t);
+                        a.put(o);
+                    }
+                    json.put("humidities", a);
+                    break;
+                }
                 case RULES: {
                     JSONArray a = new JSONArray();
                     for (Rule r : rules) {
@@ -182,9 +205,9 @@ public class State {
         }
     }
 
-    public synchronized void setZoneEnabled(String zone, boolean e) {
-        zoneEnabled.put(zone, e);
-        changed(ZONE_ENABLED);
+    public synchronized void setZoneHeatingEnabled(String zone, boolean e) {
+        zoneHeatingEnabled.put(zone, e);
+        changed(ZONE_HEATING_ENABLED);
     }
 
     public synchronized void setTarget(String zone, double t) {
@@ -214,6 +237,11 @@ public class State {
     public synchronized void setTemperatures(String zone, ArrayList<Double> t) {
         temperatures.put(zone, t);
         changed(TEMPERATURES);
+    }
+
+    public synchronized void setHumidities(String zone, ArrayList<Integer> t) {
+        humidities.put(zone, t);
+        changed(HUMIDITIES);
     }
 
     public synchronized void addOrReplace(Rule rule) {
@@ -256,11 +284,11 @@ public class State {
                 setHeatingEnabled(json.getBoolean("heating_enabled"));
             }
 
-            if (json.has("zone_enabled")) {
-                JSONArray zones = json.getJSONArray("zone_enabled");
+            if (json.has("zone_heating_enabled")) {
+                JSONArray zones = json.getJSONArray("zone_heating_enabled");
                 for (int i = 0; i < zones.length(); i++) {
                     JSONObject o = zones.getJSONObject(i);
-                    setZoneEnabled(o.getString("zone"), o.getBoolean("zone_enabled"));
+                    setZoneHeatingEnabled(o.getString("zone"), o.getBoolean("zone_heating_enabled"));
                 }
             }
 
@@ -284,6 +312,18 @@ public class State {
                         t.add(k.getDouble(j));
                     }
                     setTemperatures(zones.getJSONObject(i).getString("zone"), t);
+                }
+            }
+
+            if (json.has("humidities")) {
+                JSONArray zones = json.getJSONArray("humidities");
+                for (int i = 0; i < zones.length(); i++) {
+                    ArrayList<Integer> t = new ArrayList<Integer>();
+                    JSONArray k = zones.getJSONObject(i).getJSONArray("humidities");
+                    for (int j = 0; j < k.length(); j++) {
+                        t.add(k.getInt(j));
+                    }
+                    setHumidities(zones.getJSONObject(i).getString("zone"), t);
                 }
             }
 
