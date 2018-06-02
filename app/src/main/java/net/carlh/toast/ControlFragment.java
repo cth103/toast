@@ -44,6 +44,7 @@ public class ControlFragment extends Fragment {
     private class Zone {
 
         private TextView temperature;
+        private TextView humidity;
         private CheckBox target;
         private Button warmer;
         private Button colder;
@@ -56,7 +57,7 @@ public class ControlFragment extends Fragment {
 
             Activity a = ControlFragment.this.getActivity();
 
-            /* Zone name and current temperature */
+            /* Zone name and current temperature / humidity */
             {
                 TableRow r = new TableRow(a);
 
@@ -76,6 +77,10 @@ public class ControlFragment extends Fragment {
                 temperature.setTypeface(null, Typeface.BOLD);
                 r.addView(temperature);
 
+                humidity = new TextView(a);
+                humidity.setTextSize(size - 4);
+                r.addView(humidity);
+
                 ControlFragment.this.table.addView(r);
             }
 
@@ -91,8 +96,13 @@ public class ControlFragment extends Fragment {
                 r.addView(warmer);
 
                 colder = new Button(a);
+
                 colder.setText("Colder");
                 r.addView(colder);
+
+                TableRow.LayoutParams params = (TableRow.LayoutParams) colder.getLayoutParams();
+                params.span = 2;
+                colder.setLayoutParams(params);
 
                 ControlFragment.this.table.addView(r);
             }
@@ -121,6 +131,7 @@ public class ControlFragment extends Fragment {
             boolean c = ControlFragment.this.getConnected();
             boolean e = ControlFragment.this.getHeatingEnabled();
             temperature.setEnabled(c);
+            humidity.setEnabled(c);
             target.setEnabled(c && e);
             warmer.setEnabled(c && e && target.isChecked());
             colder.setEnabled(c && e && target.isChecked());
@@ -144,6 +155,14 @@ public class ControlFragment extends Fragment {
 
         public void clearTemperature() {
             temperature.setText("");
+        }
+
+        public void setHumidity(int h) {
+            humidity.setText(String.format("%d%%", h));
+        }
+
+        public void clearHumidity() {
+            humidity.setText("");
         }
     }
 
@@ -223,6 +242,14 @@ public class ControlFragment extends Fragment {
                 }
             }
 
+            for (Map.Entry<String, ArrayList<Integer>> i: state.getHumidities().entrySet()) {
+                Zone z = zones.get(i.getKey());
+                ArrayList<Integer> hums = i.getValue();
+                if (z != null && hums != null && hums.size() > 0) {
+                    z.setHumidity(hums.get(hums.size() - 1));
+                }
+            }
+
             for (Map.Entry<String, Double> i: state.getTarget().entrySet()) {
                 Zone z = zones.get(i.getKey());
                 if (z != null) {
@@ -241,6 +268,7 @@ public class ControlFragment extends Fragment {
             for (Map.Entry<String, Zone> i : zones.entrySet()) {
                 Zone z = i.getValue();
                 z.clearTemperature();
+                z.clearHumidity();
                 z.clearTarget();
             }
             heatingEnabled.setText("");
