@@ -63,7 +63,8 @@ class NodeProperties(object):
         self.actuators = actuators
         self.sensors = sensors
 
-node_properties = { '600194189ed3': NodeProperties('Bathroom', 'radiator', ['radiator'], ['temperature']) }
+node_properties = { '600194189ed3': NodeProperties('Bathroom', 'radiator', ['radiator'], ['temperature']),
+                    '5ccf7f3cd919': NodeProperties('Bathroom', 'fan', ['fan'], ['humidity']) }
 
 class Node(object):
     """
@@ -189,7 +190,7 @@ class ESP8266Node(Node):
                 r = int(s.recv(64)) / 10000.0
             elif name == 'humidity':
                 s.send('humidity')
-                r = int(s.recv(64))
+                r = int(s.recv(64)) / 1000
             util.verbose("Received %s %f of %s:%s" % (name, r, self.zone, self.name))
             s.close()
             return r
@@ -416,7 +417,7 @@ class State:
         with self.mutex:
             if not zone in self.humidities:
                 self.humidities[zone] = []
-            self.humidities[zone].append(t)
+            self.humidities[zone].append(h)
             if len(self.humidities[zone]) > MEMORY_LOG_MINUTES:
                 state.humidities[zone].pop(0)
         server.send(self.as_dict("humidities"))
@@ -479,7 +480,7 @@ class State:
 
     # Misc
 
-    def as_dict(self, key=None, all_temperatures=True):
+    def as_dict(self, key=None, all_values=True):
         """
         Return some or all state as dict; all state is returned
         if key is None.
@@ -494,14 +495,14 @@ class State:
 
         temperatures = []
         for k, v in self.temperatures.iteritems():
-            if all_temperatures:
+            if all_values:
                 temperatures.append({"zone": k, "temperatures": v})
             elif len(v) > 0:
                 temperatures.append({"zone": k, "temperatures": [v[-1]]})
 
         humidities = []
         for k, v in self.humidities.iteritems():
-            if all_humidities:
+            if all_values:
                 humidities.append({"zone": k, "humidities": v})
             elif len(v) > 0:
                 humidities.append({"zone": k, "humidities": [v[-1]]})
@@ -754,7 +755,7 @@ def handler(json):
         server.send({'type': 'pong'})
     elif json['type'] == 'send_basic':
         global state
-        server.send(state.as_dict(all_temperatures=False))
+        server.send(state.as_dict(all_values=False))
     elif json['type'] == 'send_all':
         global state
         server.send(state.as_dict())
