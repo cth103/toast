@@ -48,7 +48,7 @@ public class RuleActivity extends Activity {
         final String[] zones = getIntent().getStringArrayExtra("zones");
 
         Spinner zone = (Spinner) findViewById(R.id.zone);
-        ArrayAdapter zoneAdapter = new ArrayAdapter(this, android.R.layout.simple_spinner_item, zones);
+        ArrayAdapter zoneAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, zones);
         zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         zone.setAdapter(zoneAdapter);
         zone.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -67,7 +67,7 @@ public class RuleActivity extends Activity {
 
         Spinner target = (Spinner) findViewById(R.id.target);
         String[] targets = { "16", "17", "18", "19", "20", "21", "22", "23", "24", "25" };
-        ArrayAdapter targetAdapter = new ArrayAdapter(this, android.R.layout.simple_spinner_item, targets);
+        ArrayAdapter targetAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, targets);
         targetAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         target.setAdapter(targetAdapter);
         target.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {

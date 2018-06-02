@@ -72,7 +72,7 @@ public class TimerFragment extends Fragment {
                 Rule rule = (Rule) parent.getItemAtPosition(position);
                 Intent intent = new Intent(getActivity(), RuleActivity.class);
                 intent.putExtra("rule", rule);
-                Set<String> zones = getState().getZoneEnabled().keySet();
+                Set<String> zones = getState().getZoneHeatingEnabled().keySet();
                 intent.putExtra("zones", zones.toArray(new String[zones.size()]));
                 getActivity().startActivityForResult(intent, ADD_OR_UPDATE_RULE);
             }
@@ -89,7 +89,7 @@ public class TimerFragment extends Fragment {
         addRule = (Button) view.findViewById(R.id.addRule);
         addRule.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Set<String> zones = getState().getZoneEnabled().keySet();
+                Set<String> zones = getState().getZoneHeatingEnabled().keySet();
                 String zone = "";
                 if (!zones.isEmpty()) {
                     zone = zones.iterator().toString();
