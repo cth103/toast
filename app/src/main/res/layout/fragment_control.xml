@@ -29,7 +29,8 @@
           android:layout_width="0dp"
           android:text="On"
           android:id="@+id/enabled"
-          android:layout_marginLeft="8pt">
+          android:layout_marginLeft="8pt"
+          android:layout_span="2">
       </ToggleButton>
 
     </TableRow>
