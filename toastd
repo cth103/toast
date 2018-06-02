@@ -107,22 +107,28 @@ class Node(object):
             raise ValueError('unknown actuator name %s in node %s' % (name, self.name))
 
     def get_actuator(self, name):
-        if not name in self.actuators:
+        if not self.has_actuator(name):
             raise ValueError('unknown actuator name %s in node %s' % (name, self.name))
         return self.actuator_state[name]
 
+    def has_actuator(self, name):
+        return name in self.actuators
+
     def get_sensor(self, name):
         """Ask the node for a sensor reading"""
-        if not name in self.sensors:
+        if not self.has_sensor(name):
             raise ValueError('unknown sensor name %s in node %s' % (name, self.name))
         pass
+
+    def has_sensor(self, name):
+        return name in self.sensors
 
 class JSONNode(Node):
     def __init__(self, zone, name, ip):
         super(JSONNode, self).__init__(zone, name, ip, ["radiator"], ["temperature"])
 
-    def set_actuator_on(self, name, on):
-        super(JSONNode, self).set_actuator_on(name, on)
+    def set_actuator(self, name, on):
+        super(JSONNode, self).set_actuator(name, on)
         if on == self.actuator_state[name]:
             return
         s = self.connect()
@@ -130,12 +136,12 @@ class JSONNode(Node):
         self.actuator_state[name] = on
 
     def get_sensor(self, name):
-        super(JSONNode, self).get_sensor(self, name)
-        util.verbose("Connecting for temperature of %s" % self.name)
+        super(JSONNode, self).get_sensor(name)
+        util.verbose("Connecting for temperature of %s:%s" % (self.zone, self.name))
         s = self.connect()
         util.send_json(s, {'type': 'get'})
         j = util.receive_json(s)['temperature']
-        util.verbose("Received temperature %f of %s" % (j, self.name))
+        util.verbose("Received temperature %f of %s:%s" % (j, self.zone, self.name))
         return j
 
 class ESP8266Node(Node):
@@ -155,8 +161,8 @@ class ESP8266Node(Node):
         self.mac = mac
         self.lock = threading.Lock()
 
-    def set_actuator_on(self, name, on):
-        super(ESP8266Node, self).set_actuator_on(name, on)
+    def set_actuator(self, name, on):
+        super(ESP8266Node, self).set_actuator(name, on)
         if on == self.actuator_state[name]:
             return
         try:
@@ -176,15 +182,15 @@ class ESP8266Node(Node):
         super(ESP8266Node, self).get_sensor(name)
         try:
             self.lock.acquire()
-            util.verbose("Connecting for %s of %s" % (name, self.name))
+            util.verbose("Connecting for %s of %s:%s" % (name, self.zone, self.name))
             s = self.connect()
-            if self.name == 'temperature':
+            if name == 'temperature':
                 s.send('temp')
                 r = int(s.recv(64)) / 10000.0
-            elif self.name == 'humidity':
+            elif name == 'humidity':
                 s.send('humidity')
                 r = int(s.recv(64))
-            util.verbose("Received %s %f of %s" % (name, r, self.name))
+            util.verbose("Received %s %f of %s:%s" % (name, r, self.zone, self.name))
             s.close()
             return r
         finally:
@@ -357,7 +363,7 @@ class State:
     def set_zone_heating_enabled(self, zone, enabled):
         changed = False
         with self.mutex:
-            if not zone in self.zone_enabled:
+            if not zone in self.zone_heating_enabled:
                 self.zone_heating_enabled[zone] = False
             if self.zone_heating_enabled[zone] != enabled:
                 self.zone_heating_enabled[zone] = enabled
@@ -480,25 +486,25 @@ class State:
         """
         zone_heating_enabled = []
         for k, v in self.zone_heating_enabled.iteritems():
-            zone_heating_enabled.append({"zone": k.name, "zone_heating_enabled": v})
+            zone_heating_enabled.append({"zone": k, "zone_heating_enabled": v})
 
         target = []
         for k, v in self.target.iteritems():
-            target.append({"zone": k.name, "target": v})
+            target.append({"zone": k, "target": v})
 
         temperatures = []
         for k, v in self.temperatures.iteritems():
             if all_temperatures:
-                temperatures.append({"zone": k.name, "temperatures": v})
+                temperatures.append({"zone": k, "temperatures": v})
             elif len(v) > 0:
-                temperatures.append({"zone": k.name, "temperatures": [v[-1]]})
+                temperatures.append({"zone": k, "temperatures": [v[-1]]})
 
         humidities = []
         for k, v in self.humidities.iteritems():
             if all_humidities:
-                humidities.append({"zone": k.name, "humidities": v})
+                humidities.append({"zone": k, "humidities": v})
             elif len(v) > 0:
-                humidities.append({"zone": k.name, "humidities": [v[-1]]})
+                humidities.append({"zone": k, "humidities": [v[-1]]})
 
         rules = []
         for r in self.rules:
@@ -523,7 +529,7 @@ class State:
                 explanation = "Heating is switched off"
 
         all = {"heating_enabled": self.heating_enabled,
-               "zone_heating_enabled": zone_enabled,
+               "zone_heating_enabled": zone_heating_enabled,
                "target": target,
                "boiler_on": self.boiler_on,
                "temperatures": temperatures,
@@ -624,20 +630,23 @@ def update():
 
     # Zone radiators on or off
     for z in zones():
-        try:
-            if zone_heating_enabled[z]:
-                t = state.get_current_temperature(z)
-                if t > (target[z] + HYSTERESIS):
-                    z.set_actuator_on('radiator', False)
-                    note += '%s off ' % z
-                elif t < (target[z] - HYSTERESIS):
-                    z.set_actuator_on('radiator', True)
-                    note += '%s on ' % z
-            else:
-                z.set_radiator_on(False)
-        except (socket.error, util.Error) as e:
-            util.warning('could not instruct zone %s (%s)' % (z, e))
-            pass
+        for n in zone_nodes(z):
+            if not n.has_actuator('radiator'):
+                continue
+            try:
+                if zone_heating_enabled[z]:
+                    t = state.get_current_temperature(z)
+                    if t > (target[z] + HYSTERESIS):
+                        n.set_actuator('radiator', False)
+                        note += '%s off ' % z
+                    elif t < (target[z] - HYSTERESIS):
+                        n.set_actuator('radiator', True)
+                        note += '%s on ' % z
+                else:
+                    n.set_actuator('radiator', False)
+            except (socket.error, util.Error) as e:
+                util.warning('could not instruct zone %s (%s)' % (z, e))
+                pass
 
     heat_required = False
     for z in zones():
@@ -656,16 +665,16 @@ def broadcast_listen():
         if data.startswith('Hello heating'):
             mac = data[14:]
             try:
-                dynamic_zones_mutex.acquire()
+                dynamic_nodes_mutex.acquire()
                 got = False
-                for z in dynamic_zones:
-                    if z.mac == mac:
+                for n in dynamic_nodes:
+                    if n.mac == mac:
                         got = True
                 if not got:
-                    util.verbose('Adding dynamic zone at %s %s' % (addr[0], mac))
-                    dynamic_zones.append(ESP8266Zone(addr[0], mac))
+                    util.verbose('Adding dynamic node at %s %s' % (addr[0], mac))
+                    dynamic_nodes.append(ESP8266Node(addr[0], mac))
             finally:
-                dynamic_zones_mutex.release()
+                dynamic_nodes_mutex.release()
 
 def check():
     """Body of the "check" thread which converts demand to "output" state."""
@@ -712,7 +721,7 @@ def log():
                         print>>f,'%s %f %f %d %d' % (time.strftime("%H:%M:%S"), value, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
                         f.close()
 
-                    state.add_temperature(z, temp)
+                    state.add_temperature(z, value)
 
                 value = get_sensor(n, 'humidity')
                 if value is not None:
@@ -721,7 +730,7 @@ def log():
                         print>>f,'%s %d %f %d %d' % (time.strftime("%H:%M:%S"), value, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
                         f.close()
 
-                    state.add_humidity(z, temp)
+                    state.add_humidity(z, value)
 
         time.sleep(args.log_interval)
 
