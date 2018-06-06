@@ -254,7 +254,7 @@ dhtxx_loop(os_event_t *events)
 		break;
 	case DHTXX_SIGNAL_END_READ:
 		if (!dhtxx_error()) {
-			os_sprintf(reply, "%d\r\n", dhtxx_get_rh());
+			os_sprintf(reply, "%d\r\n", dht22_get_rh());
 		} else {
 			os_sprintf(reply, "error\r\n");
 		}

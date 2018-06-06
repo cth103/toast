@@ -252,16 +252,26 @@ dhtxx_error()
     return(Result != sRead[4]);
 }
 
-//-----------------------------------------------------------------------------------------
 int ICACHE_FLASH_ATTR
-dhtxx_get_temperature()
+dht11_get_temperature()
 {
     return(sRead[2]*1000+sRead[3]);
 }
 
-//-----------------------------------------------------------------------------------------
 int ICACHE_FLASH_ATTR
-dhtxx_get_rh()
+dht11_get_rh()
 {
     return(sRead[0]*1000+sRead[1]);
+}
+
+int ICACHE_FLASH_ATTR
+dht22_get_temperature()
+{
+    return(sRead[2]*256+sRead[3]);
+}
+
+int ICACHE_FLASH_ATTR
+dht22_get_rh()
+{
+    return(sRead[0]*256+sRead[1]);
 }

@@ -51,14 +51,27 @@ bool dhtxx_error();
 // Get last readed temperature (milli ºC)
 // The result of this funcion is undefined if dhtxx_error() return true
 //
-int dhtxx_get_temperature();
+int dht11_get_temperature();
 
 //
 // dhtxx_get_rh :
 // Get last readed relative humidity (in %% (per thousand)
 // The result of this funcion is undefined if dhtxx_error() return true
 //
-int dhtxx_get_rh();
+int dht11_get_rh();
 
+//
+// dhtxx_get_temperature :
+// Get last readed temperature (milli ºC)
+// The result of this funcion is undefined if dhtxx_error() return true
+//
+int dht22_get_temperature();
+
+//
+// dhtxx_get_rh :
+// Get last readed relative humidity (in %% (per thousand)
+// The result of this funcion is undefined if dhtxx_error() return true
+//
+int dht22_get_rh();
 
 #endif // DHTXX_LIB_H
