@@ -26,12 +26,12 @@ static uint32_t dht11_user_task_signal;
 
 //-----------------------------------------------------------------------------------------
 LOCAL bool ICACHE_FLASH_ATTR
-dht11_set_read_nok()
+dht11_set_read_nok(int code)
 {
     int i;
     for(i=0;i<4;i++)
         sRead[i]=0;
-    sRead[4] = 0xFF;
+    sRead[4] = code;
 }
 
 //-----------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ dht11_protocol(uint32 gpio_status, int cause)
                     if(GPIO_INPUT_GET(dht11_gpio))
                     {
 // Rising edge ?? Error.
-                        dht11_set_read_nok();
+                        dht11_set_read_nok(1);
                         dht11_set_standby();
                     }
                     else
@@ -84,7 +84,7 @@ dht11_protocol(uint32 gpio_status, int cause)
                     if(!GPIO_INPUT_GET(dht11_gpio))
                     {
 // Falling edge ?? Error.
-                        dht11_set_read_nok();
+                        dht11_set_read_nok(2);
                         dht11_set_standby();
                     }
                     else
@@ -96,7 +96,7 @@ dht11_protocol(uint32 gpio_status, int cause)
                     if(GPIO_INPUT_GET(dht11_gpio))
                     {
 // Rising edge ?? Error.
-                        dht11_set_read_nok();
+                        dht11_set_read_nok(3);
                         dht11_set_standby();
                     }
                     else
@@ -109,7 +109,7 @@ dht11_protocol(uint32 gpio_status, int cause)
                     if(! GPIO_INPUT_GET(dht11_gpio))
                     {
 // Falling edge ?? Error.
-                        dht11_set_read_nok();
+                        dht11_set_read_nok(4);
                         dht11_set_standby();
                     }
                     else
@@ -129,7 +129,7 @@ dht11_protocol(uint32 gpio_status, int cause)
                     if(GPIO_INPUT_GET(dht11_gpio))
                     {
 // Rising edge ?? Error.
-                        dht11_set_read_nok();
+                        dht11_set_read_nok(5);
                         dht11_set_standby();
                     }
                     else
@@ -182,7 +182,7 @@ dht11_protocol(uint32 gpio_status, int cause)
                 case dht11_mark_bit:
                 case dht11_read_bit:
                 default:
-                    dht11_set_read_nok();
+                    dht11_set_read_nok(6);
                     dht11_set_standby();
                 break;
             }
