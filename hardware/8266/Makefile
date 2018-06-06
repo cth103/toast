@@ -6,16 +6,16 @@ LDFLAGS = -Teagle.app.v6.ld
 fw-0x00000.bin: fw
 	esptool.py elf2image $^
 
-fw: fw.o driver/uart.o driver/ds18b20.o driver/dht11_lib.o driver/gpiolib.o
+fw: fw.o driver/uart.o driver/ds18b20.o driver/dhtxx_lib.o driver/gpiolib.o
 
 fw.o: fw.c
 driver/uart.o: driver/uart.c
 driver/ds18b20.o: driver/ds18b20.c
-driver/dht11_lib.o: driver/dht11_lib.c
+driver/dhtxx_lib.o: driver/dhtxx_lib.c
 driver/gpiolib.o: driver/gpiolib.c
 
 flash: fw-0x00000.bin
 	esptool.py write_flash 0 fw-0x00000.bin 0x10000 fw-0x10000.bin
 
 clean:
-	rm -f fw fw.o fw-0x00000.bin fw-0x10000.bin driver/uart.o driver/ds18b20.o fw.o driver/dht11_lib.o driver/gpiolib.o
+	rm -f fw fw.o fw-0x00000.bin fw-0x10000.bin driver/uart.o driver/ds18b20.o fw.o driver/dhtxx_lib.o driver/gpiolib.o

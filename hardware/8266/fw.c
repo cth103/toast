@@ -7,7 +7,7 @@
 #include "driver/uart.h"
 #include "driver/ds18b20.h"
 #include "driver/gpiolib.h"
-#include "driver/dht11_lib.h"
+#include "driver/dhtxx_lib.h"
 
 char const ssid[32] = "TALKTALK227CC2-2G";
 char const password[32] = "3N7FEUR9";

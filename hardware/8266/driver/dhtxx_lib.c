@@ -2,7 +2,7 @@
 #include "osapi.h"
 #include "driver/gpiolib.h"
 
-#include "driver/dht11_lib.h"
+#include "driver/dhtxx_lib.h"
 
 static int dht11_gpio;
 
