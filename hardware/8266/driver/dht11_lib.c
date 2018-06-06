@@ -174,7 +174,7 @@ dht11_protocol(uint32 gpio_status, int cause)
                     ETS_GPIO_INTR_ENABLE();
 
                     os_timer_disarm(&dht11_timer);
-                    os_timer_arm(&dht11_timer,6,0); // maximun frame time 4.8 ms
+                    os_timer_arm(&dht11_timer,16,0); // wait a "long time" (16ms) before we give up
                 break;
                 case dht11_connecting:
                 case dht11_mark_connecting:
