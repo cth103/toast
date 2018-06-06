@@ -1,64 +1,64 @@
-#ifndef DHT11_LIB_H
-#define DHT11_LIB_H
+#ifndef DHTXX_LIB_H
+#define DHTXX_LIB_H
 
-// DHT11 is a low cost Temperature and Relative Humidity sensor.
+// DHTXX is a low cost Temperature and Relative Humidity sensor.
 // It use a one wire protocol to send data to MCU (ESP8266 in this case)
 //
 // Your application must:
-//   - Indicate with dht11_init()
+//   - Indicate with dhtxx_init()
 //        - What gpio use to communicate with
 //        - What task get signaled when read will be finished
 //        - What signal send
 //   - Setup a gpio interrupt handler.
 //     When a interrupt is receive from gpio selected, the gpio interrupt
-//     handler must execute, dht11_gpio_interrupt_handler() function.
-//   - Start a read executing dht11_start_read() function.
-//   - Wait to end read is signaled by dht11 library
-//   - Verify read was correct using dht11_error() function.
-//   - Read temperature and RH with dht11_get_temperature() and
-//     dht11_get_rh().
+//     handler must execute, dhtxx_gpio_interrupt_handler() function.
+//   - Start a read executing dhtxx_start_read() function.
+//   - Wait to end read is signaled by dhtxx library
+//   - Verify read was correct using dhtxx_error() function.
+//   - Read temperature and RH with dhtxx_get_temperature() and
+//     dhtxx_get_rh().
 //
 
 
-// dht11_init :
-// Initialize communication protocol with dht11
+// dhtxx_init :
+// Initialize communication protocol with dhtxx
 // Params:
-//   gpio_id: GPIO ID to communicate with DHT11
+//   gpio_id: GPIO ID to communicate with DHTXX
 //   user_task: user_task priority to signal read end
 //   user_task_signal : The signal will be sent to user_task when read is finish
-void dht11_init(int gpio_id,uint32_t user_task,uint32_t user_task_signal);
+void dhtxx_init(int gpio_id,uint32_t user_task,uint32_t user_task_signal);
 
 
 // dhtll_start_read()
-// Start a DHT11 Read
+// Start a DHTXX Read
 //
-void dht11_start_read();
+void dhtxx_start_read();
 
-// dht11_gpio_intr_handler:
+// dhtxx_gpio_intr_handler:
 // General GPIO interrupt handler must be execute this function when a
-// interrupt from DHT11 gpio selected arrive.
+// interrupt from DHTXX gpio selected arrive.
 //
-void  dht11_gpio_intr_handler(uint32 gpio_status);
+void  dhtxx_gpio_intr_handler(uint32 gpio_status);
 
 //
-// dht11_error :
-// Return true if was a error on last comunication with dht11
+// dhtxx_error :
+// Return true if was a error on last comunication with dhtxx
 //
-bool dht11_error();
+bool dhtxx_error();
 
 //
-// dht11_get_temperature :
+// dhtxx_get_temperature :
 // Get last readed temperature (milli ºC)
-// The result of this funcion is undefined if dht11_error() return true
+// The result of this funcion is undefined if dhtxx_error() return true
 //
-int dht11_get_temperature();
+int dhtxx_get_temperature();
 
 //
-// dht11_get_rh :
+// dhtxx_get_rh :
 // Get last readed relative humidity (in %% (per thousand)
-// The result of this funcion is undefined if dht11_error() return true
+// The result of this funcion is undefined if dhtxx_error() return true
 //
-int dht11_get_rh();
+int dhtxx_get_rh();
 
 
-#endif // DHT11_LIB_H
+#endif // DHTXX_LIB_H
