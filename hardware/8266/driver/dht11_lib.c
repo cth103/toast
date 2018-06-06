@@ -182,7 +182,7 @@ dht11_protocol(uint32 gpio_status, int cause)
                 case dht11_mark_bit:
                 case dht11_read_bit:
                 default:
-                    dht11_set_read_nok(6);
+                    dht11_set_read_nok(128 + sStatus);
                     dht11_set_standby();
                 break;
             }
