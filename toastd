@@ -423,7 +423,7 @@ class State:
         server.send(self.as_dict("temperatures"))
 
     def add_humidity(self, zone, h):
-        assert(isinstance(t, Datum))
+        assert(isinstance(h, Datum))
         with self.mutex:
             if not zone in self.humidities:
                 self.humidities[zone] = []
@@ -705,13 +705,13 @@ def get_sensor(node, name):
     if not node.has_sensor(name):
         return None
     try:
-        value = node.get_sensor(name)
+        datum = node.get_sensor(name)
     except Exception as e:
         traceback.print_exc(file=sys.stdout)
         util.warning('could not get %s from %s:%s (%s)' % (name, node.zone, node.name, e))
         return None
 
-    return value
+    return datum
 
 
 def log():
