@@ -5,6 +5,7 @@ import argparse
 import util
 import sys
 import os
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--summary', action='store_true', help='display system state')
@@ -41,6 +42,9 @@ def on_off(v):
     else:
         return 'off'
 
+def minutes_ago(datum_time):
+    return round((time.mktime(time.gmtime()) - time.mktime(time.strptime(datum_time, '%Y-%m-%dT%H:%M:%SZ'))) / 3600.0)
+
 if args.zone is not None:
     # Get zones and correct args.zone if necessary
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,7 +77,7 @@ if (args.on or args.off) and args.zone is None:
     s.close()
 
 if (args.on or args.off) and args.zone is not None:
-    util.send_json(connect(), {'type': 'change', 'zone_enabled': [{'zone': args.zone, 'zone_enabled': args.on}]}, False)
+    util.send_json(connect(), {'type': 'change', 'zone_heating_enabled': [{'zone': args.zone, 'zone_heatin_enabled': args.on}]}, False)
     s.close()
 
 if args.target is not None and args.zone is None:
@@ -103,19 +107,26 @@ if args.summary:
     for t in json['target']:
 
         enabled = False
-        for e in json['zone_enabled']:
+        for e in json['zone_heating_enabled']:
             if e['zone'] == t['zone']:
-                enabled = e['zone_enabled']
+                enabled = e['zone_heating_enabled']
 
-        temperature = None
+        temperature = "?    "
+        temperature_age = "    "
+        humidity = "?  "
+        humidity_age = "    "
         for e in json['temperatures']:
             if e['zone'] == t['zone']:
-                temperature = e['temperatures'][0][1]
+                temperature = '%.2f' % e['temperatures'][0][1]
+                if minutes_ago(e['temperatures'][0][0]) > 2:
+                    temperature_age = '(OLD)'
+        for e in json['humidities']:
+            if e['zone'] == t['zone']:
+                humidity = '%d%%' % e['humidities'][0][1]
+                if minutes_ago(e['humidities'][0][0]) > 2:
+                    humidity_age = '(OLD)'
 
-        if temperature is None:
-            print '%s ?     %.1f [%s]' % (t['zone'].ljust(longest + 2), float(t['target']), on_off(enabled))
-        else:
-            print '%s %.2f %.1f [%s]' % (t['zone'].ljust(longest + 2), temperature, float(t['target']), on_off(enabled))
+        print '%s %s %s %.1f %s %s [%s]' % (t['zone'].ljust(longest + 2), temperature, temperature_age, float(t['target']), humidity, humidity_age, on_off(enabled))
 
     s.close()
 
