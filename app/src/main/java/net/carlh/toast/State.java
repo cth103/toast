@@ -313,7 +313,7 @@ public class State {
             }
 
         } catch (JSONException e) {
-            Log.e("toast", "JSONException was thrown": + e);
+            Log.e("toast", "JSONException was thrown:" + e);
         } catch (ParseException e) {
             Log.e("toast", "ParseException was thrown: " + e);
         }
