@@ -57,7 +57,7 @@ public class GraphFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_graph, container, false);
 
         zone = (Spinner) view.findViewById(R.id.graphZone);
-        Map<String, ArrayList<Double> > temps = getState().getTemperatures();
+        Map<String, ArrayList<Datum> > temps = getState().getTemperatures();
         ArrayAdapter zoneAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, temps.keySet().toArray(new String[0]));
         zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         zone.setAdapter(zoneAdapter);
@@ -146,7 +146,7 @@ public class GraphFragment extends Fragment {
             return;
         }
 
-        ArrayList<Double> temperatures = state.getTemperatures().get(zone.getSelectedItem());
+        ArrayList<Datum> temperatures = state.getTemperatures().get(zone.getSelectedItem());
         if (temperatures == null) {
             return;
         }
@@ -160,7 +160,7 @@ public class GraphFragment extends Fragment {
         ArrayList<Double> maf = new ArrayList<Double>();
         final int mafLength = 5;
         for (int i = 0; i < dataLength; i++) {
-            double v = temperatures.get(temperatures.size() - dataLength + i);
+            double v = temperatures.get(temperatures.size() - dataLength + i).value;
             maf.add(v);
             if (maf.size() > mafLength) {
                 maf.remove(0);

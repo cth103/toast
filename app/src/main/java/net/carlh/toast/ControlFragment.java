@@ -25,6 +25,7 @@ import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -157,8 +158,8 @@ public class ControlFragment extends Fragment {
             temperature.setText("");
         }
 
-        public void setHumidity(int h) {
-            humidity.setText(String.format("%d%%", h));
+        public void setHumidity(double h) {
+            humidity.setText(String.format("%.0f%%", h));
         }
 
         public void clearHumidity() {
@@ -234,19 +235,19 @@ public class ControlFragment extends Fragment {
                 zones.get(i.getKey()).setZoneEnabled(i.getValue());
             }
 
-            for (Map.Entry<String, ArrayList<Double>> i: state.getTemperatures().entrySet()) {
+            for (Map.Entry<String, ArrayList<Datum>> i: state.getTemperatures().entrySet()) {
                 Zone z = zones.get(i.getKey());
-                ArrayList<Double> temps = i.getValue();
+                ArrayList<Datum> temps = i.getValue();
                 if (z != null && temps != null && temps.size() > 0) {
-                    z.setTemperature(temps.get(temps.size() - 1));
+                    z.setTemperature(temps.get(temps.size() - 1).value);
                 }
             }
 
-            for (Map.Entry<String, ArrayList<Integer>> i: state.getHumidities().entrySet()) {
+            for (Map.Entry<String, ArrayList<Datum>> i: state.getHumidities().entrySet()) {
                 Zone z = zones.get(i.getKey());
-                ArrayList<Integer> hums = i.getValue();
+                ArrayList<Datum> hums = i.getValue();
                 if (z != null && hums != null && hums.size() > 0) {
-                    z.setHumidity(hums.get(hums.size() - 1));
+                    z.setHumidity(hums.get(hums.size() - 1).value);
                 }
             }
 

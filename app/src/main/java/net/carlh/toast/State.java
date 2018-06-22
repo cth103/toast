@@ -29,6 +29,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -60,8 +61,8 @@ public class State {
     private HashMap<String, Boolean> zoneHeatingEnabled = new HashMap<String, Boolean>();
     private HashMap<String, Double> target = new HashMap<String, Double>();
     private boolean boilerOn = false;
-    private HashMap<String, ArrayList<Double> > temperatures = new HashMap<String, ArrayList<Double> >();
-    private HashMap<String, ArrayList<Integer> > humidities = new HashMap<String, ArrayList<Integer> >();
+    private HashMap<String, ArrayList<Datum> > temperatures = new HashMap<>();
+    private HashMap<String, ArrayList<Datum> > humidities = new HashMap<>();
     private ArrayList<Rule> rules = new ArrayList<Rule>();
     private String explanation;
 
@@ -102,11 +103,11 @@ public class State {
         return boilerOn;
     }
 
-    public synchronized HashMap<String, ArrayList<Double> > getTemperatures() {
+    public synchronized HashMap<String, ArrayList<Datum> > getTemperatures() {
         return temperatures;
     }
 
-    public synchronized HashMap<String, ArrayList<Integer> > getHumidities() {
+    public synchronized HashMap<String, ArrayList<Datum> > getHumidities() {
         return humidities;
     }
 
@@ -153,12 +154,12 @@ public class State {
                 case TEMPERATURES:
                 {
                     JSONArray a = new JSONArray();
-                    for (Map.Entry<String, ArrayList<Double>> i : temperatures.entrySet()) {
+                    for (Map.Entry<String, ArrayList<Datum>> i : temperatures.entrySet()) {
                         JSONObject o = new JSONObject();
                         o.put("zone", i.getKey());
                         JSONArray t = new JSONArray();
-                        for (Double j : i.getValue()) {
-                            t.put(j);
+                        for (Datum j : i.getValue()) {
+                            t.put(j.asJSONArray());
                         }
                         o.put("temperatures", t);
                         a.put(o);
@@ -169,12 +170,12 @@ public class State {
                 case HUMIDITIES:
                 {
                     JSONArray a = new JSONArray();
-                    for (Map.Entry<String, ArrayList<Integer>> i : humidities.entrySet()) {
+                    for (Map.Entry<String, ArrayList<Datum>> i : humidities.entrySet()) {
                         JSONObject o = new JSONObject();
                         o.put("zone", i.getKey());
                         JSONArray t = new JSONArray();
-                        for (Integer j : i.getValue()) {
-                            t.put(j);
+                        for (Datum j : i.getValue()) {
+                            t.put(j.asJSONArray());
                         }
                         o.put("humidities", t);
                         a.put(o);
@@ -234,12 +235,12 @@ public class State {
         }
     }
 
-    public synchronized void setTemperatures(String zone, ArrayList<Double> t) {
+    public synchronized void setTemperatures(String zone, ArrayList<Datum> t) {
         temperatures.put(zone, t);
         changed(TEMPERATURES);
     }
 
-    public synchronized void setHumidities(String zone, ArrayList<Integer> t) {
+    public synchronized void setHumidities(String zone, ArrayList<Datum> t) {
         humidities.put(zone, t);
         changed(HUMIDITIES);
     }
@@ -306,10 +307,10 @@ public class State {
             if (json.has("temperatures")) {
                 JSONArray zones = json.getJSONArray("temperatures");
                 for (int i = 0; i < zones.length(); i++) {
-                    ArrayList<Double> t = new ArrayList<Double>();
+                    ArrayList<Datum> t = new ArrayList<>();
                     JSONArray k = zones.getJSONObject(i).getJSONArray("temperatures");
                     for (int j = 0; j < k.length(); j++) {
-                        t.add(k.getDouble(j));
+                        t.add(new Datum(k.getJSONArray(j)));
                     }
                     setTemperatures(zones.getJSONObject(i).getString("zone"), t);
                 }
@@ -318,10 +319,10 @@ public class State {
             if (json.has("humidities")) {
                 JSONArray zones = json.getJSONArray("humidities");
                 for (int i = 0; i < zones.length(); i++) {
-                    ArrayList<Integer> t = new ArrayList<Integer>();
+                    ArrayList<Datum> t = new ArrayList<>();
                     JSONArray k = zones.getJSONObject(i).getJSONArray("humidities");
                     for (int j = 0; j < k.length(); j++) {
-                        t.add(k.getInt(j));
+                        t.add(new Datum(k.getJSONArray(j)));
                     }
                     setHumidities(zones.getJSONObject(i).getString("zone"), t);
                 }
@@ -341,6 +342,9 @@ public class State {
             }
 
         } catch (JSONException e) {
+            Log.e("toast", "JSON exception was thrown.");
+        } catch (ParseException e) {
+            Log.e("toast", "Date parse exception was thrown: " + e);
         }
     }
 }
