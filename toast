@@ -4,16 +4,36 @@ import socket
 import argparse
 import util
 import sys
-
-SERVER = '192.168.1.1'
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--summary', action='store_true', help='display system state')
+parser.add_argument('-f', '--full', action='store_true', help='display full system state and history')
 parser.add_argument('--on', action='store_true', help='turn whole system or zone on')
 parser.add_argument('--off', action='store_true', help='turn whole system or zone off')
 parser.add_argument('-z', '--zone', help='zone to control')
 parser.add_argument('-t', '--target', help='target temperature')
+parser.add_argument('--server', help='IP address of server')
+parser.add_argument('-p', '--port', help='port to connect to server on', default=80)
+parser.add_argument('-j', '--json', help='dump received JSON to stdout', action='store_true', default=False)
 args = parser.parse_args()
+
+try:
+    f = open(os.path.expanduser('~/.config/toast'), 'r')
+    for l in f.readlines():
+        s = l.strip().split()
+        if len(s) == 2:
+            if s[0] == 'server':
+                args.server = s[1]
+            elif s[0] == 'port':
+                args.port = s[1]
+
+except:
+    pass
+
+if args.server is None:
+    print>>sys.stderr,'No server specified and no configuration file found.'
+    sys.exit(1)
 
 def on_off(v):
     if v:
@@ -24,7 +44,7 @@ def on_off(v):
 if args.zone is not None:
     # Get zones and correct args.zone if necessary
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((SERVER, 80))
+    s.connect((args.server, int(args.port)))
     util.send_json(s, {'type': 'send_basic'}, False)
     json = util.receive_json(s, False)
     candidates = []
@@ -43,19 +63,17 @@ if args.zone is not None:
 
     args.zone = candidates[0]
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((SERVER, 80))
+def connect():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((args.server, int(args.port)))
+    return s
 
 if (args.on or args.off) and args.zone is None:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((SERVER, 80))
-    util.send_json(s, {'type': 'change', 'heating_enabled': args.on}, False)
+    util.send_json(connect(), {'type': 'change', 'heating_enabled': args.on}, False)
     s.close()
 
 if (args.on or args.off) and args.zone is not None:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((SERVER, 80))
-    util.send_json(s, {'type': 'change', 'zone_enabled': [{'zone': args.zone, 'zone_enabled': args.on}]}, False)
+    util.send_json(connect(), {'type': 'change', 'zone_enabled': [{'zone': args.zone, 'zone_enabled': args.on}]}, False)
     s.close()
 
 if args.target is not None and args.zone is None:
@@ -63,17 +81,15 @@ if args.target is not None and args.zone is None:
     sys.exit(1)
 
 if args.target is not None:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((SERVER, 80))
-    util.send_json(s, {'type': 'change', 'target': [{'zone': args.zone, 'target': float(args.target)}]}, False)
+    util.send_json(connect(), {'type': 'change', 'target': [{'zone': args.zone, 'target': float(args.target)}]}, False)
     s.close()
 
 if args.summary:
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((SERVER, 80))
+    s = connect()
     util.send_json(s, {'type': 'send_basic'}, False)
     json = util.receive_json(s, False)
+    if args.json:
+        print json
 
     if json['heating_enabled']:
         print 'Heating is on.'
@@ -94,11 +110,18 @@ if args.summary:
         temperature = None
         for e in json['temperatures']:
             if e['zone'] == t['zone']:
-                temperature = e['temperatures'][0]
+                temperature = e['temperatures'][0][1]
 
         if temperature is None:
             print '%s ?     %.1f [%s]' % (t['zone'].ljust(longest + 2), float(t['target']), on_off(enabled))
         else:
             print '%s %.2f %.1f [%s]' % (t['zone'].ljust(longest + 2), temperature, float(t['target']), on_off(enabled))
 
+    s.close()
+
+if args.full:
+    s = connect()
+    util.send_json(s, {'type': 'send_all'}, False)
+    json = util.receive_json(s, False)
+    print json
     s.close()
