@@ -64,7 +64,7 @@ class NodeProperties(object):
         self.sensors = sensors
 
 node_properties = { '600194189ed3': NodeProperties('Bathroom', 'radiator', ['radiator'], ['temperature']),
-                    '5ccf7f3cd919': NodeProperties('Bathroom', 'fan', ['fan'], ['humidity']) }
+                    '5ccf7f3ce462': NodeProperties('Bathroom', 'fan', ['fan'], ['humidity']) }
 
 class Node(object):
     """
@@ -190,7 +190,7 @@ class ESP8266Node(Node):
                 r = int(s.recv(64)) / 10000.0
             elif name == 'humidity':
                 s.send('humidity')
-                r = int(s.recv(64)) / 1000
+                r = int(s.recv(64)) / 10.0
             util.verbose("Received %s %f of %s:%s" % (name, r, self.zone, self.name))
             s.close()
             return r
