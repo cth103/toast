@@ -27,7 +27,7 @@ try:
                 args.server = s[1]
             elif s[0] == 'port':
                 args.port = s[1]
-            
+
 except:
     pass
 
@@ -123,7 +123,5 @@ if args.full:
     s = connect()
     util.send_json(s, {'type': 'send_all'}, False)
     json = util.receive_json(s, False)
-    if args.json:
-        print json
-
+    print json
     s.close()
