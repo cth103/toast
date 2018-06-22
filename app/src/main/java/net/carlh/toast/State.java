@@ -151,38 +151,6 @@ public class State {
                 case BOILER_ON:
                     json.put("boiler_on", boilerOn);
                     break;
-                case TEMPERATURES:
-                {
-                    JSONArray a = new JSONArray();
-                    for (Map.Entry<String, ArrayList<Datum>> i : temperatures.entrySet()) {
-                        JSONObject o = new JSONObject();
-                        o.put("zone", i.getKey());
-                        JSONArray t = new JSONArray();
-                        for (Datum j : i.getValue()) {
-                            t.put(j.asJSONArray());
-                        }
-                        o.put("temperatures", t);
-                        a.put(o);
-                    }
-                    json.put("temperatures", a);
-                    break;
-                }
-                case HUMIDITIES:
-                {
-                    JSONArray a = new JSONArray();
-                    for (Map.Entry<String, ArrayList<Datum>> i : humidities.entrySet()) {
-                        JSONObject o = new JSONObject();
-                        o.put("zone", i.getKey());
-                        JSONArray t = new JSONArray();
-                        for (Datum j : i.getValue()) {
-                            t.put(j.asJSONArray());
-                        }
-                        o.put("humidities", t);
-                        a.put(o);
-                    }
-                    json.put("humidities", a);
-                    break;
-                }
                 case RULES: {
                     JSONArray a = new JSONArray();
                     for (Rule r : rules) {
@@ -191,8 +159,11 @@ public class State {
                     json.put("rules", a);
                     break;
                 }
+                default:
+                    assert(false);
             }
         } catch (JSONException e) {
+            Log.e("toast", "JSONException was thrown: " + e);
         }
     }
 
@@ -342,9 +313,9 @@ public class State {
             }
 
         } catch (JSONException e) {
-            Log.e("toast", "JSON exception was thrown.");
+            Log.e("toast", "JSONException was thrown": + e);
         } catch (ParseException e) {
-            Log.e("toast", "Date parse exception was thrown: " + e);
+            Log.e("toast", "ParseException was thrown: " + e);
         }
     }
 }

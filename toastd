@@ -402,16 +402,6 @@ class State:
         if changed:
             server.send(self.as_dict("boiler_on"))
 
-    def set_temperatures(self, zone, temperatures):
-        with self.mutex:
-            self.temperatures[zone] = temperatures
-        server.send(self.as_dict("temperatures"))
-
-    def set_humidities(self, zone, humidities):
-        with self.mutex:
-            self.humidities[zone] = humidities
-        server.send(self.as_dict("humidities"))
-
     def add_temperature(self, zone, t):
         assert(isinstance(t, Datum))
         with self.mutex:
@@ -567,12 +557,11 @@ class State:
                 self.set_target(z['zone'], z['target'])
         if 'boiler_on' in c:
             self.set_boiler_on(c['boiler_on'])
-        if 'temperatures' in c:
-            for z in c['temperatures']:
-                self.set_temperatures(z['zone'], z['temperatures'])
-        if 'humidities' in c:
-            for z in c['humidities']:
-                self.set_humidities(z['zone'], z['humidities'])
+        # We never expect to receive these data here, since
+        # they are managed by the server, sent out to the client(s)
+        # and a client never sends them back.
+        assert(not 'temperatures' in c)
+        assert(not 'humidities' in c)
         if 'rules' in c:
             rules = []
             for dr in c['rules']:

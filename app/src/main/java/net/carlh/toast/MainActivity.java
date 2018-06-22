@@ -75,7 +75,7 @@ import java.util.List;
                    that only goes server -> client).
                 */
                 int property = message.getData().getInt("property");
-                if (property != State.TEMPERATURES && client != null) {
+                if (property != State.TEMPERATURES && property != State.HUMIDITIES && client != null) {
                     JSONObject json = new JSONObject();
                     try {
                         json.put("type", "change");
