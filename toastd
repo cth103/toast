@@ -56,6 +56,14 @@ NODE_PORT = 9142
 # Port to listen for ESP8266 UDP broadcasts
 BROADCAST_PORT = 9143
 
+class Datum(object):
+    def __init__(self, value):
+        self.time = time.gmtime()
+        self.value = value
+
+    def as_tuple(self):
+        return (time.strftime('%Y-%m-%dT%H:%M:%SZ', self.time), self.value)
+
 class NodeProperties(object):
     def __init__(self, zone, name, actuators, sensors):
         self.zone = zone
@@ -143,7 +151,7 @@ class JSONNode(Node):
         util.send_json(s, {'type': 'get'})
         j = util.receive_json(s)['temperature']
         util.verbose("Received temperature %f of %s:%s" % (j, self.zone, self.name))
-        return j
+        return Datum(j)
 
 class ESP8266Node(Node):
     def __init__(self, ip, mac):
@@ -193,7 +201,7 @@ class ESP8266Node(Node):
                 r = int(s.recv(64)) / 10.0
             util.verbose("Received %s %f of %s:%s" % (name, r, self.zone, self.name))
             s.close()
-            return r
+            return Datum(r)
         finally:
             self.lock.release()
 
@@ -405,6 +413,7 @@ class State:
         server.send(self.as_dict("humidities"))
 
     def add_temperature(self, zone, t):
+        assert(isinstance(t, Datum))
         with self.mutex:
             if not zone in self.temperatures:
                 self.temperatures[zone] = []
@@ -414,6 +423,7 @@ class State:
         server.send(self.as_dict("temperatures"))
 
     def add_humidity(self, zone, h):
+        assert(isinstance(t, Datum))
         with self.mutex:
             if not zone in self.humidities:
                 self.humidities[zone] = []
@@ -496,16 +506,16 @@ class State:
         temperatures = []
         for k, v in self.temperatures.iteritems():
             if all_values:
-                temperatures.append({"zone": k, "temperatures": v})
+                temperatures.append({"zone": k, "temperatures": [i.as_tuple() for i in v]})
             elif len(v) > 0:
-                temperatures.append({"zone": k, "temperatures": [v[-1]]})
+                temperatures.append({"zone": k, "temperatures": [v[-1].as_tuple()]})
 
         humidities = []
         for k, v in self.humidities.iteritems():
             if all_values:
-                humidities.append({"zone": k, "humidities": v})
+                humidities.append({"zone": k, "humidities": [i.as_tuple() for i in v]})
             elif len(v) > 0:
-                humidities.append({"zone": k, "humidities": [v[-1]]})
+                humidities.append({"zone": k, "humidities": [v[-1].as_tuple()]})
 
         rules = []
         for r in self.rules:
@@ -637,10 +647,10 @@ def update():
             try:
                 if zone_heating_enabled[z]:
                     t = state.get_current_temperature(z)
-                    if t > (target[z] + HYSTERESIS):
+                    if t.value > (target[z] + HYSTERESIS):
                         n.set_actuator('radiator', False)
                         note += '%s off ' % z
-                    elif t < (target[z] - HYSTERESIS):
+                    elif t.value < (target[z] - HYSTERESIS):
                         n.set_actuator('radiator', True)
                         note += '%s on ' % z
                 else:
@@ -715,23 +725,23 @@ def log():
 
         for z in zones():
             for n in zone_nodes(z):
-                value = get_sensor(n, 'temperature')
-                if value is not None:
+                datum = get_sensor(n, 'temperature')
+                if datum is not None:
                     if write_logs:
                         f = open(log_file, 'a')
-                        print>>f,'%s %f %f %d %d' % (time.strftime("%H:%M:%S"), value, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
+                        print>>f,'%s %f %f %d %d' % (time.strftime("%H:%M:%S"), datum.value, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
                         f.close()
 
-                    state.add_temperature(z, value)
+                    state.add_temperature(z, datum)
 
-                value = get_sensor(n, 'humidity')
-                if value is not None:
+                datum = get_sensor(n, 'humidity')
+                if datum is not None:
                     if write_logs:
                         f = open(log_file, 'a')
-                        print>>f,'%s %d %f %d %d' % (time.strftime("%H:%M:%S"), value, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
+                        print>>f,'%s %d %f %d %d' % (time.strftime("%H:%M:%S"), datum.value, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
                         f.close()
 
-                    state.add_humidity(z, value)
+                    state.add_humidity(z, datum)
 
         time.sleep(args.log_interval)
 
