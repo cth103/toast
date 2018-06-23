@@ -51,6 +51,7 @@ public class GraphFragment extends Fragment {
     private Spinner period;
     /** The graph */
     private GraphView graphView;
+    private LineGraphSeries<DataPoint> series;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -192,7 +193,6 @@ public class GraphFragment extends Fragment {
         
         period.setEnabled(true);
         graphView.setVisibility(View.VISIBLE);
-        graphView.removeAllSeries();
 
         dataLength = Math.min(data.size(), minutes);
         DataPoint[] graphData = new DataPoint[dataLength];
@@ -212,6 +212,11 @@ public class GraphFragment extends Fragment {
             graphData[i] = new DataPoint(i, v);
         }
 
-        graphView.addSeries(new LineGraphSeries<>(graphData));
+        if (series != null) {
+            series.resetData(graphData);
+        } else {
+            series = new LineGraphSeries<>(graphData);
+            graphView.addSeries(series);
+        }
     }
 }
