@@ -91,4 +91,9 @@ class Server:
     def send(self, d):
         with self.mutex:
             for c in self.clients:
-                util.send_json(c, d)
+                try:
+                    util.send_json(c, d)
+                except Exception as e:
+                    util.warning('Could not send to client')
+                    traceback.print_exc(file=sys.stdout)
+                    pass
