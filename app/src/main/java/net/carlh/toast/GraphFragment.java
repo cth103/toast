@@ -28,14 +28,12 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 
-import com.jjoe64.graphview.CustomLabelFormatter;
+import com.jjoe64.graphview.DefaultLabelFormatter;
 import com.jjoe64.graphview.GraphView;
-import com.jjoe64.graphview.GraphViewSeries;
-import com.jjoe64.graphview.LineGraphView;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Map;
 
 /** Fragment to plot graphs of temperature */
@@ -99,29 +97,17 @@ public class GraphFragment extends Fragment {
             }
         });
 
-        graphView = new LineGraphView(getActivity(), "Temperature");
-        graphView.getGraphViewStyle().setTextSize(getResources().getDimension(R.dimen.abc_text_size_small_material));
-        graphView.setScalable(true);
+        graphView = new GraphView(getActivity());
 
         /* Format the x axis with times or dates */
-        graphView.setCustomLabelFormatter(new CustomLabelFormatter() {
+        graphView.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter() {
             @Override
             public String formatLabel(double value, boolean isValueX) {
                 if (!isValueX) {
-                    return null;
+                    return super.formatLabel(value, isValueX);
                 }
 
-                Calendar c = Calendar.getInstance();
-
-                SimpleDateFormat f = null;
-                if (minutes <= (60 * 24)) {
-                    f = new SimpleDateFormat("K:mm a");
-                } else {
-                    f = new SimpleDateFormat("E K:mm a");
-                }
-
-                c.add(Calendar.MINUTE, (int) (value - dataLength));
-                return f.format(c.getTime());
+                return "";
             }
         });
 
@@ -156,7 +142,7 @@ public class GraphFragment extends Fragment {
         graphView.removeAllSeries();
 
         dataLength = Math.min(temperatures.size(), minutes);
-        GraphView.GraphViewData[] data = new GraphView.GraphViewData[dataLength];
+        DataPoint[] data = new DataPoint[dataLength];
         ArrayList<Double> maf = new ArrayList<Double>();
         final int mafLength = 5;
         for (int i = 0; i < dataLength; i++) {
@@ -170,9 +156,9 @@ public class GraphFragment extends Fragment {
                 }
                 v = total / mafLength;
             }
-            data[i] = new GraphView.GraphViewData(i, v);
+            data[i] = new DataPoint(i, v);
         }
 
-        graphView.addSeries(new GraphViewSeries(data));
+        graphView.addSeries(new LineGraphSeries<>(data));
     }
 }
