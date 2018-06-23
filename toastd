@@ -92,7 +92,7 @@ class Node(object):
         self.sensors = sensors
         self.actuator_state = dict()
         for a in self.actuators:
-            self.actuator_state[a] = False
+            self.actuator_state[a] = None
 
     def __str__(self):
         return self.name
