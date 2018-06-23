@@ -34,6 +34,7 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /** Fragment to plot graphs of temperature */
@@ -45,6 +46,7 @@ public class GraphFragment extends Fragment {
     private int dataLength = 0;
     /** Zone spinner */
     private Spinner zone;
+    private Spinner parameter;
     /** Period spinner */
     private Spinner period;
     /** The graph */
@@ -60,6 +62,18 @@ public class GraphFragment extends Fragment {
         zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         zone.setAdapter(zoneAdapter);
         zone.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                update_zone();
+            }
+
+            public void onNothingSelected(AdapterView<?> parentView) {
+
+            }
+        });
+
+        parameter = (Spinner) view.findViewById(R.id.graphParameter);
+        parameter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
                 update();
@@ -118,6 +132,35 @@ public class GraphFragment extends Fragment {
         return view;
     }
 
+    private void update_zone() {
+        if (period == null) {
+            /* The UI hasn't been created yet */
+            return;
+        }
+
+        State state = getState();
+
+        if (state == null || state.getTemperatures().size() == 0) {
+            period.setEnabled(false);
+            graphView.setVisibility(View.INVISIBLE);
+            return;
+        }
+
+        List<String> parameters = new ArrayList<String>();
+        if (state.getTemperatures().get(zone.getSelectedItem()) != null) {
+            parameters.add("Temperature");
+        }
+        if (state.getHumidities().get(zone.getSelectedItem()) != null) {
+            parameters.add("Humidity");
+        }
+
+        ArrayAdapter parameterAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, parameters);
+        parameterAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        parameter.setAdapter(parameterAdapter);
+
+        update();
+    }
+
     public void update() {
         if (period == null) {
             /* The UI hasn't been created yet */
@@ -132,8 +175,18 @@ public class GraphFragment extends Fragment {
             return;
         }
 
-        ArrayList<Datum> temperatures = state.getTemperatures().get(zone.getSelectedItem());
-        if (temperatures == null) {
+        ArrayList<Datum> data = null;
+
+        switch (parameter.getSelectedItemPosition()) {
+            case 0:
+                data = state.getTemperatures().get(zone.getSelectedItem());
+                break;
+            case 1:
+                data = state.getHumidities().get(zone.getSelectedItem());
+                break;
+        }
+
+        if (data == null) {
             return;
         }
         
@@ -141,12 +194,12 @@ public class GraphFragment extends Fragment {
         graphView.setVisibility(View.VISIBLE);
         graphView.removeAllSeries();
 
-        dataLength = Math.min(temperatures.size(), minutes);
-        DataPoint[] data = new DataPoint[dataLength];
+        dataLength = Math.min(data.size(), minutes);
+        DataPoint[] graphData = new DataPoint[dataLength];
         ArrayList<Double> maf = new ArrayList<Double>();
         final int mafLength = 5;
         for (int i = 0; i < dataLength; i++) {
-            double v = temperatures.get(temperatures.size() - dataLength + i).value;
+            double v = data.get(data.size() - dataLength + i).value;
             maf.add(v);
             if (maf.size() > mafLength) {
                 maf.remove(0);
@@ -156,9 +209,9 @@ public class GraphFragment extends Fragment {
                 }
                 v = total / mafLength;
             }
-            data[i] = new DataPoint(i, v);
+            graphData[i] = new DataPoint(i, v);
         }
 
-        graphView.addSeries(new LineGraphSeries<>(data));
+        graphView.addSeries(new LineGraphSeries<>(graphData));
     }
 }
