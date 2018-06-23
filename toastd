@@ -51,6 +51,8 @@ MEMORY_LOG_MINUTES = 60 * 24 * 7
 AUTO_OFF_HOURS = [0, 1, 2, 3, 4, 5, 6, 10]
 # Default target temperature
 DEFAULT_TARGET = 19.0
+HUMIDITY_HIGH_THRESHOLD = 72.0
+HUMIDITY_LOW_THRESHOLD = 68.0
 # Port to talk to nodes on
 NODE_PORT = 9142
 # Port to listen for ESP8266 UDP broadcasts
@@ -456,7 +458,7 @@ class State:
             return self.boiler_on
 
     def get_current_temperature(self, zone):
-        t = 0.0
+        t = None
         with self.mutex:
             if not zone in self.temperatures:
                 self.temperatures[zone] = []
@@ -465,7 +467,7 @@ class State:
         return t
 
     def get_current_humidity(self, zone):
-        t = 0.0
+        t = None
         with self.mutex:
             if not zone in self.humidities:
                 self.humidities[zone] = []
@@ -636,12 +638,13 @@ def update():
             try:
                 if zone_heating_enabled[z]:
                     t = state.get_current_temperature(z)
-                    if t.value > (target[z] + HYSTERESIS):
-                        n.set_actuator('radiator', False)
-                        note += '%s off ' % z
-                    elif t.value < (target[z] - HYSTERESIS):
-                        n.set_actuator('radiator', True)
-                        note += '%s on ' % z
+                    if t is not None:
+                        if t.value > (target[z] + HYSTERESIS):
+                            n.set_actuator('radiator', False)
+                            note += '%s off ' % z
+                        elif t.value < (target[z] - HYSTERESIS):
+                            n.set_actuator('radiator', True)
+                            note += '%s on ' % z
                 else:
                     n.set_actuator('radiator', False)
             except (socket.error, util.Error) as e:
@@ -656,6 +659,19 @@ def update():
 
     # Then turn the boiler on or off
     state.set_boiler_on(heat_required and heating_enabled)
+
+    # Humidity
+    for z in zones():
+        hum = state.get_current_humidity(z)
+        if hum is not None:
+            if hum.value > HUMIDITY_HIGH_THRESHOLD:
+                for n in zone_nodes(z):
+                    if n.has_actuator('fan'):
+                        n.set_actuator('fan', True)
+            elif hum.value < HUMIDITY_LOW_THRESHOLD:
+                for n in zone_nodes(z):
+                    if n.has_actuator('fan'):
+                        n.set_actuator('fan', False)
 
 def broadcast_listen():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
