@@ -38,17 +38,19 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /** Fragment to plot graphs of temperature */
 public class GraphFragment extends Fragment {
 
-    /** Number of minutes to plot */
-    private int minutes = 60;
-    /** Number of minutes that we have data for */
-    private int dataLength = 0;
+    private Date startTime;
+    private Date endTime = new Date();
     /** Zone spinner */
     private Spinner zone;
     /** Period spinner */
@@ -61,6 +63,8 @@ public class GraphFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_graph, container, false);
+
+        startTime = new Date(endTime.getTime() - 60 * 60 * 1000);
 
         zone = (Spinner) view.findViewById(R.id.graphZone);
         Map<String, ArrayList<Datum>> temps = getState().getTemperatures();
@@ -79,22 +83,35 @@ public class GraphFragment extends Fragment {
         });
 
         period = (Spinner) view.findViewById(R.id.graphPeriod);
-        String periods[] = {"Last hour", "Last day", "Last week"};
+        String periods[] = {"Last hour", "Today", "This week"};
         ArrayAdapter periodAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, periods);
         periodAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         period.setAdapter(periodAdapter);
         period.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                Calendar cal = new GregorianCalendar();
                 switch (position) {
                     case 0:
-                        minutes = 60;
+                        endTime = new Date();
+                        startTime = new Date(endTime.getTime() - 60 * 60 * 1000);
                         break;
                     case 1:
-                        minutes = 24 * 60;
+                        cal.set(Calendar.HOUR_OF_DAY, 0);
+                        cal.set(Calendar.MINUTE, 0);
+                        cal.set(Calendar.SECOND, 0);
+                        startTime = cal.getTime();
+                        cal.add(Calendar.DAY_OF_MONTH, 1);
+                        endTime = cal.getTime();
                         break;
                     case 2:
-                        minutes = 7 * 24 * 60;
+                        cal.set(Calendar.HOUR_OF_DAY, 0);
+                        cal.set(Calendar.DAY_OF_WEEK, 0);
+                        cal.set(Calendar.MINUTE, 0);
+                        cal.set(Calendar.SECOND, 0);
+                        startTime = cal.getTime();
+                        cal.add(Calendar.DAY_OF_MONTH, 7);
+                        endTime = cal.getTime();
                         break;
                 }
                 update();
@@ -140,18 +157,19 @@ public class GraphFragment extends Fragment {
         /* Count how many data points are less than minutes old */
         int dataLength = 0;
         for (Datum i: data) {
-            if (i.ageInMinutes() <= minutes) {
+            if (startTime.compareTo(i.time) <= 0 && i.time.compareTo(endTime) < 0) {
                 ++dataLength;
             }
         }
 
         DataPoint[] graphData = new DataPoint[dataLength];
-        ArrayList<Double> maf = new ArrayList<Double>();
+        ArrayList<Double> maf = new ArrayList<>();
         final int mafLength = 5;
 
         int j = 0;
+        String s = "";
         for (Datum i: data) {
-            if (i.ageInMinutes() <= minutes) {
+            if (startTime.compareTo(i.time) <= 0 && i.time.compareTo(endTime) < 0) {
                 double v = i.value;
                 maf.add(v);
                 if (maf.size() > mafLength) {
@@ -162,10 +180,12 @@ public class GraphFragment extends Fragment {
                     }
                     v = total / mafLength;
                 }
-                graphData[j] = new DataPoint(minutes - i.ageInMinutes(), v);
+                graphData[j] = new DataPoint(TimeUnit.MILLISECONDS.toSeconds(i.time.getTime() - startTime.getTime()), v);
                 ++j;
             }
         }
+
+        Log.e("toast", s);
 
         return graphData;
     }
@@ -186,8 +206,6 @@ public class GraphFragment extends Fragment {
 
         period.setEnabled(true);
         graphView.setVisibility(View.VISIBLE);
-        graphView.getViewport().setMinX(0);
-        graphView.getViewport().setMaxX(minutes);
 
         ArrayList<Datum> temperatureData = state.getTemperatures().get(zone.getSelectedItem());
         if (temperatureData != null && temperatureData.size() > 0) {
@@ -210,11 +228,15 @@ public class GraphFragment extends Fragment {
                 humiditySeries.setColor(Color.GREEN);
                 graphView.getSecondScale().addSeries(humiditySeries);
             }
-            graphView.getSecondScale().setMinY(0);
-            graphView.getSecondScale().setMaxY(100);
         } else {
             graphView.getSecondScale().removeAllSeries();
             humiditySeries = null;
         }
+
+        graphView.getSecondScale().setMinY(0);
+        graphView.getSecondScale().setMaxY(100);
+
+        graphView.getViewport().setMinX(0);
+        graphView.getViewport().setMaxX(TimeUnit.MILLISECONDS.toSeconds(endTime.getTime() - startTime.getTime()) - 1);
     }
 }

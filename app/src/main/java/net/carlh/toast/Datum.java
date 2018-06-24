@@ -28,9 +28,4 @@ public class Datum {
         a.put(Double.toString(value));
         return a;
     }
-
-    public long ageInMinutes() {
-        Date now = new Date();
-        return TimeUnit.MILLISECONDS.toMinutes(now.getTime() - time.getTime());
-    }
 }
