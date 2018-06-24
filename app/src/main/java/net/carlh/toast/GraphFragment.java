@@ -32,10 +32,6 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 
-import com.jjoe64.graphview.DefaultLabelFormatter;
-import com.jjoe64.graphview.GraphView;
-import com.jjoe64.graphview.series.DataPoint;
-import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -55,10 +51,7 @@ public class GraphFragment extends Fragment {
     private Spinner zone;
     /** Period spinner */
     private Spinner period;
-    /** The graph */
-    private GraphView graphView;
-    private LineGraphSeries<DataPoint> temperatureSeries;
-    private LineGraphSeries<DataPoint> humiditySeries;
+    private Graph graph;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -122,52 +115,20 @@ public class GraphFragment extends Fragment {
             }
         });
 
-        graphView = new GraphView(getActivity());
-        graphView.getViewport().setXAxisBoundsManual(true);
-        graphView.getViewport().setYAxisBoundsManual(true);
-        graphView.getViewport().setMinY(5);
-        graphView.getViewport().setMaxY(25);
+        graph = (Graph) view.findViewById(R.id.graph);
 
-        /* Format the x axis with times or dates */
-        graphView.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter() {
-            @Override
-            public String formatLabel(double value, boolean isValueX) {
-                if (!isValueX) {
-                    return super.formatLabel(value, isValueX);
-                }
-
-                return "";
-            }
-        });
-
-        LinearLayout layout = (LinearLayout) view.findViewById(R.id.graph);
-        layout.addView(graphView);
-        update();
         return view;
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        temperatureSeries = null;
-        humiditySeries = null;
-    }
-
-    private DataPoint[] getDataPoints(ArrayList<Datum> data) {
-        /* Count how many data points are less than minutes old */
-        int dataLength = 0;
-        for (Datum i: data) {
-            if (startTime.compareTo(i.time) <= 0 && i.time.compareTo(endTime) < 0) {
-                ++dataLength;
-            }
+    private ArrayList<Graph.Point> getGraphData(ArrayList<Datum> data) {
+        if (data == null) {
+            return null;
         }
 
-        DataPoint[] graphData = new DataPoint[dataLength];
+        ArrayList<Graph.Point> graphData = new ArrayList<>();
         ArrayList<Double> maf = new ArrayList<>();
         final int mafLength = 5;
 
-        int j = 0;
-        String s = "";
         for (Datum i: data) {
             if (startTime.compareTo(i.time) <= 0 && i.time.compareTo(endTime) < 0) {
                 double v = i.value;
@@ -180,12 +141,9 @@ public class GraphFragment extends Fragment {
                     }
                     v = total / mafLength;
                 }
-                graphData[j] = new DataPoint(TimeUnit.MILLISECONDS.toSeconds(i.time.getTime() - startTime.getTime()), v);
-                ++j;
+                graphData.add(new Graph.Point(i.time.getTime() - startTime.getTime(), (float) v));
             }
         }
-
-        Log.e("toast", s);
 
         return graphData;
     }
@@ -200,43 +158,14 @@ public class GraphFragment extends Fragment {
 
         if (state == null || state.getTemperatures().size() == 0) {
             period.setEnabled(false);
-            graphView.setVisibility(View.INVISIBLE);
             return;
         }
 
         period.setEnabled(true);
-        graphView.setVisibility(View.VISIBLE);
 
-        ArrayList<Datum> temperatureData = state.getTemperatures().get(zone.getSelectedItem());
-        if (temperatureData != null && temperatureData.size() > 0) {
-            DataPoint[] temperatureDataPoints = getDataPoints(temperatureData);
-            if (temperatureSeries != null) {
-                temperatureSeries.resetData(temperatureDataPoints);
-            } else {
-                temperatureSeries = new LineGraphSeries<>(temperatureDataPoints);
-                graphView.addSeries(temperatureSeries);
-            }
-        }
+        graph.setData(Datum.TYPE_TEMPERATURE, getGraphData(state.getTemperatures().get(zone.getSelectedItem())));
+        graph.setData(Datum.TYPE_HUMIDITY, getGraphData(state.getHumidities().get(zone.getSelectedItem())));
 
-        ArrayList<Datum> humidityData = state.getHumidities().get(zone.getSelectedItem());
-        if (humidityData != null && humidityData.size() > 0) {
-            DataPoint[] humidityDataPoints = getDataPoints(humidityData);
-            if (humiditySeries != null) {
-                humiditySeries.resetData(humidityDataPoints);
-            } else {
-                humiditySeries = new LineGraphSeries<>(humidityDataPoints);
-                humiditySeries.setColor(Color.GREEN);
-                graphView.getSecondScale().addSeries(humiditySeries);
-            }
-        } else {
-            graphView.getSecondScale().removeAllSeries();
-            humiditySeries = null;
-        }
-
-        graphView.getSecondScale().setMinY(0);
-        graphView.getSecondScale().setMaxY(100);
-
-        graphView.getViewport().setMinX(0);
-        graphView.getViewport().setMaxX(TimeUnit.MILLISECONDS.toSeconds(endTime.getTime() - startTime.getTime()) - 1);
+        graph.setTimeRange(endTime.getTime() - startTime.getTime());
     }
 }
