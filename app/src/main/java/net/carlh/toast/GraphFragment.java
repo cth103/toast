@@ -19,8 +19,11 @@
 
 package net.carlh.toast;
 
+import android.app.Activity;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.AttributeSet;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -113,6 +116,9 @@ public class GraphFragment extends Fragment {
         });
 
         graphView = new GraphView(getActivity());
+        graphView.getViewport().setYAxisBoundsManual(true);
+        graphView.getViewport().setMinY(5);
+        graphView.getViewport().setMaxY(25);
 
         /* Format the x axis with times or dates */
         graphView.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter() {
@@ -128,9 +134,15 @@ public class GraphFragment extends Fragment {
 
         LinearLayout layout = (LinearLayout) view.findViewById(R.id.graph);
         layout.addView(graphView);
-
         update();
         return view;
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        temperatureSeries = null;
+        humiditySeries = null;
     }
 
     private DataPoint[] getDataPoints(ArrayList<Datum> data) {
@@ -171,8 +183,9 @@ public class GraphFragment extends Fragment {
         period.setEnabled(true);
         graphView.setVisibility(View.VISIBLE);
 
+
         ArrayList<Datum> temperatureData = state.getTemperatures().get(zone.getSelectedItem());
-        if (temperatureData != null) {
+        if (temperatureData != null && temperatureData.size() > 0) {
             DataPoint[] temperatureDataPoints = getDataPoints(temperatureData);
             if (temperatureSeries != null) {
                 temperatureSeries.resetData(temperatureDataPoints);
@@ -183,7 +196,7 @@ public class GraphFragment extends Fragment {
         }
 
         ArrayList<Datum> humidityData = state.getHumidities().get(zone.getSelectedItem());
-        if (humidityData != null) {
+        if (humidityData != null && humidityData.size() > 0) {
             DataPoint[] humidityDataPoints = getDataPoints(humidityData);
             if (humiditySeries != null) {
                 humiditySeries.resetData(humidityDataPoints);
@@ -192,14 +205,11 @@ public class GraphFragment extends Fragment {
                 humiditySeries.setColor(Color.GREEN);
                 graphView.getSecondScale().addSeries(humiditySeries);
             }
-            double minVal = Double.MAX_VALUE;
-            double maxVal = Double.MIN_VALUE;
-            for (DataPoint i: humidityDataPoints) {
-                minVal = Math.min(i.getY(), minVal);
-                maxVal = Math.max(i.getY(), maxVal);
-            }
-            graphView.getSecondScale().setMinY(minVal);
-            graphView.getSecondScale().setMaxY(maxVal);
+            graphView.getSecondScale().setMinY(0);
+            graphView.getSecondScale().setMaxY(100);
+        } else {
+            graphView.getSecondScale().removeAllSeries();
+            humiditySeries = null;
         }
     }
 }
