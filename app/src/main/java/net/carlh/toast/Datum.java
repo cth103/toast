@@ -7,6 +7,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 public class Datum {
     public Date time;
@@ -26,5 +27,10 @@ public class Datum {
         a.put(format.format(time));
         a.put(Double.toString(value));
         return a;
+    }
+
+    public long ageInMinutes() {
+        Date now = new Date();
+        return TimeUnit.MILLISECONDS.toMinutes(now.getTime() - time.getTime());
     }
 }

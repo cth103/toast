@@ -116,6 +116,7 @@ public class GraphFragment extends Fragment {
         });
 
         graphView = new GraphView(getActivity());
+        graphView.getViewport().setXAxisBoundsManual(true);
         graphView.getViewport().setYAxisBoundsManual(true);
         graphView.getViewport().setMinY(5);
         graphView.getViewport().setMaxY(25);
@@ -146,23 +147,36 @@ public class GraphFragment extends Fragment {
     }
 
     private DataPoint[] getDataPoints(ArrayList<Datum> data) {
-        dataLength = Math.min(data.size(), minutes);
+        /* Count how many data points are less than minutes old */
+        int dataLength = 0;
+        for (Datum i: data) {
+            if (i.ageInMinutes() <= minutes) {
+                ++dataLength;
+            }
+        }
+
         DataPoint[] graphData = new DataPoint[dataLength];
         ArrayList<Double> maf = new ArrayList<Double>();
         final int mafLength = 5;
-        for (int i = 0; i < dataLength; i++) {
-            double v = data.get(data.size() - dataLength + i).value;
-            maf.add(v);
-            if (maf.size() > mafLength) {
-                maf.remove(0);
-                double total = 0;
-                for (Double d: maf) {
-                    total += d;
+
+        int j = 0;
+        for (Datum i: data) {
+            if (i.ageInMinutes() <= minutes) {
+                double v = i.value;
+                maf.add(v);
+                if (maf.size() > mafLength) {
+                    maf.remove(0);
+                    double total = 0;
+                    for (Double d: maf) {
+                        total += d;
+                    }
+                    v = total / mafLength;
                 }
-                v = total / mafLength;
+                graphData[j] = new DataPoint(minutes - i.ageInMinutes(), v);
+                ++j;
             }
-            graphData[i] = new DataPoint(i, v);
         }
+        
         return graphData;
     }
 
@@ -182,7 +196,8 @@ public class GraphFragment extends Fragment {
 
         period.setEnabled(true);
         graphView.setVisibility(View.VISIBLE);
-
+        graphView.getViewport().setMinX(0);
+        graphView.getViewport().setMaxX(minutes);
 
         ArrayList<Datum> temperatureData = state.getTemperatures().get(zone.getSelectedItem());
         if (temperatureData != null && temperatureData.size() > 0) {
