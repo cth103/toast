@@ -148,9 +148,6 @@ public class Graph extends View {
                 Path path = new Path();
                 boolean first = true;
                 for (Point j : data.get(i)) {
-                    float px = j.x * xPerUnit();
-                    float py = j.y * -yPerUnit(i) + height - margin;
-                    Log.e("toast", px + " " + j.y + " " + yPerUnit(i) + " " + height + " " + py);
                     if (first) {
                         path.moveTo(j.x, j.y - rangeMin[i]);
                         first = false;
@@ -160,7 +157,6 @@ public class Graph extends View {
                 }
                 Matrix sm = new Matrix();
                 sm.setScale(xPerUnit(), -yPerUnit(i));
-                Log.e("toast", "pu:" + xPerUnit() + " " + yPerUnit(i));
                 path.transform(sm);
                 path.offset(margin, height - margin);
                 canvas.drawPath(path, dataPaint[i]);
