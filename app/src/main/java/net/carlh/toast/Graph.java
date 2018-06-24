@@ -62,6 +62,7 @@ public class Graph extends View {
         dataPaint[Datum.TYPE_TEMPERATURE].setColor(0xffff0000);
         dataPaint[Datum.TYPE_TEMPERATURE].setStrokeWidth(4);
         dataPaint[Datum.TYPE_TEMPERATURE].setStyle(Paint.Style.STROKE);
+        dataPaint[Datum.TYPE_TEMPERATURE].setTextAlign(Paint.Align.RIGHT);
 
         dataPaint[Datum.TYPE_HUMIDITY] = new Paint(Paint.ANTI_ALIAS_FLAG);
         dataPaint[Datum.TYPE_HUMIDITY].setColor(0xffffff00);
@@ -75,13 +76,6 @@ public class Graph extends View {
         rangeMin[Datum.TYPE_HUMIDITY] = 0;
         rangeMax[Datum.TYPE_HUMIDITY] = 100;
 
-        xLabels = new String[hDivisions + 1];
-        xLabels[0] = "Midnight";
-        xLabels[1] = "6am";
-        xLabels[2] = "Noon";
-        xLabels[3] = "6pm";
-        xLabels[4] = "Midnight";
-
         data = new ArrayList<>();
         for (int i = 0; i < Datum.TYPE_COUNT; ++i) {
             data.add(new ArrayList<Point>());
@@ -93,6 +87,9 @@ public class Graph extends View {
         width = w;
         height = h;
         textPaint.setTextSize(height / textSizeDivisor);
+        for (int i = 0; i < Datum.TYPE_COUNT; ++i) {
+            dataPaint[i].setTextSize(height / textSizeDivisor);
+        }
     }
 
     private float xPerUnit() {
@@ -120,8 +117,10 @@ public class Graph extends View {
             int pos = margin + i * (width - 2 * margin) / hDivisions;
             canvas.drawLine(pos, margin, pos, height - margin, gridPaint);
             Rect bounds = new Rect();
-            textPaint.getTextBounds(xLabels[i], 0, xLabels[i].length(), bounds);
-            canvas.drawText(xLabels[i], pos - bounds.width() / 2, height - fudge, textPaint);
+            if (xLabels != null) {
+                textPaint.getTextBounds(xLabels[i], 0, xLabels[i].length(), bounds);
+                canvas.drawText(xLabels[i], pos - bounds.width() / 2, height - fudge, textPaint);
+            }
         }
 
         /* Horizontal grid lines */
@@ -132,12 +131,10 @@ public class Graph extends View {
                 int label = rangeMin[j] + ((rangeMax[j] - rangeMin[j]) / vDivisions) * (vDivisions - i);
                 switch (j) {
                     case Datum.TYPE_TEMPERATURE:
-                        textPaint.setTextAlign(Paint.Align.RIGHT);
-                        canvas.drawText(Integer.toString(label), margin - fudge, pos + (height / (textSizeDivisor * 2)), textPaint);
+                        canvas.drawText(Integer.toString(label), margin - fudge, pos + (height / (textSizeDivisor * 2)), dataPaint[j]);
                         break;
                     case Datum.TYPE_HUMIDITY:
-                        textPaint.setTextAlign(Paint.Align.LEFT);
-                        canvas.drawText(Integer.toString(label), width - margin + fudge, pos + (height / (textSizeDivisor * 2)), textPaint);
+                        canvas.drawText(Integer.toString(label), width - margin + fudge, pos + (height / (textSizeDivisor * 2)), dataPaint[j]);
                         break;
                 }
             }
@@ -173,4 +170,15 @@ public class Graph extends View {
     public void setTimeRange(long range) {
         timeRange = range;
     }
+
+    public void setXLabels(String[] xLabels) {
+        this.xLabels = xLabels;
+        invalidate();
+    }
+
+    public void setXDivisions(int d) {
+        hDivisions = d;
+        invalidate();
+    }
+
 }

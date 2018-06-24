@@ -84,10 +84,19 @@ public class GraphFragment extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
                 Calendar cal = new GregorianCalendar();
+                String[] xLabels;
                 switch (position) {
                     case 0:
                         endTime = new Date();
                         startTime = new Date(endTime.getTime() - 60 * 60 * 1000);
+                        xLabels = new String[5];
+                        xLabels[0] = "1h ago";
+                        xLabels[1] = "45m ago";
+                        xLabels[2] = "30m ago";
+                        xLabels[3] = "15m ago";
+                        xLabels[4] = "Now";
+                        graph.setXLabels(xLabels);
+                        graph.setXDivisions(4);
                         break;
                     case 1:
                         cal.set(Calendar.HOUR_OF_DAY, 0);
@@ -96,15 +105,36 @@ public class GraphFragment extends Fragment {
                         startTime = cal.getTime();
                         cal.add(Calendar.DAY_OF_MONTH, 1);
                         endTime = cal.getTime();
+                        xLabels = new String[] {
+                                "Midnight",
+                                "6am",
+                                "Noon",
+                                "6pm",
+                                "Midnight"
+                        };
+                        graph.setXLabels(xLabels);
+                        graph.setXDivisions(4);
                         break;
                     case 2:
                         cal.set(Calendar.HOUR_OF_DAY, 0);
-                        cal.set(Calendar.DAY_OF_WEEK, 0);
                         cal.set(Calendar.MINUTE, 0);
                         cal.set(Calendar.SECOND, 0);
+                        cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
                         startTime = cal.getTime();
                         cal.add(Calendar.DAY_OF_MONTH, 7);
                         endTime = cal.getTime();
+                        xLabels = new String[] {
+                                "Mo",
+                                "Tu",
+                                "Wed",
+                                "Th",
+                                "Fr",
+                                "Sat",
+                                "Su",
+                                ""
+                        };
+                        graph.setXLabels(xLabels);
+                        graph.setXDivisions(7);
                         break;
                 }
                 update();
