@@ -45,25 +45,15 @@ import java.util.Map;
 /** Fragment to plot graphs of temperature */
 public class GraphFragment extends Fragment {
 
-    /**
-     * Number of minutes to plot
-     */
+    /** Number of minutes to plot */
     private int minutes = 60;
-    /**
-     * Number of minutes that we have data for
-     */
+    /** Number of minutes that we have data for */
     private int dataLength = 0;
-    /**
-     * Zone spinner
-     */
+    /** Zone spinner */
     private Spinner zone;
-    /**
-     * Period spinner
-     */
+    /** Period spinner */
     private Spinner period;
-    /**
-     * The graph
-     */
+    /** The graph */
     private GraphView graphView;
     private LineGraphSeries<DataPoint> temperatureSeries;
     private LineGraphSeries<DataPoint> humiditySeries;
@@ -176,7 +166,7 @@ public class GraphFragment extends Fragment {
                 ++j;
             }
         }
-        
+
         return graphData;
     }
 
