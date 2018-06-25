@@ -60,10 +60,7 @@ public class GraphFragment extends Fragment {
         startTime = new Date(endTime.getTime() - 60 * 60 * 1000);
 
         zone = (Spinner) view.findViewById(R.id.graphZone);
-        Map<String, ArrayList<Datum>> temps = getState().getTemperatures();
-        ArrayAdapter zoneAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, temps.keySet().toArray(new String[0]));
-        zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        zone.setAdapter(zoneAdapter);
+        checkZones();
         zone.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
@@ -146,9 +143,23 @@ public class GraphFragment extends Fragment {
         });
 
         graph = (Graph) view.findViewById(R.id.graph);
+        update();
 
         return view;
     }
+
+    private void checkZones() {
+        if (zone.getAdapter() != null && zone.getAdapter().getCount() > 0) {
+            /* Already set up */
+            return;
+        }
+
+        Map<String, ArrayList<Datum>> temps = getState().getTemperatures();
+        ArrayAdapter zoneAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, temps.keySet().toArray(new String[0]));
+        zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        zone.setAdapter(zoneAdapter);
+    }
+
 
     private ArrayList<Graph.Point> getGraphData(ArrayList<Datum> data) {
         if (data == null) {
@@ -190,6 +201,8 @@ public class GraphFragment extends Fragment {
             period.setEnabled(false);
             return;
         }
+
+        checkZones();
 
         period.setEnabled(true);
 
