@@ -124,7 +124,7 @@ public class Client {
                             }
 
                             int length = ((b[0] & 0xff) << 24) | ((b[1] & 0xff) << 16) | ((b[2] & 0xff) << 8) | (b[3] & 0xff);
-                            if (length < 0 || length > (256*1024)) {
+                            if (length < 0 || length > (512*1024)) {
                                 /* Don't like the sound of that */
                                 Log.e("Toast", "Strange length " + length);
                                 break;
