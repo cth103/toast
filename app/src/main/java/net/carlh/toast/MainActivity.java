@@ -76,13 +76,7 @@ import java.util.List;
                 */
                 int property = message.getData().getInt("property");
                 if (property != State.TEMPERATURES && property != State.HUMIDITIES && client != null) {
-                    JSONObject json = new JSONObject();
-                    try {
-                        json.put("type", "change");
-                    } catch (JSONException e) {
-                    }
-                    state.addAsJSON(json, property);
-                    client.send(json);
+                    client.send(state.getBinary(property));
                 }
 
                 /* Update the whole UI */
@@ -123,12 +117,9 @@ import java.util.List;
 
                     Bundle data = message.getData();
 
-                    if (data != null && data.getString("json") != null) {
+                    if (data != null && data.getString("data") != null) {
                         /* Some state changed */
-                        try {
-                            state.setFromJSON(new JSONObject(data.getString("json")));
-                        } catch (JSONException e) {
-                        }
+                        state.setFromBinary(data.getByteArray("data"));
                     } else {
 
                         /* Connected or disconnected */
@@ -138,14 +129,8 @@ import java.util.List;
                                can be moderately slow to parse as it can be a few
                                hundred kilobytes.
                             */
-                            try {
-                                JSONObject json = new JSONObject();
-                                json.put("type", "send_basic");
-                                client.send(json);
-                                json.put("type", "send_all");
-                                client.send(json);
-                            } catch (JSONException e) {
-                            }
+                            client.send(new byte[] { State.OP_SEND_BASIC });
+                            client.send(new byte[] { State.OP_SEND_ALL });
                         }
                     }
                 }

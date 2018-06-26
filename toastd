@@ -35,7 +35,7 @@ import argparse
 import urlparse
 import traceback
 
-import json_server
+import server
 import util
 
 # GPIO pin of boiler relay
@@ -58,16 +58,65 @@ NODE_PORT = 9142
 # Port to listen for ESP8266 UDP broadcasts
 BROADCAST_PORT = 9143
 
+# Message types
+OP_PING                         = 0
+OP_PONG                         = 1
+OP_SEND_BASIC                   = 2
+OP_SEND_ALL                     = 3
+
+OP_CHANGE                       = 0x10
+OP_HEATING_ENABLED              = OP_CHANGE | 0
+OP_HEATING_ZONE_HEATING_ENABLED = OP_CHANGE | 1
+OP_TARGET                       = OP_CHANGE | 2
+OP_BOILER_ON                    = OP_CHANGE | 3
+OP_TEMPERATURES                 = OP_CHANGE | 4
+OP_HUMIDITIES                   = OP_CHANGE | 5
+OP_RULES                        = OP_CHANGE | 6
+OP_ALL                          = OP_CHANGE | 7
+
+def binary_string(s):
+    b = bytearray()
+    assert(len(s) <= 255)
+    e = s.encode('UTF-8')
+    b.append(len(e))
+    b.extend(e)
+    return b
+
+def binary_float(s):
+    b = bytearray()
+    s = s * 16
+    b.append(s & 0xff)
+    b.append((s & 0xff00) >> 8)
+    return b
+
+def binary_int16(s):
+    b = bytearray()
+    b.append(s & 0xff)
+    b.append((s & 0xff00) >> 8)
+    return b
+
+def binary_datum(s):
+    b = bytearray()
+    seconds = int(time.mktime(s.time))
+    b.append (seconds & 0xff)
+    b.append((seconds & 0xff00)             >> 8)
+    b.append((seconds & 0xff0000)           >> 16)
+    b.append((seconds & 0xff000000)         >> 24)
+    b.append((seconds & 0xff00000000)       >> 32)
+    b.append((seconds & 0xff0000000000)     >> 40)
+    b.append((seconds & 0xff000000000000)   >> 48)
+    b.append((seconds & 0xff00000000000000) >> 56)
+    b.extend(binary_float(s.value))
+    return b
+
 class Datum(object):
     def __init__(self, value, timestamp=None):
+        self.value = value
         if timestamp is None:
-            self.time = time.gmtime()
+            self.time = time.localtime()
         else:
             self.time = timestamp
-        self.value = value
-
-    def as_tuple(self):
-        return (time.strftime('%Y-%m-%dT%H:%M:%SZ', self.time), self.value)
+        self.time = t
 
 class NodeProperties(object):
     def __init__(self, zone, name, actuators, sensors):
@@ -155,10 +204,16 @@ class JSONNode(Node):
         util.verbose("Connecting for temperature of %s:%s" % (self.zone, self.name))
         s = self.connect()
         util.send_json(s, {'type': 'get'})
+<<<<<<< HEAD
         j = util.receive_json(s)['temperature']
         d = Datum(j)
         util.verbose("Received temperature %f of %s:%s at %d:%d:%d" % (j, self.zone, self.name, d.time.tm_hour, d.time.tm_min, d.time.tm_sec))
         return d
+=======
+        j = util.get_json(s)['temperature']
+        util.verbose("Received temperature %f of %s:%s" % (j, self.zone, self.name))
+        return Datum(j)
+>>>>>>> First hacks to use binary network comms rather than JSON.
 
 class ESP8266Node(Node):
     def __init__(self, ip, mac):
@@ -298,15 +353,18 @@ class Rule:
         self.target = data['target']
         self.zone = data['zone']
 
-    def as_dict(self):
-        return {"id": self.id,
-                "days": self.days,
-                "on_hour": self.on_hour,
-                "on_minute": self.on_minute,
-                "off_hour": self.off_hour,
-                "off_minute": self.off_minute,
-                "target": self.target,
-                "zone": str(self.zone)}
+    def as_binary(self):
+        b = bytearray()
+        assert(self.id < 256)
+        b.append(self.id)
+        b.append(self.days)
+        b.append(self.on_hour)
+        b.append(self.on_minute)
+        b.append(self.off_hour)
+        b.append(self.off_minute)
+        b.extend(binary_float(self.target))
+        b.extend(binary_string(self.zone))
+        return b
 
     def active(self, time=None):
         """
@@ -373,7 +431,7 @@ class State:
                 self.heating_enabled = enabled
                 changed = True
         if changed:
-            server.send(self.as_dict("heating_enabled"))
+            server.send(self.as_binary(True, OP_CHANGE_HEATING_ENABLED))
             request_update()
 
     def set_zone_heating_enabled(self, zone, enabled):
@@ -384,18 +442,18 @@ class State:
             if self.zone_heating_enabled[zone] != enabled:
                 self.zone_heating_enabled[zone] = enabled
                 changed = True
-        if changed:
-            server.send(self.as_dict("zone_heating_enabled"))
+        if changed and server is not None:
+            server.send(self.as_binary(True, OP_ZONE_HEATING_ENABLED))
             request_update()
 
     def set_target(self, zone, target):
         changed = False
         with self.mutex:
-            if abs(target - self.target[zone]) > 1e-6:
+            if zone not in self.target or abs(target - self.target[zone]) > 1e-6:
                 self.target[zone] = target
                 changed = True
-        if changed:
-            server.send(self.as_dict("target"))
+        if changed and server is not None:
+            server.send(self.as_binary(True, OP_TARGET))
             request_update()
 
     def set_boiler_on(self, on):
@@ -407,7 +465,7 @@ class State:
                     RPi.GPIO.output(BOILER_GPIO, self.boiler_on)
                 changed = True
         if changed:
-            server.send(self.as_dict("boiler_on"))
+            server.send(self.as_binary(True, OP_BOILER_ON))
 
     def add_temperature(self, zone, t):
         assert(isinstance(t, Datum))
@@ -417,7 +475,7 @@ class State:
             self.temperatures[zone].append(t)
             if len(self.temperatures[zone]) > MEMORY_LOG_MINUTES:
                 state.temperatures[zone].pop(0)
-        server.send(self.as_dict("temperatures"))
+        server.send(self.as_binary(True, OP_TEMPERATURES))
 
     def add_humidity(self, zone, h):
         assert(isinstance(h, Datum))
@@ -427,7 +485,7 @@ class State:
             self.humidities[zone].append(h)
             if len(self.humidities[zone]) > MEMORY_LOG_MINUTES:
                 state.humidities[zone].pop(0)
-        server.send(self.as_dict("humidities"))
+        server.send(self.as_binary(True, OP_HUMIDITIES))
 
     def set_rules(self, r):
         assert(type(r) is list)
@@ -437,7 +495,7 @@ class State:
                 self.rules = r
                 changed = True
         if changed:
-            server.send(self.as_dict("rules"))
+            server.send(self.as_binary(True, OP_RULES, "rules"))
 
 
     # Get methods for use by the server
@@ -487,68 +545,75 @@ class State:
 
     # Misc
 
-    def as_dict(self, key=None, all_values=True):
-        """
-        Return some or all state as dict; all state is returned
-        if key is None.
-        """
-        zone_heating_enabled = []
-        for k, v in self.zone_heating_enabled.iteritems():
-            zone_heating_enabled.append({"zone": k, "zone_heating_enabled": v})
+    def as_binary(self, all_values=True, op=OP_ALL):
+        out = bytearray()
+        out.append(op)
+        if op == OP_ALL or op == OP_HEATING_ENABLED:
+            out.append(self.heating_enabled)
+        if op == OP_ALL or op == OP_BOILER_ON:
+            out.append(self.boiler_on)
 
-        target = []
-        for k, v in self.target.iteritems():
-            target.append({"zone": k, "target": v})
+        if op == OP_ALL:
+            out.append(len(zones()))
+            for z in zones():
+                out.extend(binary_string(z))
 
-        temperatures = []
-        for k, v in self.temperatures.iteritems():
-            if all_values:
-                temperatures.append({"zone": k, "temperatures": [i.as_tuple() for i in v]})
-            elif len(v) > 0:
-                temperatures.append({"zone": k, "temperatures": [v[-1].as_tuple()]})
-
-        humidities = []
-        for k, v in self.humidities.iteritems():
-            if all_values:
-                humidities.append({"zone": k, "humidities": [i.as_tuple() for i in v]})
-            elif len(v) > 0:
-                humidities.append({"zone": k, "humidities": [v[-1].as_tuple()]})
-
-        rules = []
-        for r in self.rules:
-            rules.append(r.as_dict())
-
-        any_zone_heating_enabled = False
-        for k, v in self.zone_heating_enabled.iteritems():
-            if v:
-                any_zone_heating_enabled = True
-
-        explanation = ""
-
-        if self.boiler_on and (not self.heating_enabled):
-            explanation = "Heating to programmed target"
-        elif not self.boiler_on:
-            if self.heating_enabled:
-                if any_zone_heating_enabled:
-                    explanation = "Target temperatures reached"
+        for z in zones():
+            if op == OP_ALL or op == OP_ZONE_HEATING_ENABLED:
+                if z in self.zone_heating_enabled:
+                    out.append(self.zone_heating_enabled[z])
                 else:
-                    explanation = "All rooms switched off"
-            else:
-                explanation = "Heating is switched off"
+                    out.append(0)
+            if op == OP_ALL or op == OP_TARGET:
+                if z in self.target:
+                    out.extend(binary_float(self.target[z]))
+                else:
+                    out.extend(binary_float(0))
+            if op == OP_ALL or op == OP_TEMPERATURES:
+                if z in self.temperatures:
+                    if all_values:
+                        out.extend(binary_int16(len(self.temperatures[z])))
+                        for i in self.temperatures[z]:
+                            out.extend(binary_datum(i))
+                    else:
+                        out.extend(binary_int16(1))
+                        out.extend(binary_datum(v[-1]))
+            if op == OP_ALL or op == OP_HUMIDITIES:
+                if z in self.humidities:
+                    if all_values:
+                        out.extend(binary_int16(len(self.humidities)))
+                        for i in self.humidities[z]:
+                            out.extend(binary_datum(i))
+                    else:
+                        out.extend(binary_int16(1))
+                        out.extend(binary_datum(v[-1]))
 
-        all = {"heating_enabled": self.heating_enabled,
-               "zone_heating_enabled": zone_heating_enabled,
-               "target": target,
-               "boiler_on": self.boiler_on,
-               "temperatures": temperatures,
-               "humidities": humidities,
-               "rules": rules,
-               "explanation": explanation}
+        if op == OP_ALL or op == OP_RULES:
+            assert(len(self.rules) < 256)
+            out.append(len(self.rules))
+            for r in self.rules:
+                out.extend(r.as_binary())
 
-        if key is not None:
-            out = { key: all[key] }
-        else:
-            out = all
+        if op == OP_ALL:
+            any_zone_heating_enabled = False
+            for k, v in self.zone_heating_enabled.iteritems():
+                if v:
+                    any_zone_heating_enabled = True
+
+            explanation = ""
+
+            if self.boiler_on and (not self.heating_enabled):
+                explanation = "Heating to programmed target"
+            elif not self.boiler_on:
+                if self.heating_enabled:
+                    if any_zone_heating_enabled:
+                        explanation = "Target temperatures reached"
+                    else:
+                        explanation = "All rooms switched off"
+                else:
+                    explanation = "Heating is switched off"
+
+            out.extend(binary_string(explanation))
 
         return out
 
@@ -770,30 +835,101 @@ def test():
     rule = Rule(Rule.WEDNESDAY, 7, 30, 8, 30)
     assert(rule.active(datetime.datetime(2014, 11, 19, 8, 20)) == True)
 
-def handler(json):
-    if json['type'] == 'ping':
-        server.send({'type': 'pong'})
-    elif json['type'] == 'send_basic':
-        global state
-        server.send(state.as_dict(all_values=False))
-    elif json['type'] == 'send_all':
-        global state
-        server.send(state.as_dict())
-    elif json['type'] == 'change':
-        state.set_from_dict(json)
+    state = State()
+    zn = "Sitting room"
+    state.set_zone_heating_enabled(zn, True)
+    state.set_target(zn, 42)
+    state.temperatures[zn] = []
+    state.temperatures[zn].append(Datum(16, time.localtime(99)))
+    state.temperatures[zn].append(Datum(41, time.localtime(1656)))
+    state.humidities[zn] = []
+    state.humidities[zn].append(Datum(153, time.localtime(16123)))
+    b = state.as_binary()
+    o = 0
+    assert(b[o] == OP_ALL)
+    o += 1
+    assert(b[o] == 0)
+    o += 1
+    assert(b[o] == 0)
+    o += 1
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-p', '--port', help='port to bind to', type=int, default=80)
-parser.add_argument('-i', '--log-interval', help='interval in seconds at which to log sensor readings', type=int, default=60)
-parser.add_argument('-l', '--log-directory', help='directory to log sensor readings to', type=str, default='/var/log/toast')
-args = parser.parse_args()
+    def assert_string(b, offset, string):
+        sl = len(string.encode('UTF-8'))
+        assert(b[offset] == sl)
+        assert(b[offset+1:offset+sl+1].decode('UTF-8') == string)
+        return sl + 1
+
+    def assert_float(b, offset, value):
+        v = b[offset] | b[offset+1] << 8
+        assert(value == v / 16)
+
+    def assert_int16(b, offset, value):
+        v = b[offset] | b[offset+1] << 8
+        assert(value == v)
+
+    def assert_datum(b, offset, datum):
+        s = b[offset] | b[offset+1] << 8 | b[offset+2] << 16 | b[offset+3] << 24 | b[offset+4] << 32 | b[offset+5] << 40 | b[offset+6] << 48 | b[offset+7] << 56
+        assert(s == time.mktime(datum.time))
+        assert_float(b, offset + 8, datum.value)
+
+    # Zone list
+    assert(b[o] == 1)
+    o += 1
+    o += assert_string(b, o, "Sitting room")
+
+    # Zone heating enabled
+    assert(b[o] == 1)
+    o += 1
+    # Zone temperature target
+    assert_float(b, o, 42)
+    o += 2
+    # Zone temperature count
+    assert_int16(b, o, 2)
+    o += 2
+    # Zone temperatures
+    assert_datum(b, o, Datum(16, time.localtime(99)))
+    o += 10
+    assert_datum(b, o, Datum(41, time.localtime(1656)))
+    o += 10
+    # Zone humidity count
+    assert_int16(b, o, 1)
+    o += 2
+    # Zone humidities
+    assert_datum(b, o, Datum(153, time.localtime(16123)))
+    o += 10
+
+    # Rule count
+    assert(b[o] == 0)
+    o += 1
+
+    # Explanation
+    o += assert_string(b, o, "Heating is switched off")
+
+
+def handler(data):
+    if data[0] == OP_PING:
+        server.send(bytearray([OP_PONG]))
+    elif data[0] == OP_SEND_BASIC:
+        global state
+        server.send(state.as_binary(all_values=False))
+    elif data[0] == OP_SEND_ALL:
+        global state
+        server.send(state.as_binary())
+    elif data[0] == OP_:
+        state.set_from_binary(data)
 
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     test()
 else:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port', help='port to bind to', type=int, default=80)
+    parser.add_argument('-i', '--log-interval', help='interval in seconds at which to log sensor readings', type=int, default=60)
+    parser.add_argument('-l', '--log-directory', help='directory to log sensor readings to', type=str, default='/var/log/toast')
+    args = parser.parse_args()
+
     setup()
 
-    server = json_server.Server(args.port)
+    server = server.Server(args.port)
     server.handler = handler
     server.start()
 

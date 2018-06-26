@@ -61,7 +61,7 @@ public class Client {
     private final Lock lock = new ReentrantLock();
     private final Condition writeCondition = lock.newCondition();
     /** Things that need writing */
-    private ArrayList<String> toWrite = new ArrayList<String>();
+    private ArrayList<byte[]> toWrite = new ArrayList<>();
     /** Thread to ping the server */
     private Thread pingThread;
     private AtomicBoolean ping = new AtomicBoolean(false);
@@ -136,11 +136,7 @@ public class Client {
                                 break;
                             }
 
-                            try {
-                                handler(new JSONObject(new String(d)));
-                            } catch (JSONException e) {
-                                Log.e("Toast", "Exception " + e.toString());
-                            }
+                            handler(d);
                         }
 
                         synchronized (mutex) {
@@ -186,7 +182,7 @@ public class Client {
                         lock.unlock();
                     }
 
-                    String s = null;
+                    byte[] s = null;
                     lock.lock();
                     if (toWrite.size() > 0) {
                         s = toWrite.get(0);
@@ -197,11 +193,11 @@ public class Client {
                     synchronized (mutex) {
                         try {
                             if (socket != null && s != null) {
-                                socket.getOutputStream().write((s.length() >> 24) & 0xff);
-                                socket.getOutputStream().write((s.length() >> 16) & 0xff);
-                                socket.getOutputStream().write((s.length() >> 8) & 0xff);
-                                socket.getOutputStream().write((s.length() >> 0) & 0xff);
-                                socket.getOutputStream().write(s.getBytes());
+                                socket.getOutputStream().write((s.length >> 24) & 0xff);
+                                socket.getOutputStream().write((s.length >> 16) & 0xff);
+                                socket.getOutputStream().write((s.length >> 8) & 0xff);
+                                socket.getOutputStream().write((s.length >> 0) & 0xff);
+                                socket.getOutputStream().write(s);
                             }
                         } catch (IOException e) {
                             Log.e("Toast", "IOException in write");
@@ -225,12 +221,9 @@ public class Client {
                     }
                     pong.set(false);
                     try {
-                        JSONObject json = new JSONObject();
-                        json.put("type", "ping");
-                        send(json);
+                        send(new byte[] { State.OP_PING});
                         ping.set(true);
                         Thread.sleep(pingInterval);
-                    } catch (JSONException e) {
                     } catch (InterruptedException e) {
                     }
 
@@ -241,30 +234,26 @@ public class Client {
         pingThread.start();
     }
 
-    private void handler(JSONObject json) {
-        try {
-            if (json.has("type") && json.get("type").equals("pong")) {
-                setConnected(true);
-                pong.set(true);
-            } else {
-                for (Handler h : handlers) {
-                    Log.e("update", "Sending out new data.");
-                    Message m = Message.obtain();
-                    Bundle b = new Bundle();
-                    b.putString("json", json.toString());
-                    m.setData(b);
-                    h.sendMessage(m);
-                }
-            }
-        } catch (JSONException e) {
+    private void handler(byte[] data) {
+        if (data[0] == State.OP_PONG) {
+            setConnected(true);
+            pong.set(true);
+        } else {
+           for (Handler h : handlers) {
+               Message m = Message.obtain();
+               Bundle b = new Bundle();
+               b.putByteArray("data", data);
+               m.setData(b);
+               h.sendMessage(m);
+           }
         }
     }
 
     /** Send to server */
-    public void send(JSONObject json) {
+    public void send(byte[] data) {
         lock.lock();
         try {
-            toWrite.add(json.toString());
+            toWrite.add(data);
             writeCondition.signal();
         } finally {
             lock.unlock();

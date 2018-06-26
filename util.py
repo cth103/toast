@@ -37,16 +37,19 @@ def verbose(v):
     print '%s: %s' % (datetime.datetime.now(), v)
     sys.stdout.flush()
 
+def send_bytearray(socket, data):
+    """Send a bytearray to a socket"""
+    length = bytearray(4)
+    length[0] = (len(data) >> 24) & 0xff
+    length[1] = (len(data) >> 16) & 0xff
+    length[2] = (len(data) >>  8) & 0xff
+    length[3] = (len(data) >>  0) & 0xff
+    socket.sendall(length)
+    socket.sendall(data)
+
 def send_json(socket, data, verbose=False):
     """Send a dict as JSON to a socket"""
-    s = json.dumps(data)
-    length = bytearray(4)
-    length[0] = (len(s) >> 24) & 0xff
-    length[1] = (len(s) >> 16) & 0xff
-    length[2] = (len(s) >>  8) & 0xff
-    length[3] = (len(s) >>  0) & 0xff
-    socket.sendall(length)
-    socket.sendall(s)
+    send_bytearray(json.dumps(data))
     if verbose:
         print '-> %s' % data
 
@@ -63,8 +66,15 @@ def get_data(sock, length):
 
     return all
 
-def receive_json(socket, verbose=False):
+def get_json(socket, verbose=False):
     """Receive some JSON from a socket"""
+    s = get_bytearray(socket)
+    if verbose:
+        print '<- %s' % s
+    return json.loads(s)
+
+def get_bytearray(socket):
+    """Receive a bytearray from a socket"""
     s = get_data(socket, 4)
     if len(s) < 4:
         return None
@@ -74,6 +84,4 @@ def receive_json(socket, verbose=False):
     if len(s) != size:
         raise Error('could not get data from socket (got %d instead of %d)' % (len(s), size))
 
-    if verbose:
-        print '<- %s' % s
-    return json.loads(s);
+    return s

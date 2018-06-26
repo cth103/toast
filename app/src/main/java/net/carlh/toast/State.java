@@ -37,6 +37,12 @@ import java.util.Map;
 
 public class State {
 
+    public static final int OP_PING = 0x0;
+    public static final int OP_PONG = 0x1;
+    public static final int OP_SEND_BASIC = 0x2;
+    public static final int OP_SEND_ALL = 0x3;
+    private static final int OP_CHANGE = 0x10;
+
     /** Whether or not heating is `enabled' (i.e. switched on) */
     public static final int HEATING_ENABLED = 0;
     /** Whether or not the heating in each zone is enabled */
@@ -63,8 +69,9 @@ public class State {
     private boolean boilerOn = false;
     private HashMap<String, ArrayList<Datum> > temperatures = new HashMap<>();
     private HashMap<String, ArrayList<Datum> > humidities = new HashMap<>();
-    private ArrayList<Rule> rules = new ArrayList<Rule>();
+    private ArrayList<Rule> rules = new ArrayList<>();
     private String explanation;
+    private ArrayList<String> zones = new ArrayList<>();
 
     public State(Context context) {
         this.context = context;
@@ -119,52 +126,44 @@ public class State {
         return explanation;
     }
 
-    /** Add that state which goes from client to server as JSON */
-    public synchronized void addAsJSON(JSONObject json, int id) {
-        try {
-            switch (id) {
-                case HEATING_ENABLED:
-                    json.put("heating_enabled", heatingEnabled);
-                    break;
-                case ZONE_HEATING_ENABLED: {
-                    JSONArray a = new JSONArray();
-                    for (Map.Entry<String, Boolean> i : zoneHeatingEnabled.entrySet()) {
-                        JSONObject o = new JSONObject();
-                        o.put("zone", i.getKey());
-                        o.put("zone_heating_enabled", i.getValue());
-                        a.put(o);
-                    }
-                    json.put("zone_heating_enabled", a);
-                    break;
+    public synchronized byte[] getBinary(int id) {
+        byte[] data = null;
+
+        switch (id) {
+        case HEATING_ENABLED:
+            data = new byte[] { OP_CHANGE | HEATING_ENABLED, (byte) (heatingEnabled ? 1 : 0) };
+            break;
+        case ZONE_HEATING_ENABLED:
+            data = new byte[zones.size()];
+            for (int i = 0; i < zones.size(); ++i) {
+                if (zoneHeatingEnabled.containsKey(zones.get(i))) {
+                    data[i] = (byte) (zoneHeatingEnabled.get(zones.get(i)) ? 1 : 0);
+                } else {
+                    data[i] = 0;
                 }
-                case TARGET: {
-                    JSONArray a = new JSONArray();
-                    for (Map.Entry<String, Double> i : target.entrySet()) {
-                        JSONObject o = new JSONObject();
-                        o.put("zone", i.getKey());
-                        o.put("target", i.getValue());
-                        a.put(o);
-                    }
-                    json.put("target", a);
-                    break;
-                }
-                case BOILER_ON:
-                    json.put("boiler_on", boilerOn);
-                    break;
-                case RULES: {
-                    JSONArray a = new JSONArray();
-                    for (Rule r : rules) {
-                        a.put(r.asJSON());
-                    }
-                    json.put("rules", a);
-                    break;
-                }
-                default:
-                    assert(false);
             }
-        } catch (JSONException e) {
-            Log.e("toast", "JSONException was thrown: " + e);
+            break;
+        case TARGET:
+            data = new byte[zones.size() * 2];
+            for (int i = 0; i < zones.size(); ++i) {
+                if (target.containsKey(zones.get(i))) {
+                    Binary.putFloat(data, i * 2, target.get(zones.get(i)));
+                } else {
+                    Binary.putFloat(data, i * 2, 0);
+                }
+            }
+            break;
+        case BOILER_ON:
+            data = new byte[] { OP_CHANGE | BOILER_ON, (byte) (boilerOn ? 1 : 0) };
+            break;
+        case RULES:
+            /* XXX */
+            break;
+        default:
+            assert(false);
         }
+
+        return data;
     }
 
 
@@ -250,72 +249,70 @@ public class State {
         }
     }
 
-    public synchronized void setFromJSON(JSONObject json) {
-        try {
-            if (json.has("heating_enabled")) {
-                setHeatingEnabled(json.getBoolean("heating_enabled"));
-            }
+    public synchronized void setFromBinary(byte[] data) {
+        int o = 0;
+        final int op = data[o++];
 
-            if (json.has("zone_heating_enabled")) {
-                JSONArray zones = json.getJSONArray("zone_heating_enabled");
-                for (int i = 0; i < zones.length(); i++) {
-                    JSONObject o = zones.getJSONObject(i);
-                    setZoneHeatingEnabled(o.getString("zone"), o.getBoolean("zone_heating_enabled"));
+        boolean all = (op & OP_CHANGE) == 0;
+
+        if (all || op == (OP_CHANGE | HEATING_ENABLED)) {
+            setHeatingEnabled(data[o++] == 1);
+        }
+
+        if (all || op == (OP_CHANGE | BOILER_ON)) {
+            setBoilerOn(data[o++] == 1);
+        }
+
+        int numZones = data[o++];
+        zones.clear();
+        for (int i = 0; i < numZones; ++i) {
+            String name = Binary.getString(data, o);
+            o += name.length() + 1;
+            zones.add(name);
+
+            if (all || op == (OP_CHANGE | HEATING_ENABLED)) {
+                setZoneHeatingEnabled(name, data[o++] == 1);
+            }
+            if (all || op == (OP_CHANGE | TARGET)) {
+                setTarget(name, Binary.getFloat(data, o));
+                o += 2;
+            }
+            if (all || op == (OP_CHANGE | TEMPERATURES)) {
+                int num = Binary.getInt16(data, o);
+                o += 2;
+                ArrayList<Datum> t = new ArrayList<>();
+                for (int j = 0; j < num; ++j) {
+                    t.add(new Datum(data, o));
+                    o += Datum.BINARY_LENGTH;
                 }
+                setTemperatures(name, t);
             }
-
-            if (json.has("target")) {
-                JSONArray j = json.getJSONArray("target");
-                for (int i = 0; i < j.length(); i++) {
-                    setTarget(j.getJSONObject(i).getString("zone"), j.getJSONObject(i).getDouble("target"));
+            if (all || op == (OP_CHANGE | HUMIDITIES)) {
+                int num = Binary.getInt16(data, o);
+                o += 2;
+                ArrayList<Datum> t = new ArrayList<>();
+                for (int j = 0; j < num; ++j) {
+                    t.add(new Datum(data, o));
+                    o += Datum.BINARY_LENGTH;
                 }
+                setHumidities(name, t);
             }
+        }
 
-            if (json.has("boiler_on")) {
-                setBoilerOn(json.getBoolean("boiler_on"));
+        /* XXX
+        if (all || op == (OP_CHANGE | RULES)) {
+            int num = data[o++];
+            ArrayList<Rule> r = new ArrayList<>();
+            for (int i = 0; i < num; ++i) {
+                r.add(new Rule(data, o));
+                o += Rule.binary_length;
             }
+        }
+        */
 
-            if (json.has("temperatures")) {
-                JSONArray zones = json.getJSONArray("temperatures");
-                for (int i = 0; i < zones.length(); i++) {
-                    ArrayList<Datum> t = new ArrayList<>();
-                    JSONArray k = zones.getJSONObject(i).getJSONArray("temperatures");
-                    for (int j = 0; j < k.length(); j++) {
-                        t.add(new Datum(k.getJSONArray(j)));
-                    }
-                    setTemperatures(zones.getJSONObject(i).getString("zone"), t);
-                }
-            }
-
-            if (json.has("humidities")) {
-                JSONArray zones = json.getJSONArray("humidities");
-                for (int i = 0; i < zones.length(); i++) {
-                    ArrayList<Datum> t = new ArrayList<>();
-                    JSONArray k = zones.getJSONObject(i).getJSONArray("humidities");
-                    for (int j = 0; j < k.length(); j++) {
-                        t.add(new Datum(k.getJSONArray(j)));
-                    }
-                    setHumidities(zones.getJSONObject(i).getString("zone"), t);
-                }
-            }
-
-            if (json.has("rules")) {
-                ArrayList<Rule> r = new ArrayList<Rule>();
-                JSONArray j = json.getJSONArray("rules");
-                for (int i = 0; i < j.length(); i++) {
-                    r.add(new Rule(j.getJSONObject(i)));
-                }
-                setRules(r);
-            }
-
-            if (json.has("explanation")) {
-                explanation = json.getString("explanation");
-            }
-
-        } catch (JSONException e) {
-            Log.e("toast", "JSONException was thrown:" + e);
-        } catch (ParseException e) {
-            Log.e("toast", "ParseException was thrown: " + e);
+        if (all) {
+            explanation = Binary.getString(data, o);
+            o += explanation.length() + 1;
         }
     }
 }

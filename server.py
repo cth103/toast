@@ -74,10 +74,10 @@ class Server:
 
         try:
             while True:
-                json = util.receive_json(conn)
-                if json is None:
+                data = util.get_bytearray(conn)
+                if data is None:
                     break
-                self.handler(json)
+                self.handler(data)
         except Exception as e:
             util.warning('Server handler threw "%s"' % e)
             traceback.print_exc(file=sys.stdout)
@@ -92,7 +92,7 @@ class Server:
         with self.mutex:
             for c in self.clients:
                 try:
-                    util.send_json(c, d)
+                    util.send_bytearray(c, d)
                 except Exception as e:
                     util.warning('Could not send to client')
                     traceback.print_exc(file=sys.stdout)
