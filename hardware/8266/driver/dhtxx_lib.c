@@ -246,10 +246,16 @@ bool ICACHE_FLASH_ATTR
 dhtxx_error()
 {
     int i;
-    uint8_t Result=0;
-    for(i=0;i<4;i++)
-        Result += sRead[i];
-    return(Result != sRead[4]);
+    uint8_t Result = 0;
+    for (i = 0; i < 4;i++) {
+	    Result += sRead[i];
+    }
+    if (Result != sRead[4]) {
+	    /* there's an error; the last number given to dhtxx_set_read_nok will be here */
+	    return sRead[4];
+    }
+    /* OK */
+    return 0;
 }
 
 int ICACHE_FLASH_ATTR

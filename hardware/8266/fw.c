@@ -248,15 +248,17 @@ LOCAL void ICACHE_FLASH_ATTR
 dhtxx_loop(os_event_t *events)
 {
 	char reply[16];
+	int e;
 	switch (events->sig) {
         case DHTXX_SIGNAL_START:
 		dhtxx_start_read(events->par);
 		break;
 	case DHTXX_SIGNAL_END_READ:
-		if (!dhtxx_error()) {
+		e = dhtxx_error();
+		if (!e) {
 			os_sprintf(reply, "%d\r\n", dht22_get_rh());
 		} else {
-			os_sprintf(reply, "error\r\n");
+			os_sprintf(reply, "error %d\r\n", e);
 		}
 		espconn_sent(dhtxx_connection, reply, strlen(reply));
 		break;
