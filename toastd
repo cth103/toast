@@ -37,7 +37,6 @@ import traceback
 
 import json_server
 import util
-import weather
 
 # GPIO pin of boiler relay
 BOILER_GPIO = 2
@@ -420,7 +419,7 @@ class State:
         with self.mutex:
             if not zone in self.humidities:
                 self.humidities[zone] = []
-            self.humidities[zone].append(Datum(h.value - weather.state.get_humidity(), h.time))
+            self.humidities[zone].append(h)
             if len(self.humidities[zone]) > MEMORY_LOG_MINUTES:
                 state.humidities[zone].pop(0)
         server.send(self.as_dict("humidities"))
