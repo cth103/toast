@@ -59,8 +59,11 @@ NODE_PORT = 9142
 BROADCAST_PORT = 9143
 
 class Datum(object):
-    def __init__(self, value, time=time.gmtime()):
-        self.time = time
+    def __init__(self, value, timestamp=None):
+        if timestamp is None:
+            self.time = time.gmtime()
+        else:
+            self.time = timestamp
         self.value = value
 
     def as_tuple(self):
@@ -152,8 +155,9 @@ class JSONNode(Node):
         s = self.connect()
         util.send_json(s, {'type': 'get'})
         j = util.receive_json(s)['temperature']
-        util.verbose("Received temperature %f of %s:%s" % (j, self.zone, self.name))
-        return Datum(j)
+        d = Datum(j)
+        util.verbose("Received temperature %f of %s:%s at %d:%d:%d" % (j, self.zone, self.name, d.time.tm_hour, d.time.tm_min, d.time.tm_sec))
+        return d
 
 class ESP8266Node(Node):
     def __init__(self, ip, mac):
