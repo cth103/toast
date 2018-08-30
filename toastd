@@ -37,7 +37,6 @@ import traceback
 
 import json_server
 import util
-import weather
 
 # GPIO pin of boiler relay
 BOILER_GPIO = 2
@@ -60,8 +59,11 @@ NODE_PORT = 9142
 BROADCAST_PORT = 9143
 
 class Datum(object):
-    def __init__(self, value, time=time.gmtime()):
-        self.time = time
+    def __init__(self, value, timestamp=None):
+        if timestamp is None:
+            self.time = time.gmtime()
+        else:
+            self.time = timestamp
         self.value = value
 
     def as_tuple(self):
@@ -153,8 +155,9 @@ class JSONNode(Node):
         s = self.connect()
         util.send_json(s, {'type': 'get'})
         j = util.receive_json(s)['temperature']
-        util.verbose("Received temperature %f of %s:%s" % (j, self.zone, self.name))
-        return Datum(j)
+        d = Datum(j)
+        util.verbose("Received temperature %f of %s:%s at %d:%d:%d" % (j, self.zone, self.name, d.time.tm_hour, d.time.tm_min, d.time.tm_sec))
+        return d
 
 class ESP8266Node(Node):
     def __init__(self, ip, mac):
@@ -420,7 +423,7 @@ class State:
         with self.mutex:
             if not zone in self.humidities:
                 self.humidities[zone] = []
-            self.humidities[zone].append(Datum(h.value - weather.state.get_humidity(), h.time))
+            self.humidities[zone].append(h)
             if len(self.humidities[zone]) > MEMORY_LOG_MINUTES:
                 state.humidities[zone].pop(0)
         server.send(self.as_dict("humidities"))
