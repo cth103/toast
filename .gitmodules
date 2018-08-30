@@ -1,0 +1,3 @@
+[submodule "metoffer"]
+	path = metoffer
+	url = https://github.com/cth103/metoffer.git
