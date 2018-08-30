@@ -12,3 +12,10 @@ Ideas for improvements: swap GPIO0 with 2 so we don't need the PNP transistor da
 Latching relay
 
 3.3V relay & RAC01-3.3SC (100-240VAC -> 3.3V @ 300mA)
+
+Humidity ideas: SHT30 humidity sensor; I2C so needs 2x GPIO.
+Options
+ - hack GPIO onto ESP8266
+ - I2C expander for relay (MCP23017 28-pin DIP, MCP23008 18-pin DIP, PCF8574 16-pin DIP, PCA9517 8-pin SOIC)
+ - use another board e.g. ESP8266 03?
+ 
