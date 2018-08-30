@@ -13,9 +13,13 @@ Latching relay
 
 3.3V relay & RAC01-3.3SC (100-240VAC -> 3.3V @ 300mA)
 
+DHT22 unreliability; fails when looking for the first response from the DHT22 after the microprocessor
+sends the "start" signal.
+
 Humidity ideas: SHT30 humidity sensor; I2C so needs 2x GPIO.
 Options
  - hack GPIO onto ESP8266
  - I2C expander for relay (MCP23017 28-pin DIP, MCP23008 18-pin DIP, PCF8574 16-pin DIP, PCA9517 8-pin SOIC)
  - use another board e.g. ESP8266 03?
- 
+ - ditch humidity altogether and sense with temperature
+ - use DS2438 and HIH-5030 e.g. http://rants.dyer.com.hk/rpi/humidity_1w.html (~£9 for HIH 5030, ~£5 for DS2438 and it's SOIC!)
