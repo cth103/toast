@@ -4,6 +4,7 @@
 #include "os_type.h"
 #include "user_interface.h"
 #include "espconn.h"
+#include "driver/i2c_master.h"
 #include "driver/uart.h"
 #include "driver/ds18b20.h"
 #include "driver/gpiolib.h"
@@ -13,12 +14,19 @@ char const ssid[32] = "TALKTALK227CC2-2G";
 char const password[32] = "3N7FEUR9";
 #define LISTEN_PORT 9142
 #define BROADCAST_PORT 9143
+
+/* GPIO that the relay is directly connected to */
 #define RELAY_GPIO 2
-/* DS18B20 GPIO defined in include/driver/ds18b20.h */
+/* GPIO that a DHTxx IC is directly connected to */
 #define DHTXX_GPIO 0
 
-#define WITH_DHTXX 1
-#define WITH_DS18B20 0
+/* DHTxx IC connected to DHTXX_GPIO */
+//#define WITH_DHTXX
+/* DS18B20 IC connected to the GPIO defined in include/driver/ds18b20.h */
+//#define WITH_DS18B20
+/* All communication is done via I2C.  GPIO 0 to SCL, GPIO 2 to SDA.  A SHT30 is on the bus. */
+#define WITH_I2C
+#define SHT30_ADDRESS 0x44
 
 #define DHTXX_TASK 0
 #define DHTXX_TASK_QUEUE_LENGTH 10
@@ -79,14 +87,57 @@ conversion_cb(void* arg)
 }
 #endif
 
+#ifdef WITH_I2C
+LOCAL int ICACHE_FLASH_ATTR
+read_sht30(float* temp, float* humidity)
+{
+	char i2c_data[6];
+	int i;
+
+	i2c_master_start();
+	i2c_master_writeByte(SHT30_ADDRESS << 1);
+	if (!i2c_master_checkAck()) {
+		return 1;
+	}
+	i2c_master_writeByte(0x2c);
+	i2c_master_checkAck();
+	i2c_master_writeByte(0x06);
+	i2c_master_checkAck();
+	i2c_master_stop();
+
+	os_delay_us(500000);
+
+	i2c_master_start();
+	i2c_master_writeByte((SHT30_ADDRESS << 1) + 1);
+	i2c_master_checkAck();
+	for (i = 0; i < 6; ++i) {
+		i2c_data[i] = i2c_master_readByte();
+		if (i == 5) {
+			i2c_master_send_nack();
+		} else {
+			i2c_master_send_ack();
+		}
+	}
+
+	*temp = ((((i2c_data[0] * 256) + i2c_data[1]) * 175) / 65535.0) - 45;
+	*humidity = ((((i2c_data[3] * 256) + i2c_data[4]) * 100) / 65535.0);
+	return 0;
+}
+#endif
+
 LOCAL void ICACHE_FLASH_ATTR
 receive_cb(void* arg, char* data, unsigned short length)
 {
 	int r;
+#ifdef WITH_I2C
+	float temp;
+	float humidity;
+	char reply[32];
+#endif
 
-#ifdef WITH_DS18B20
 	if (os_strncmp(data, "temp", 4) == 0) {
-		/* Report current temperature */
+		/* Report current temperature in Celsius multiplied by 10000 */
+#ifdef WITH_DS18B20
 		ds_init();
 		while ((r = ds_search(ds18b20_addr))) {
 			if (crc8(ds18b20_addr, 7) != ds18b20_addr[7]) {
@@ -106,19 +157,39 @@ receive_cb(void* arg, char* data, unsigned short length)
 				os_timer_arm(&conversion_timer, 750, false);
 			}
 		}
-	} else
 #endif
-	if (os_strncmp(data, "off", 3) == 0) {
+#ifdef WITH_I2C
+		r = read_sht30(&temp, &humidity);
+		if (r) {
+			os_sprintf(reply, "error 1\r\n");
+			espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
+			return;
+		}
+		os_sprintf(reply, "%d\r\n", (int) temp * 10000);
+		espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
+
+#endif
+	} else if (os_strncmp(data, "off", 3) == 0) {
 		gpio_output_set(0, 1 << RELAY_GPIO, 1 << RELAY_GPIO, 0);
 	} else if (os_strncmp(data, "on", 2) == 0) {
 		gpio_output_set(1 << RELAY_GPIO, 0, 1 << RELAY_GPIO, 0);
 	}
-#ifdef WITH_DHTXX
 	else if (os_strncmp(data, "humidity", 8) == 0) {
+#ifdef WITH_DHTXX
 		dhtxx_connection = (struct espconn*) arg;
 		system_os_post(DHTXX_TASK, DHTXX_SIGNAL_START, 0);
-	}
 #endif
+#ifdef WITH_I2C
+		r = read_sht30(&temp, &humidity);
+		if (r) {
+			os_sprintf(reply, "error 1\r\n");
+			espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
+			return;
+		}
+		os_sprintf(reply, "%d\r\n", (int) humidity * 10);
+		espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
+#endif
+	}
 }
 
 LOCAL void ICACHE_FLASH_ATTR
@@ -281,6 +352,12 @@ void ICACHE_FLASH_ATTR user_init()
 	ETS_GPIO_INTR_ATTACH(dhtxx_intr_handler, DHTXX_GPIO);
 	ETS_GPIO_INTR_ENABLE();
 	system_os_task(dhtxx_loop, DHTXX_TASK, dhtxx_task_queue, DHTXX_TASK_QUEUE_LENGTH);
+#endif
+
+#ifdef WITH_I2C
+	i2c_master_gpio_init();
+	i2c_master_init();
+	os_delay_us(100000);
 #endif
 
 	wifi_set_opmode(STATIONAP_MODE);
