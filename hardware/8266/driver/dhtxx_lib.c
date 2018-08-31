@@ -154,7 +154,7 @@ dhtxx_protocol(uint32 gpio_status, int cause)
         case 1: //timer
             switch(sStatus)
             {
-                case dhtxx_mark: // end of mark
+                case dhtxx_mark: // end of mark (start signal)
                     sStatus = dhtxx_connecting;
                     // GPIO as Output to high level by default.
                     GPIO_OUTPUT_SET(dhtxx_gpio,1);
@@ -232,13 +232,13 @@ void ICACHE_FLASH_ATTR
 dhtxx_start_read(void* arg)
 {
 
-// set gpio to  0 for 18 mS minimun
+// set gpio to  0 for 18 mS minimun; use 30ms to be on the safe side
     GPIO_OUTPUT_SET(dhtxx_gpio, 0);
 
     sStatus = dhtxx_mark;
 
     os_timer_disarm(&dhtxx_timer);
-    os_timer_arm(&dhtxx_timer,20,arg);
+    os_timer_arm(&dhtxx_timer,30,arg);
 }
 
 //-----------------------------------------------------------------------------------------
