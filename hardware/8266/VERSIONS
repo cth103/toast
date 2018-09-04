@@ -3,3 +3,4 @@
 	maybe broken as it seems GPIO0 AND 2 have to be H to boot from flash
 3	Separate ebay PSU module, 5V/3.3V rails
 4?	3.3V regulator & relay, old-style PNP arrangement
+5	V4 but using SHT30 and PCF8574A ICs via I2C bus

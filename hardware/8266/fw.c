@@ -24,9 +24,11 @@ char const password[32] = "3N7FEUR9";
 //#define WITH_DHTXX
 /* DS18B20 IC connected to the GPIO defined in include/driver/ds18b20.h */
 //#define WITH_DS18B20
-/* All communication is done via I2C.  GPIO 0 to SCL, GPIO 2 to SDA.  A SHT30 is on the bus. */
+/* All communication is done via I2C.  GPIO 0 to SCL, GPIO 2 to SDA.  SHT30 and PCF8574 are on the bus. */
 #define WITH_I2C
 #define SHT30_ADDRESS 0x44
+#define PCF8574_ADDRESS 0x7e
+#define RELAY_CHANNEL 0
 
 #define DHTXX_TASK 0
 #define DHTXX_TASK_QUEUE_LENGTH 10
@@ -118,9 +120,26 @@ read_sht30(float* temp, float* humidity)
 			i2c_master_send_ack();
 		}
 	}
+	i2c_master_stop();
 
 	*temp = ((((i2c_data[0] * 256) + i2c_data[1]) * 175) / 65535.0) - 45;
 	*humidity = ((((i2c_data[3] * 256) + i2c_data[4]) * 100) / 65535.0);
+	return 0;
+}
+
+LOCAL int ICACHE_FLASH_ATTR
+pcf8574_set(int value)
+{
+	i2c_master_start();
+	i2c_master_writeByte(PCF8574_ADDRESS);
+	if (!i2c_master_checkAck()) {
+		return 1;
+	}
+	i2c_master_writeByte(value);
+	if (!i2c_master_checkAck()) {
+		return 2;
+	}
+	i2c_master_stop();
 	return 0;
 }
 #endif
@@ -153,7 +172,7 @@ receive_cb(void* arg, char* data, unsigned short length)
 				reset();
 				select(ds18b20_addr);
 				write(DS1820_CONVERT_T, 1);
-				os_timer_setfn(&conversion_timer, (os_timer_func_t *) conversion_cb, arg);
+				os_timer_setfn(&conversion_timer, (os_timer_func_t *) conversion_c b, arg);
 				os_timer_arm(&conversion_timer, 750, false);
 			}
 		}
@@ -170,9 +189,27 @@ receive_cb(void* arg, char* data, unsigned short length)
 
 #endif
 	} else if (os_strncmp(data, "off", 3) == 0) {
+#ifdef WITH_I2C
+		r = pcf8574_set(0);
+		if (r) {
+			os_sprintf(reply, "error 1\r\n");
+			espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
+			return;
+		}
+#else
 		gpio_output_set(0, 1 << RELAY_GPIO, 1 << RELAY_GPIO, 0);
+#endif
 	} else if (os_strncmp(data, "on", 2) == 0) {
+#ifdef WITH_I2C
+		r = pcf8574_set(1 << RELAY_CHANNEL);
+		if (r) {
+			os_sprintf(reply, "error 1\r\n");
+			espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
+			return;
+		}
+#else
 		gpio_output_set(1 << RELAY_GPIO, 0, 1 << RELAY_GPIO, 0);
+#endif
 	}
 	else if (os_strncmp(data, "humidity", 8) == 0) {
 #ifdef WITH_DHTXX
