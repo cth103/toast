@@ -31,6 +31,12 @@
 LOCAL uint8 m_nLastSDA;
 LOCAL uint8 m_nLastSCL;
 
+LOCAL void ICACHE_FLASH_ATTR
+i2c_master_wait(int t)
+{
+	os_delay_us(t * I2C_MASTER_SLOW_DOWN);
+}
+
 /******************************************************************************
  * FunctionName : i2c_master_setDC
  * Description  : Internal used function -

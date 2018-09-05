@@ -38,6 +38,7 @@
 #define I2C_MASTER_SCL_GPIO 0
 #define I2C_MASTER_SDA_FUNC FUNC_GPIO2
 #define I2C_MASTER_SCL_FUNC FUNC_GPIO0
+#define I2C_MASTER_SLOW_DOWN 10
 
 #if 0
 #define I2C_MASTER_GPIO_SET(pin)  \
@@ -66,7 +67,6 @@
 void i2c_master_gpio_init(void);
 void i2c_master_init(void);
 
-#define i2c_master_wait    os_delay_us
 void i2c_master_stop(void);
 void i2c_master_start(void);
 void i2c_master_setAck(uint8 level);
