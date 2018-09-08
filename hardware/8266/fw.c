@@ -28,7 +28,7 @@ char const password[32] = "3N7FEUR9";
 #define WITH_I2C
 #define SHT30_ADDRESS 0x44
 #define PCF8574_ADDRESS 0x7e
-#define RELAY_CHANNEL 0
+#define RELAY_CHANNEL 1
 
 #define DHTXX_TASK 0
 #define DHTXX_TASK_QUEUE_LENGTH 10
@@ -145,6 +145,22 @@ pcf8574_set(int value)
 #endif
 
 LOCAL void ICACHE_FLASH_ATTR
+gpio_off(void* arg)
+{
+#ifdef WITH_I2C
+	char reply[32];
+	r = pcf8574_set(0);
+	if (r) {
+		os_sprintf(reply, "error 1\r\n");
+		espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
+		return;
+	}
+#else
+	gpio_output_set(0, 1 << RELAY_GPIO, 1 << RELAY_GPIO, 0);
+#endif
+}
+
+LOCAL void ICACHE_FLASH_ATTR
 receive_cb(void* arg, char* data, unsigned short length)
 {
 	int r;
@@ -189,16 +205,7 @@ receive_cb(void* arg, char* data, unsigned short length)
 
 #endif
 	} else if (os_strncmp(data, "off", 3) == 0) {
-#ifdef WITH_I2C
-		r = pcf8574_set(0);
-		if (r) {
-			os_sprintf(reply, "error 1\r\n");
-			espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
-			return;
-		}
-#else
-		gpio_output_set(0, 1 << RELAY_GPIO, 1 << RELAY_GPIO, 0);
-#endif
+		gpio_off();
 	} else if (os_strncmp(data, "on", 2) == 0) {
 #ifdef WITH_I2C
 		r = pcf8574_set(1 << RELAY_CHANNEL);
@@ -396,6 +403,8 @@ void ICACHE_FLASH_ATTR user_init()
 	i2c_master_init();
 	os_delay_us(100000);
 #endif
+
+	gpio_off();
 
 	wifi_set_opmode(STATIONAP_MODE);
 	os_memcpy(&station_conf.ssid, ssid, 32);
