@@ -10,25 +10,7 @@
 #include "driver/gpiolib.h"
 #include "driver/dhtxx_lib.h"
 
-char const ssid[32] = "TALKTALK227CC2-2G";
-char const password[32] = "3N7FEUR9";
-#define LISTEN_PORT 9142
-#define BROADCAST_PORT 9143
-
-/* GPIO that the relay is directly connected to */
-#define RELAY_GPIO 2
-/* GPIO that a DHTxx IC is directly connected to */
-#define DHTXX_GPIO 0
-
-/* DHTxx IC connected to DHTXX_GPIO */
-//#define WITH_DHTXX
-/* DS18B20 IC connected to the GPIO defined in include/driver/ds18b20.h */
-//#define WITH_DS18B20
-/* All communication is done via I2C.  GPIO 0 to SCL, GPIO 2 to SDA.  SHT30 and PCF8574 are on the bus. */
-#define WITH_I2C
-#define SHT30_ADDRESS 0x44
-#define PCF8574_ADDRESS 0x7e
-#define RELAY_CHANNEL 1
+#include "config"
 
 #define DHTXX_TASK 0
 #define DHTXX_TASK_QUEUE_LENGTH 10
@@ -149,8 +131,9 @@ gpio_off(void* arg)
 {
 #ifdef WITH_I2C
 	char reply[32];
+	int r;
 	r = pcf8574_set(0);
-	if (r) {
+	if (r && arg) {
 		os_sprintf(reply, "error 1\r\n");
 		espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
 		return;
@@ -205,7 +188,7 @@ receive_cb(void* arg, char* data, unsigned short length)
 
 #endif
 	} else if (os_strncmp(data, "off", 3) == 0) {
-		gpio_off();
+		gpio_off(arg);
 	} else if (os_strncmp(data, "on", 2) == 0) {
 #ifdef WITH_I2C
 		r = pcf8574_set(1 << RELAY_CHANNEL);
@@ -404,7 +387,7 @@ void ICACHE_FLASH_ATTR user_init()
 	os_delay_us(100000);
 #endif
 
-	gpio_off();
+	gpio_off(NULL);
 
 	wifi_set_opmode(STATIONAP_MODE);
 	os_memcpy(&station_conf.ssid, ssid, 32);
