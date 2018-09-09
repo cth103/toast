@@ -252,7 +252,9 @@ public class ControlFragment extends Fragment {
 
             for (Map.Entry<String, Boolean> i: state.getZoneHeatingEnabled().entrySet()) {
                 Log.e("test", "getting zone called " + i.getKey());
-                zones.get(i.getKey()).setZoneEnabled(i.getValue());
+                if (zones.get(i.getKey()) != null) {
+                    zones.get(i.getKey()).setZoneEnabled(i.getValue());
+                }
             }
 
             for (Map.Entry<String, ArrayList<Datum>> i: state.getTemperatures().entrySet()) {
