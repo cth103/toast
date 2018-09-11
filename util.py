@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-#    Copyright (C) 2014-2015 Carl Hetherington <cth@carlh.net>
+#    Copyright (C) 2014-2018 Carl Hetherington <cth@carlh.net>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -54,15 +54,14 @@ def send_json(socket, data, verbose=False):
         print '-> %s' % data
 
 def get_data(sock, length):
-    """Get some data from a socket"""
-    all = ""
+    """recv() from a socket into a Python bytearray"""
+    all = bytearray(length)
     got = 0
     while got < length:
-        d = sock.recv(length - got)
-        if not d:
+        d = sock.recv_into(all, length - got)
+        if d == 0:
             break
-        all += d
-        got += len(d)
+        got += d
 
     return all
 
@@ -73,14 +72,14 @@ def get_json(socket, verbose=False):
         print '<- %s' % s
     return json.loads(s)
 
-def get_bytearray(socket):
+def get_bytearray(sock):
     """Receive a bytearray from a socket"""
-    s = get_data(socket, 4)
+    s = get_data(sock, 4)
     if len(s) < 4:
         return None
 
-    size = (ord(s[0]) << 24) | (ord(s[1]) << 16) | (ord(s[2]) << 8) | ord(s[3])
-    s = get_data(socket, size)
+    size = (s[0] << 24) | (s[1] << 16) | (s[2] << 8) | s[3]
+    s = get_data(sock, size)
     if len(s) != size:
         raise Error('could not get data from socket (got %d instead of %d)' % (len(s), size))
 
