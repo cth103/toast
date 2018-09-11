@@ -77,7 +77,8 @@ class NodeProperties(object):
         self.sensors = sensors
 
 node_properties = { '600194189ed3': NodeProperties('Bathroom', 'radiator', ['radiator'], ['temperature']),
-                    '5ccf7f3ce462': NodeProperties('Bathroom', 'fan', ['fan'], ['humidity']) }
+                    '5ccf7f3cd919': NodeProperties('Bathroom', 'fan', ['fan'], ['humidity']),
+                    }
 
 class Node(object):
     """
