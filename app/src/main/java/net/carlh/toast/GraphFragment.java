@@ -206,6 +206,8 @@ public class GraphFragment extends Fragment {
 
         period.setEnabled(true);
 
+        Log.e("update","Graph update with " + state.getTemperatures().size() + " " + state.getHumidities().size());
+
         graph.setData(Datum.TYPE_TEMPERATURE, getGraphData(state.getTemperatures().get(zone.getSelectedItem())));
         graph.setData(Datum.TYPE_HUMIDITY, getGraphData(state.getHumidities().get(zone.getSelectedItem())));
 

@@ -248,6 +248,7 @@ public class Client {
                 pong.set(true);
             } else {
                 for (Handler h : handlers) {
+                    Log.e("update", "Sending out new data.");
                     Message m = Message.obtain();
                     Bundle b = new Bundle();
                     b.putString("json", json.toString());

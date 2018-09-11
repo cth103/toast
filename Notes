@@ -1,0 +1,8 @@
+
+Data transfers:
+
+1.  when something changes on server, just that thing is pushed to all clients.
+2.  when something changes on client, just that thing is pushed to server.
+3.  client: "send-basic", server: all state but not all data.
+4.  client: "send-all",   server: all state and all data.
+

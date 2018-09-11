@@ -162,6 +162,7 @@ public class Graph extends View {
     }
 
     public void setData(int type, ArrayList<Point> d) {
+        Log.e("update", "setting new graph data.");
         data.set(type, d);
         invalidate();
     }

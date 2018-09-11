@@ -26,11 +26,14 @@ import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -67,11 +70,26 @@ public class ControlFragment extends Fragment {
                 l.setTextSize(size);
                 l.setPadding(32, first ? 32 : 0, 0, 0);
                 l.setTypeface(null, Typeface.BOLD);
-                r.addView(l);
 
-                TableRow.LayoutParams params = (TableRow.LayoutParams) l.getLayoutParams();
-                params.span = 2;
-                l.setLayoutParams(params);
+                ImageView iv = new ImageView(a);
+                iv.setImageResource(R.drawable.ic_fan);
+                iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+
+                LinearLayout state = new LinearLayout(a);
+                state.addView(l);
+                state.addView(iv);
+                state.setGravity(Gravity.BOTTOM);
+                //iv.setVisibility(View.GONE);
+
+                LinearLayout.LayoutParams linear_params = (LinearLayout.LayoutParams) iv.getLayoutParams();
+                linear_params.height = 64;
+                iv.setLayoutParams(linear_params);
+
+                r.addView(state);
+
+                TableRow.LayoutParams table_params = (TableRow.LayoutParams) state.getLayoutParams();
+                table_params.span = 2;
+                state.setLayoutParams(table_params);
 
                 temperature = new TextView(a);
                 temperature.setTextSize(size);
@@ -81,6 +99,8 @@ public class ControlFragment extends Fragment {
                 humidity = new TextView(a);
                 humidity.setTextSize(size - 4);
                 r.addView(humidity);
+
+                r.setGravity(Gravity.BOTTOM);
 
                 ControlFragment.this.table.addView(r);
             }
@@ -97,7 +117,6 @@ public class ControlFragment extends Fragment {
                 r.addView(warmer);
 
                 colder = new Button(a);
-
                 colder.setText("Colder");
                 r.addView(colder);
 
@@ -232,6 +251,7 @@ public class ControlFragment extends Fragment {
             heatingEnabled.setChecked(getHeatingEnabled());
 
             for (Map.Entry<String, Boolean> i: state.getZoneHeatingEnabled().entrySet()) {
+                Log.e("test", "getting zone called " + i.getKey());
                 zones.get(i.getKey()).setZoneEnabled(i.getValue());
             }
 
@@ -274,7 +294,6 @@ public class ControlFragment extends Fragment {
             }
             heatingEnabled.setText("");
 
-            boolean wifiConnected = false;
             if (getActivity() != null) {
                 ConnectivityManager cm = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
                 if (!cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI).isConnected()) {
