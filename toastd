@@ -204,16 +204,9 @@ class JSONNode(Node):
         util.verbose("Connecting for temperature of %s:%s" % (self.zone, self.name))
         s = self.connect()
         util.send_json(s, {'type': 'get'})
-<<<<<<< HEAD
-        j = util.receive_json(s)['temperature']
-        d = Datum(j)
-        util.verbose("Received temperature %f of %s:%s at %d:%d:%d" % (j, self.zone, self.name, d.time.tm_hour, d.time.tm_min, d.time.tm_sec))
-        return d
-=======
         j = util.get_json(s)['temperature']
         util.verbose("Received temperature %f of %s:%s" % (j, self.zone, self.name))
         return Datum(j)
->>>>>>> First hacks to use binary network comms rather than JSON.
 
 class ESP8266Node(Node):
     def __init__(self, ip, mac):
