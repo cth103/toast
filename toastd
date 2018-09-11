@@ -37,6 +37,7 @@ import traceback
 
 import binary_server
 import util
+import messages
 
 # GPIO pin of boiler relay
 BOILER_GPIO = 2
@@ -57,22 +58,6 @@ HUMIDITY_LOW_THRESHOLD = 68.0
 NODE_PORT = 9142
 # Port to listen for ESP8266 UDP broadcasts
 BROADCAST_PORT = 9143
-
-# Message types
-OP_PING                         = 0
-OP_PONG                         = 1
-OP_SEND_BASIC                   = 2
-OP_SEND_ALL                     = 3
-
-OP_CHANGE                       = 0x10
-OP_HEATING_ENABLED              = OP_CHANGE | 0
-OP_HEATING_ZONE_HEATING_ENABLED = OP_CHANGE | 1
-OP_TARGET                       = OP_CHANGE | 2
-OP_BOILER_ON                    = OP_CHANGE | 3
-OP_TEMPERATURES                 = OP_CHANGE | 4
-OP_HUMIDITIES                   = OP_CHANGE | 5
-OP_RULES                        = OP_CHANGE | 6
-OP_ALL                          = OP_CHANGE | 7
 
 def binary_string(s):
     b = bytearray()
@@ -424,7 +409,7 @@ class State:
                 self.heating_enabled = enabled
                 changed = True
         if changed:
-            server.send(self.as_binary(True, OP_CHANGE_HEATING_ENABLED))
+            server.send(self.as_binary(True, messages.OP_CHANGE_HEATING_ENABLED))
             request_update()
 
     def set_zone_heating_enabled(self, zone, enabled):
@@ -436,7 +421,7 @@ class State:
                 self.zone_heating_enabled[zone] = enabled
                 changed = True
         if changed and server is not None:
-            server.send(self.as_binary(True, OP_ZONE_HEATING_ENABLED))
+            server.send(self.as_binary(True, messages.OP_ZONE_HEATING_ENABLED))
             request_update()
 
     def set_target(self, zone, target):
@@ -446,7 +431,7 @@ class State:
                 self.target[zone] = target
                 changed = True
         if changed and server is not None:
-            server.send(self.as_binary(True, OP_TARGET))
+            server.send(self.as_binary(True, messages.OP_TARGET))
             request_update()
 
     def set_boiler_on(self, on):
@@ -458,7 +443,7 @@ class State:
                     RPi.GPIO.output(BOILER_GPIO, self.boiler_on)
                 changed = True
         if changed:
-            server.send(self.as_binary(True, OP_BOILER_ON))
+            server.send(self.as_binary(True, messages.OP_BOILER_ON))
 
     def add_temperature(self, zone, t):
         assert(isinstance(t, Datum))
@@ -468,7 +453,7 @@ class State:
             self.temperatures[zone].append(t)
             if len(self.temperatures[zone]) > MEMORY_LOG_MINUTES:
                 state.temperatures[zone].pop(0)
-        server.send(self.as_binary(True, OP_TEMPERATURES))
+        server.send(self.as_binary(True, messages.OP_TEMPERATURES))
 
     def add_humidity(self, zone, h):
         assert(isinstance(h, Datum))
@@ -478,7 +463,7 @@ class State:
             self.humidities[zone].append(h)
             if len(self.humidities[zone]) > MEMORY_LOG_MINUTES:
                 state.humidities[zone].pop(0)
-        server.send(self.as_binary(True, OP_HUMIDITIES))
+        server.send(self.as_binary(True, messages.OP_HUMIDITIES))
 
     def set_rules(self, r):
         assert(type(r) is list)
@@ -488,7 +473,7 @@ class State:
                 self.rules = r
                 changed = True
         if changed:
-            server.send(self.as_binary(True, OP_RULES, "rules"))
+            server.send(self.as_binary(True, messages.OP_RULES, "rules"))
 
 
     # Get methods for use by the server
@@ -538,31 +523,31 @@ class State:
 
     # Misc
 
-    def as_binary(self, all_values=True, op=OP_ALL):
+    def as_binary(self, all_values=True, op=messages.OP_ALL):
         out = bytearray()
         out.append(op)
-        if op == OP_ALL or op == OP_HEATING_ENABLED:
+        if op == messages.OP_ALL or op == messages.OP_HEATING_ENABLED:
             out.append(self.heating_enabled)
-        if op == OP_ALL or op == OP_BOILER_ON:
+        if op == messages.OP_ALL or op == messages.OP_BOILER_ON:
             out.append(self.boiler_on)
 
-        if op == OP_ALL:
+        if op == messages.OP_ALL:
             out.append(len(zones()))
             for z in zones():
                 out.extend(binary_string(z))
 
         for z in zones():
-            if op == OP_ALL or op == OP_ZONE_HEATING_ENABLED:
+            if op == messages.OP_ALL or op == messages.OP_ZONE_HEATING_ENABLED:
                 if z in self.zone_heating_enabled:
                     out.append(self.zone_heating_enabled[z])
                 else:
                     out.append(0)
-            if op == OP_ALL or op == OP_TARGET:
+            if op == messages.OP_ALL or op == messages.OP_TARGET:
                 if z in self.target:
                     out.extend(binary_float(self.target[z]))
                 else:
                     out.extend(binary_float(0))
-            if op == OP_ALL or op == OP_TEMPERATURES:
+            if op == messages.OP_ALL or op == messages.OP_TEMPERATURES:
                 if z in self.temperatures:
                     if all_values:
                         out.extend(binary_int16(len(self.temperatures[z])))
@@ -571,7 +556,7 @@ class State:
                     else:
                         out.extend(binary_int16(1))
                         out.extend(binary_datum(v[-1]))
-            if op == OP_ALL or op == OP_HUMIDITIES:
+            if op == messages.OP_ALL or op == messages.OP_HUMIDITIES:
                 if z in self.humidities:
                     if all_values:
                         out.extend(binary_int16(len(self.humidities)))
@@ -581,13 +566,13 @@ class State:
                         out.extend(binary_int16(1))
                         out.extend(binary_datum(v[-1]))
 
-        if op == OP_ALL or op == OP_RULES:
+        if op == messages.OP_ALL or op == messages.OP_RULES:
             assert(len(self.rules) < 256)
             out.append(len(self.rules))
             for r in self.rules:
                 out.extend(r.as_binary())
 
-        if op == OP_ALL:
+        if op == messages.OP_ALL:
             any_zone_heating_enabled = False
             for k, v in self.zone_heating_enabled.iteritems():
                 if v:
@@ -839,7 +824,7 @@ def test():
     state.humidities[zn].append(Datum(153, time.localtime(16123)))
     b = state.as_binary()
     o = 0
-    assert(b[o] == OP_ALL)
+    assert(b[o] == messages.OP_ALL)
     o += 1
     assert(b[o] == 0)
     o += 1
@@ -900,16 +885,16 @@ def test():
 
 
 def handler(data):
-    if data[0] == OP_PING:
-        server.send(bytearray([OP_PONG]))
-    elif data[0] == OP_SEND_BASIC:
+    if data[0] == messages.OP_PING:
+        server.send(bytearray([messages.OP_PONG]))
+    elif data[0] == messages.OP_SEND_BASIC:
         global state
         server.send(state.as_binary(all_values=False))
-    elif data[0] == OP_SEND_ALL:
+    elif data[0] == messages.OP_SEND_ALL:
         global state
         server.send(state.as_binary())
-    elif data[0] == OP_:
-        state.set_from_binary(data)
+
+    # XXX: stuff coming in from client
 
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     test()
