@@ -35,7 +35,7 @@ import argparse
 import urlparse
 import traceback
 
-import server
+import binary_server
 import util
 
 # GPIO pin of boiler relay
@@ -922,7 +922,7 @@ else:
 
     setup()
 
-    server = server.Server(args.port)
+    server = binary_server.Server(args.port)
     server.handler = handler
     server.start()
 
