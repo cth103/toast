@@ -75,7 +75,7 @@ class Server:
         try:
             while True:
                 data = util.get_bytearray(conn)
-                if data is None:
+                if len(data) == 0:
                     break
                 self.handler(data)
         except Exception as e:

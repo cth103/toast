@@ -7,7 +7,7 @@ OP_SEND_ALL                     = 3
 
 OP_CHANGE                       = 0x10
 OP_HEATING_ENABLED              = OP_CHANGE | 0
-OP_HEATING_ZONE_HEATING_ENABLED = OP_CHANGE | 1
+OP_ZONE_HEATING_ENABLED         = OP_CHANGE | 1
 OP_TARGET                       = OP_CHANGE | 2
 OP_BOILER_ON                    = OP_CHANGE | 3
 OP_TEMPERATURES                 = OP_CHANGE | 4

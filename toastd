@@ -69,7 +69,7 @@ def binary_string(s):
 
 def binary_float(s):
     b = bytearray()
-    s = s * 16
+    s = int(s * 16)
     b.append(s & 0xff)
     b.append((s & 0xff00) >> 8)
     return b
@@ -101,7 +101,6 @@ class Datum(object):
             self.time = time.localtime()
         else:
             self.time = timestamp
-        self.time = t
 
 class NodeProperties(object):
     def __init__(self, zone, name, actuators, sensors):
@@ -531,10 +530,9 @@ class State:
         if op == messages.OP_ALL or op == messages.OP_BOILER_ON:
             out.append(self.boiler_on)
 
-        if op == messages.OP_ALL:
-            out.append(len(zones()))
-            for z in zones():
-                out.extend(binary_string(z))
+        out.append(len(zones()))
+        for z in zones():
+            out.extend(binary_string(z))
 
         for z in zones():
             if op == messages.OP_ALL or op == messages.OP_ZONE_HEATING_ENABLED:
@@ -548,23 +546,33 @@ class State:
                 else:
                     out.extend(binary_float(0))
             if op == messages.OP_ALL or op == messages.OP_TEMPERATURES:
+                v = []
                 if z in self.temperatures:
-                    if all_values:
-                        out.extend(binary_int16(len(self.temperatures[z])))
-                        for i in self.temperatures[z]:
-                            out.extend(binary_datum(i))
-                    else:
-                        out.extend(binary_int16(1))
-                        out.extend(binary_datum(v[-1]))
+                    v = self.temperatures[z]
+                if all_values:
+                    out.extend(binary_int16(len(v)))
+                    for i in v:
+                        out.extend(binary_datum(i))
+                elif len(v) > 0:
+                    out.extend(binary_int16(1))
+                    out.extend(binary_datum(v[-1]))
+                else:
+                    out.extend(binary_int16(0))
+
             if op == messages.OP_ALL or op == messages.OP_HUMIDITIES:
+                v = []
                 if z in self.humidities:
-                    if all_values:
-                        out.extend(binary_int16(len(self.humidities)))
-                        for i in self.humidities[z]:
-                            out.extend(binary_datum(i))
-                    else:
-                        out.extend(binary_int16(1))
-                        out.extend(binary_datum(v[-1]))
+                    v = self.humidities[z]
+                if all_values:
+                    out.extend(binary_int16(len(v)))
+                    for i in v:
+                        out.extend(binary_datum(i))
+                elif len(v) > 0:
+                    out.extend(binary_int16(1))
+                    out.extend(binary_datum(v[-1]))
+                else:
+                    out.extend(binary_int16(0))
+
 
         if op == messages.OP_ALL or op == messages.OP_RULES:
             assert(len(self.rules) < 256)
@@ -580,9 +588,12 @@ class State:
 
             explanation = ""
 
-            if self.boiler_on and (not self.heating_enabled):
-                explanation = "Heating to programmed target"
-            elif not self.boiler_on:
+            if self.boiler_on:
+                if self.heating_enabled:
+                    explanation = "Heating"
+                else:
+                    explanation = "Heating to programmed target"
+            else:
                 if self.heating_enabled:
                     if any_zone_heating_enabled:
                         explanation = "Target temperatures reached"
