@@ -8,7 +8,7 @@ import util
 import messages
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-p', '--port', help='port to send to', type=int, default=9142)
+parser.add_argument('-p', '--port', help='port to send to', type=int, default=80)
 parser.add_argument('--host', help='host to send to', type=str, default='localhost')
 parser.add_argument('commands', nargs='*')
 args = parser.parse_args()
@@ -16,7 +16,11 @@ args = parser.parse_args()
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((args.host, args.port))
 for c in args.commands:
+    b = bytearray()
     if c == 'ping':
-        s.send(messages.OP_PING)
-    print s.recv()
+        b.append(messages.OP_PING)
+    util.send_bytearray(s, b)
+    reply = util.get_bytearray(s)
+    if len(reply) > 0 and reply[0] == messages.OP_PONG:
+        print 'PONG'
 s.close()
