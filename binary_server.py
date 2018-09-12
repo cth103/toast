@@ -68,16 +68,13 @@ class Server:
     # Thread to handle one client session
     def client(self, conn):
         try:
-            while True:
-                data = util.get_bytearray(conn)
-                if len(data) == 0:
-                    break
+            data = util.get_bytearray(conn)
+            if len(data) > 0:
                 reply = self.handler(data)
                 if reply is not None:
                     util.send_bytearray(conn, reply)
         except Exception as e:
             util.warning('Server handler threw "%s"' % e)
             traceback.print_exc(file=sys.stdout)
-            pass
 
         conn.close()
