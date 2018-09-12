@@ -32,6 +32,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ConnectException;
 import java.net.Socket;
@@ -76,15 +77,12 @@ public class Client {
             Socket socket = null;
             public void run() {
                 while (!shouldStop.get()) {
-                    Log.e("Client", "New socket.");
                     try {
                         socket = new Socket(hostName, port);
                         socket.setSoTimeout(timeout);
                         setConnected(true);
                     } catch (IOException e) {
-                        reconnectLock.lock();
-                        reconnectCondition.signal();
-                        reconnectLock.unlock();
+                        continue;
                     }
 
                     Thread readThread = new Thread(new Runnable() {
@@ -101,7 +99,6 @@ public class Client {
                                     Bundle bundle = new Bundle();
                                     bundle.putByteArray("data", Util.getData(socket, length));
                                     message.setData(bundle);
-                                    Log.e("Client", "Passing data to UI");
                                     handler.sendMessage(message);
                                 }
                             } catch (IOException e) {
@@ -134,11 +131,13 @@ public class Client {
                                     }
                                     writeLock.unlock();
                                     if (s != null) {
-                                        socket.getOutputStream().write((s.length >> 24) & 0xff);
-                                        socket.getOutputStream().write((s.length >> 16) & 0xff);
-                                        socket.getOutputStream().write((s.length >> 8) & 0xff);
-                                        socket.getOutputStream().write((s.length >> 0) & 0xff);
-                                        socket.getOutputStream().write(s);
+                                        OutputStream os = socket.getOutputStream();
+                                        os.write((s.length >> 24) & 0xff);
+                                        os.write((s.length >> 16) & 0xff);
+                                        os.write((s.length >> 8) & 0xff);
+                                        os.write((s.length >> 0) & 0xff);
+                                        os.write(s);
+                                        os.flush();
                                         writeLock.lock();
                                         toWrite.remove(0);
                                         writeLock.unlock();
