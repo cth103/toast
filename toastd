@@ -646,6 +646,9 @@ def setup():
             util.warning('could not create log directory `%s\'; logging disabled' % args.log_directory)
             write_logs = False
 
+    # Try to remove buffering for stdout
+    sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+
 def update():
     """
     The actual decision-making part: take inputs and decide which actuators should be on and
@@ -900,7 +903,7 @@ def zones_from_message(data, off):
     off += 1
     zone_names = []
     for i in range(0, zones):
-        (off, name) = get_string(reply, off)
+        (off, name) = get_string(data, off)
         zone_names.append(name)
     return (off, zone_names)
 
@@ -920,7 +923,7 @@ def handler(data):
         off = 1
         (off, zone_names) = zones_from_message(data, off)
         for z in zone_names:
-            state.set_zone_heating_enabled(data[off])
+            state.set_zone_heating_enabled(z, data[off])
             off += 1
         return state.as_binary(False, messages.OP_ZONE_HEATING_ENABLED)
 
