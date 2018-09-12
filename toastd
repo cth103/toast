@@ -895,17 +895,36 @@ def test():
     o += assert_string(b, o, "Heating is switched off")
 
 
+def get_string(b, p):
+    sl = b[p]
+    return (p+sl+1, b[p+1:p+sl+1].decode('UTF-8'))
+
+def zones_from_message(data, off):
+    zones = data[off]
+    off += 1
+    zone_names = []
+    for i in range(0, zones):
+        (off, name) = get_string(reply, off)
+        zone_names.append(name)
+    return (off, zone_names)
+
 def handler(data):
-    if data[0] == messages.OP_PING:
-        server.send(bytearray([messages.OP_PONG]))
-    elif data[0] == messages.OP_SEND_BASIC:
+    if data[0] == messages.OP_SEND_BASIC:
         global state
         server.send(state.as_binary(all_values=False))
     elif data[0] == messages.OP_SEND_ALL:
         global state
         server.send(state.as_binary())
-
-    # XXX: stuff coming in from client
+    elif data[0] == messages.OP_HEATING_ENABLED:
+        global state
+        state.set_heating_enabled(data[1]);
+    elif data[0] == messages.OP_ZONE_HEATING_ENABLED:
+        global state
+        off = 1
+        (off, zone_names) = zones_from_message(data, off)
+        for z in zone_names:
+            state.set_zone_heating_enabled(data[off])
+            off += 1
 
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     test()

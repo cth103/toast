@@ -1,9 +1,6 @@
 
-# Message types
-OP_PING                         = 0
-OP_PONG                         = 1
-OP_SEND_BASIC                   = 2
-OP_SEND_ALL                     = 3
+OP_SEND_BASIC                   = 0
+OP_SEND_ALL                     = 1
 
 OP_CHANGE                       = 0x10
 OP_HEATING_ENABLED              = OP_CHANGE | 0
