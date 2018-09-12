@@ -170,8 +170,10 @@ public class State {
     }
 
     public synchronized void setZoneHeatingEnabled(String zone, boolean e) {
-        zoneHeatingEnabled.put(zone, e);
-        changed(ZONE_HEATING_ENABLED);
+        if (!zoneHeatingEnabled.containsKey(zone) || zoneHeatingEnabled.get(zone) != e) {
+            zoneHeatingEnabled.put(zone, e);
+            changed(ZONE_HEATING_ENABLED);
+        }
     }
 
     public synchronized void setTarget(String zone, double t) {
