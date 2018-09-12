@@ -49,7 +49,7 @@ def send_bytearray(socket, data):
 
 def send_json(socket, data, verbose=False):
     """Send a dict as JSON to a socket"""
-    send_bytearray(json.dumps(data))
+    send_bytearray(socket, json.dumps(data))
     if verbose:
         print '-> %s' % data
 
