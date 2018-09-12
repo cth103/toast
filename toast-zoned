@@ -69,9 +69,9 @@ args = parser.parse_args()
 
 def handler(json):
     if json['type'] == 'ping':
-        server.send({'type': 'pong'})
+        return {'type': 'pong'}
     elif json['type'] == 'get':
-        server.send({'temperature': get_temperature()})
+        return {'temperature': get_temperature()}
     elif json['type'] == 'set':
         if 'radiator_on' in json and have_gpio:
             RPi.GPIO.output(RADIATOR, json['radiator_on'])

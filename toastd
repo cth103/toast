@@ -408,7 +408,6 @@ class State:
                 self.heating_enabled = enabled
                 changed = True
         if changed:
-            server.send(self.as_binary(True, messages.OP_CHANGE_HEATING_ENABLED))
             request_update()
 
     def set_zone_heating_enabled(self, zone, enabled):
@@ -420,7 +419,6 @@ class State:
                 self.zone_heating_enabled[zone] = enabled
                 changed = True
         if changed and server is not None:
-            server.send(self.as_binary(True, messages.OP_ZONE_HEATING_ENABLED))
             request_update()
 
     def set_target(self, zone, target):
@@ -452,7 +450,6 @@ class State:
             self.temperatures[zone].append(t)
             if len(self.temperatures[zone]) > MEMORY_LOG_MINUTES:
                 state.temperatures[zone].pop(0)
-        server.send(self.as_binary(True, messages.OP_TEMPERATURES))
 
     def add_humidity(self, zone, h):
         assert(isinstance(h, Datum))
@@ -462,7 +459,6 @@ class State:
             self.humidities[zone].append(h)
             if len(self.humidities[zone]) > MEMORY_LOG_MINUTES:
                 state.humidities[zone].pop(0)
-        server.send(self.as_binary(True, messages.OP_HUMIDITIES))
 
     def set_rules(self, r):
         assert(type(r) is list)
@@ -911,13 +907,14 @@ def zones_from_message(data, off):
 def handler(data):
     if data[0] == messages.OP_SEND_BASIC:
         global state
-        server.send(state.as_binary(all_values=False))
+        return state.as_binary(all_values=False)
     elif data[0] == messages.OP_SEND_ALL:
         global state
-        server.send(state.as_binary())
+        return state.as_binary()
     elif data[0] == messages.OP_HEATING_ENABLED:
         global state
         state.set_heating_enabled(data[1]);
+        return state.as_binary(False, messages.OP_HEATING_ENABLED)
     elif data[0] == messages.OP_ZONE_HEATING_ENABLED:
         global state
         off = 1
@@ -925,6 +922,7 @@ def handler(data):
         for z in zone_names:
             state.set_zone_heating_enabled(data[off])
             off += 1
+        return state.as_binary(False, messages.OP_ZONE_HEATING_ENABLED)
 
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     test()

@@ -21,6 +21,8 @@ import threading
 import socket
 import traceback
 import sys
+import datetime
+import os
 
 import util
 
@@ -28,10 +30,6 @@ class Server:
     def __init__(self, port):
         # Port number to listen on
         self.port = port
-        # Active client sockets
-        self.clients = []
-        # Mutex for self.clients
-        self.mutex = threading.Lock()
 
     # Start the server
     def start(self):
@@ -64,36 +62,22 @@ class Server:
     def run(self, sock):
         while True:
             conn, addr = sock.accept()
-            conn.settimeout(10)
+            conn.settimeout(10.0)
             threading.Thread(target=self.client, args=(conn,)).start()
 
     # Thread to handle one client session
     def client(self, conn):
-        with self.mutex:
-            self.clients.append(conn)
-
         try:
             while True:
                 data = util.get_bytearray(conn)
                 if len(data) == 0:
                     break
-                self.handler(data)
+                reply = self.handler(data)
+                if reply is not None:
+                    util.send_bytearray(conn, reply)
         except Exception as e:
             util.warning('Server handler threw "%s"' % e)
             traceback.print_exc(file=sys.stdout)
             pass
 
-        with self.mutex:
-            self.clients.remove(conn)
-
         conn.close()
-
-    def send(self, d):
-        with self.mutex:
-            for c in self.clients:
-                try:
-                    util.send_bytearray(c, d)
-                except Exception as e:
-                    util.warning('Could not send to client')
-                    traceback.print_exc(file=sys.stdout)
-                    pass

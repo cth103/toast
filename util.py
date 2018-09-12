@@ -55,13 +55,12 @@ def send_json(socket, data, verbose=False):
 
 def get_data(sock, length):
     """recv() from a socket into a Python bytearray"""
-    all = bytearray(length)
-    got = 0
-    while got < length:
-        d = sock.recv_into(all, length - got)
-        if d == 0:
-            break
-        got += d
+    all = bytearray()
+    remaining = length
+    while remaining > 0:
+        chunk = sock.recv(remaining)
+        all.extend(chunk)
+        remaining -= len(chunk)
 
     return all
 
@@ -76,7 +75,7 @@ def get_bytearray(sock):
     """Receive a bytearray from a socket"""
     s = get_data(sock, 4)
     if len(s) < 4:
-        return None
+        raise Error('could not get data length from socket')
 
     size = (s[0] << 24) | (s[1] << 16) | (s[2] << 8) | s[3]
     s = get_data(sock, size)
