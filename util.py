@@ -59,6 +59,9 @@ def get_data(sock, length):
     remaining = length
     while remaining > 0:
         chunk = sock.recv(remaining)
+        if chunk == b'':
+            # "the other side has closed (or is in the process of closing) the connection"
+            raise Error('other side is closing')
         all.extend(chunk)
         remaining -= len(chunk)
 
