@@ -109,24 +109,7 @@ import java.util.List;
         client = new Client(
                 new Handler() {
                     public void handleMessage(Message message) {
-                        Bundle data = message.getData();
-
-                        if (data != null && data.getByteArray("data") != null) {
-                            /* Some state changed */
-                            state.setFromBinary(data.getByteArray("data"));
-                        } else {
-                            /* Connected or disconnected */
-                            if (getConnected()) {
-                                /* Newly connected: ask the server to tell us the basics
-                                   and then the full temperature history.
-                                   XXX this was to cope with the fact that the whole history
-                                   takes a long time to parse: may not be a problem with
-                                   binary transfer.
-                                */
-                                client.send(new byte[]{State.OP_SEND_BASIC});
-                                client.send(new byte[]{State.OP_SEND_ALL});
-                            }
-                        }
+                        state.setFromBinary(message.getData().getByteArray("data"));
                     }
                 });
 

@@ -47,144 +47,126 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Client {
 
-    private Thread connectThread;
+    private Thread commsThread;
+    private Thread pingThread;
     /** Socket timeout in ms */
     private int timeout = 5000;
+    private int pingInterval = 1000;
     private final Lock reconnectLock = new ReentrantLock();
     private final Condition reconnectCondition = reconnectLock.newCondition();
     /** true if all threads should stop */
     private AtomicBoolean shouldStop = new AtomicBoolean(false);
     /** true if we're fairly sure we're connected */
     private AtomicBoolean connected = new AtomicBoolean(false);
-    private Thread controlThread;
     /** Lock and condition to tell the write thread that there is something to do */
     private final Lock writeLock = new ReentrantLock();
     private final Condition writeCondition = writeLock.newCondition();
     /** Things that need writing */
     private ArrayList<byte[]> toWrite = new ArrayList<>();
-    /** Handler that will be told about incoming commands */
+    /** Handler that will be told about incoming messages */
     Handler handler;
-
-    /** Ping interval in ms (must be less than timeout) */
-    private int pingInterval = 4000;
 
     public Client(Handler handler) {
         this.handler = handler;
     }
 
     public void start(final String hostName, final int port) {
-        connectThread = new Thread(new Runnable() {
+        commsThread = new Thread(new Runnable() {
+
             Socket socket = null;
+
             public void run() {
                 while (!shouldStop.get()) {
                     try {
-                        socket = new Socket(hostName, port);
-                        socket.setSoTimeout(timeout);
-                        setConnected(true);
-                    } catch (IOException e) {
-                        continue;
-                    }
-
-                    Thread readThread = new Thread(new Runnable() {
-                        public void run() {
-                            try {
-                                while (!shouldStop.get()) {
-                                    byte[] b = Util.getData(socket, 4);
-                                    int length = ((b[0] & 0xff) << 24) | ((b[1] & 0xff) << 16) | ((b[2] & 0xff) << 8) | (b[3] & 0xff);
-                                    if (length < 0 || length > (1024 * 1024)) {
-                                        throw new Error("Strange block length " + length);
-                                    }
-
-                                    Message message = Message.obtain();
-                                    Bundle bundle = new Bundle();
-                                    bundle.putByteArray("data", Util.getData(socket, length));
-                                    message.setData(bundle);
-                                    handler.sendMessage(message);
-                                }
-                            } catch (IOException e) {
-                                reconnectLock.lock();
-                                reconnectCondition.signal();
-                                reconnectLock.unlock();
-                            }
+                        /* Connect */
+                        try {
+                            socket = new Socket(hostName, port);
+                            socket.setSoTimeout(timeout);
+                        } catch (IOException e) {
+                            connected.set(false);
+                            throw e;
                         }
-                    });
 
-                    readThread.start();
+                        connected.set(true);
 
-                    Thread writeThread = new Thread(new Runnable() {
-                        public void run() {
-                            try {
-                                while (!shouldStop.get()) {
-                                    writeLock.lock();
-                                    try {
-                                        while (toWrite.size() == 0 && !shouldStop.get()) {
-                                            writeCondition.await();
-                                        }
-                                    } finally {
-                                        writeLock.unlock();
-                                    }
-
-                                    byte[] s = null;
-                                    writeLock.lock();
-                                    if (toWrite.size() > 0) {
-                                        s = toWrite.get(0);
-                                    }
-                                    writeLock.unlock();
-                                    if (s != null) {
-                                        OutputStream os = socket.getOutputStream();
-                                        os.write((s.length >> 24) & 0xff);
-                                        os.write((s.length >> 16) & 0xff);
-                                        os.write((s.length >> 8) & 0xff);
-                                        os.write((s.length >> 0) & 0xff);
-                                        os.write(s);
-                                        os.flush();
-                                        writeLock.lock();
-                                        toWrite.remove(0);
-                                        writeLock.unlock();
-                                    }
-                                }
-                            } catch (IOException e) {
-                                reconnectLock.lock();
-                                reconnectCondition.signal();
-                                reconnectLock.unlock();
-                            } catch (InterruptedException e) {
-                                reconnectLock.lock();
-                                reconnectCondition.signal();
-                                reconnectLock.unlock();
+                        /* Wait for something to send */
+                        writeLock.lock();
+                        try {
+                            while (toWrite.size() == 0 && !shouldStop.get()) {
+                                writeCondition.await();
                             }
+                        } finally {
+                            writeLock.unlock();
                         }
-                    });
 
-                    writeThread.start();
+                        /* Send it */
+                        writeLock.lock();
+                        if (toWrite.isEmpty()) {
+                            writeLock.unlock();
+                            continue;
+                        }
+                        byte[] s = toWrite.get(0);
+                        writeLock.unlock();
+                        OutputStream os = socket.getOutputStream();
+                        os.write((s.length >> 24) & 0xff);
+                        os.write((s.length >> 16) & 0xff);
+                        os.write((s.length >> 8) & 0xff);
+                        os.write((s.length >> 0) & 0xff);
+                        os.write(s);
+                        os.flush();
+                        writeLock.lock();
+                        toWrite.remove(0);
+                        writeLock.unlock();
 
-                    try {
-                        reconnectLock.lock();
-                        reconnectCondition.await();
-                        reconnectLock.unlock();
-                    } catch (InterruptedException e) {
+                        /* Read the reply */
+                        byte[] b = Util.getData(socket, 4);
+                        int length = ((b[0] & 0xff) << 24) | ((b[1] & 0xff) << 16) | ((b[2] & 0xff) << 8) | (b[3] & 0xff);
+                        if (length < 0 || length > (1024 * 1024)) {
+                            throw new Error("Strange block length " + length);
+                        }
+
+                        Message message = Message.obtain();
+                        Bundle bundle = new Bundle();
+                        bundle.putByteArray("data", Util.getData(socket, length));
+                        message.setData(bundle);
+                        handler.sendMessage(message);
+                    } catch(InterruptedException e){
+
+                    } catch(IOException e){
+
+                    } finally {
+                        try {
+                            socket.close();
+                        } catch (IOException e) {
+
+                        }
                     }
-
-                    try {
-                        readThread.interrupt();
-                        readThread.join();
-                        writeThread.interrupt();
-                        writeThread.join();
-                    } catch (InterruptedException e) {
-
-                    }
-
-                    try {
-                        socket.close();
-                    } catch (IOException e) {
-
-                    }
-
-                    setConnected(false);
                 }
             }
         });
 
-        connectThread.start();
+        /* XXX this was to cope with the fact that the whole history
+           takes a long time to parse: may not be a problem with
+           binary transfer. */
+        send(new byte[]{State.OP_SEND_BASIC});
+        send(new byte[]{State.OP_SEND_ALL});
+        commsThread.start();
+
+        /* Start a thread to request updates every so often */
+        pingThread = new Thread(new Runnable() {
+           public void run() {
+               while (!shouldStop.get()) {
+                   try {
+                       Thread.sleep(pingInterval);
+                   } catch (InterruptedException e) {
+
+                   }
+                   send(new byte[]{State.OP_SEND_ALL});
+               }
+           }
+        });
+
+        pingThread.start();
     }
 
     public void send(byte[] data) {
@@ -199,23 +181,22 @@ public class Client {
 
     public void stop() {
         shouldStop.set(true);
-        if (controlThread != null   ) {
-            controlThread.interrupt();
+        if (commsThread != null) {
+            commsThread.interrupt();
             try {
-                controlThread.join();
+                commsThread.join();
             } catch (InterruptedException e) {
 
             }
         }
-    }
+        if (pingThread != null) {
+            pingThread.interrupt();
+            try {
+                pingThread.join();
+            } catch (InterruptedException e) {
 
-    private void setConnected(boolean c) {
-        if (c == connected.get()) {
-            return;
+            }
         }
-
-        connected.set(c);
-        handler.sendEmptyMessage(0);
     }
 
     public boolean getConnected() {
