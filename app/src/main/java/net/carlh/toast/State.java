@@ -126,13 +126,6 @@ public class State {
             s.write(heatingEnabled ? 1 : 0);
         } else if (id == ZONE_HEATING_ENABLED) {
             s.write(OP_CHANGE | ZONE_HEATING_ENABLED);
-            for (int i = 0; i < zones.size(); ++i) {
-                if (zoneHeatingEnabled.containsKey(zones.get(i))) {
-                    s.write(zoneHeatingEnabled.get(zones.get(i)) ? 1 : 0);
-                } else {
-                    s.write(0);
-                }
-            }
         }
 
         s.write(zones.size());
@@ -140,7 +133,15 @@ public class State {
             Util.putString(s, name);
         }
 
-        if (id == TARGET) {
+        if (id == ZONE_HEATING_ENABLED) {
+            for (int i = 0; i < zones.size(); ++i) {
+                if (zoneHeatingEnabled.containsKey(zones.get(i))) {
+                    s.write(zoneHeatingEnabled.get(zones.get(i)) ? 1 : 0);
+                } else {
+                    s.write(0);
+                }
+            }
+        } else if (id == TARGET) {
             s.write(OP_CHANGE | TARGET);
             for (int i = 0; i < zones.size(); ++i) {
                 if (target.containsKey(zones.get(i))) {

@@ -108,6 +108,7 @@ public class Client {
                         byte[] s = toWrite.get(0);
                         writeLock.unlock();
                         OutputStream os = socket.getOutputStream();
+                        Log.e("Client", "Sending msg of len " + s.length + " first byte " + ((int) s[0]));
                         os.write((s.length >> 24) & 0xff);
                         os.write((s.length >> 16) & 0xff);
                         os.write((s.length >> 8) & 0xff);
@@ -161,7 +162,7 @@ public class Client {
                    } catch (InterruptedException e) {
 
                    }
-                   send(new byte[]{State.OP_SEND_ALL});
+                   sendIfNotPending(State.OP_SEND_ALL);
                }
            }
         });
@@ -169,14 +170,37 @@ public class Client {
         pingThread.start();
     }
 
+    public void sendImmediate(byte[] data) {
+        writeLock.lock();
+        try {
+            toWrite.add(0, data);
+            writeCondition.signal();
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
     public void send(byte[] data) {
         writeLock.lock();
         try {
+            Log.e("Client", "add a message type " + data[0] + "; " + toWrite.size() + " to send.");
             toWrite.add(data);
             writeCondition.signal();
         } finally {
             writeLock.unlock();
         }
+    }
+
+    public void sendIfNotPending(int request) {
+        writeLock.lock();
+        for (byte[] b: toWrite) {
+            if (b[0] == request) {
+                writeLock.unlock();
+                return;
+            }
+        }
+        writeLock.unlock();
+        send(new byte[]{(byte) request});
     }
 
     public void stop() {

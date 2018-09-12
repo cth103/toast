@@ -67,13 +67,12 @@ import java.util.List;
         state = new State(this);
         state.addHandler(new Handler() {
             public void handleMessage(Message message) {
-
                 /* Send the change to the server (unless it's something
                    that only goes server -> client).
                 */
                 int property = message.getData().getInt("property");
                 if (property != State.TEMPERATURES && property != State.HUMIDITIES && client != null) {
-                    client.send(state.getBinary(property));
+                    client.sendImmediate(state.getBinary(property));
                 }
 
                 /* Update the whole UI */
