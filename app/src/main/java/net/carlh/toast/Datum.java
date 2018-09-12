@@ -1,5 +1,7 @@
 package net.carlh.toast;
 
+import android.util.Log;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -20,8 +22,12 @@ public class Datum {
     public static final int BINARY_LENGTH = 10;
 
     public Datum(byte[] data, int offset) {
-        time = new Date(data[offset] | data[offset+1] << 8 | data[offset+2] << 16 | data[offset+3] << 24 | data[offset+4] << 32 | data[offset+5] << 40 | data[offset+6] << 48 | data[offset+7] << 56);
-        value = Binary.getInt16(data, offset + 8);
+        long epoch =
+                (data[offset] & 0xff) | ((data[offset+1] & 0xff) << 8) |
+                ((data[offset+2] & 0xff) << 16) | ((data[offset+3] & 0xff) << 24) | ((data[offset+4] & 0xff) << 32) |
+                ((data[offset+5] & 0xff) << 40) | ((data[offset+6] & 0xff) << 48) | ((data[offset+7] & 0xff) << 56);
+        time = new Date(epoch * 1000);
+        value = Util.getFloat(data, offset + 8);
     }
 
     public Datum(Date time, double value) {
@@ -40,7 +46,11 @@ public class Datum {
         b[5] = (byte) ((seconds & 0xff0000000000L) >> 40);
         b[6] = (byte) ((seconds & 0xff000000000000L) >> 48);
         b[7] = (byte) ((seconds & 0xff00000000000000L) >> 56);
-        Binary.putFloat(b, 8, value);
+        Util.putFloat(b, 8, value);
         return b;
+    }
+
+    public String toString() {
+        return time.toString() + ": " + value;
     }
 }

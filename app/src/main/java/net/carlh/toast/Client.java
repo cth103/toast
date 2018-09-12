@@ -45,262 +45,169 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Client {
-    /** True if all threads should stop */
-    private AtomicBoolean stop = new AtomicBoolean(false);
-    /** True if we're fairly sure we're connected */
+
+    private Thread connectThread;
+    /** Socket timeout in ms */
+    private int timeout = 5000;
+    private final Lock reconnectLock = new ReentrantLock();
+    private final Condition reconnectCondition = reconnectLock.newCondition();
+    /** true if all threads should stop */
+    private AtomicBoolean shouldStop = new AtomicBoolean(false);
+    /** true if we're fairly sure we're connected */
     private AtomicBoolean connected = new AtomicBoolean(false);
-    /** Mutex to protect changes to the value of socket */
-    private final Object mutex = new Object();
-    /** Socket that we are talking to the server with */
-    private Socket socket;
-    /** Thread to read data from socket */
-    private Thread readThread;
-    /** Thread to write data to socket */
-    private Thread writeThread;
+    private Thread controlThread;
     /** Lock and condition to tell the write thread that there is something to do */
-    private final Lock lock = new ReentrantLock();
-    private final Condition writeCondition = lock.newCondition();
+    private final Lock writeLock = new ReentrantLock();
+    private final Condition writeCondition = writeLock.newCondition();
     /** Things that need writing */
     private ArrayList<byte[]> toWrite = new ArrayList<>();
-    /** Thread to ping the server */
-    private Thread pingThread;
-    private AtomicBoolean ping = new AtomicBoolean(false);
-    /** True if we have received a pong reply to our last ping */
-    private AtomicBoolean pong = new AtomicBoolean(false);
-    /** Handlers that will be told about incoming commands */
-    private ArrayList<Handler> handlers = new ArrayList<Handler>();
+    /** Handler that will be told about incoming commands */
+    Handler handler;
 
     /** Ping interval in ms (must be less than timeout) */
     private int pingInterval = 4000;
-    /** Socket timeout in ms */
-    private int timeout = 5000;
 
-    public void start(final String hostName, final int port) throws java.net.UnknownHostException, java.io.IOException {
+    public Client(Handler handler) {
+        this.handler = handler;
+    }
 
-        /* Thread to read stuff from the server */
-        readThread = new Thread(new Runnable() {
-
-            private byte[] getData(Socket socket, int length) {
-                byte[] d = new byte[length];
-                int offset = 0;
-                while (offset < length) {
+    public void start(final String hostName, final int port) {
+        connectThread = new Thread(new Runnable() {
+            Socket socket = null;
+            public void run() {
+                while (!shouldStop.get()) {
+                    Log.e("Client", "New socket.");
                     try {
-                        int t = socket.getInputStream().read(d, offset, length - offset);
-                        if (t == -1) {
-                            break;
-                        }
-                        offset += t;
-                    } catch (SocketException e) {
-                        /* This is probably because the socket has been closed in order to make
-                           this thread terminate.
-                        */
-                        Log.e("Toast", "SocketException in client.getData", e);
-                        break;
+                        socket = new Socket(hostName, port);
+                        socket.setSoTimeout(timeout);
+                        setConnected(true);
                     } catch (IOException e) {
-                        Log.e("Toast", "IOException in Client.getData()", e);
-                        break;
+                        reconnectLock.lock();
+                        reconnectCondition.signal();
+                        reconnectLock.unlock();
                     }
-                }
 
-                return java.util.Arrays.copyOf(d, offset);
-            }
+                    Thread readThread = new Thread(new Runnable() {
+                        public void run() {
+                            try {
+                                while (!shouldStop.get()) {
+                                    byte[] b = Util.getData(socket, 4);
+                                    int length = ((b[0] & 0xff) << 24) | ((b[1] & 0xff) << 16) | ((b[2] & 0xff) << 8) | (b[3] & 0xff);
+                                    if (length < 0 || length > (1024 * 1024)) {
+                                        throw new Error("Strange block length " + length);
+                                    }
 
-            public void run() {
-                while (!stop.get()) {
+                                    Message message = Message.obtain();
+                                    Bundle bundle = new Bundle();
+                                    bundle.putByteArray("data", Util.getData(socket, length));
+                                    message.setData(bundle);
+                                    Log.e("Client", "Passing data to UI");
+                                    handler.sendMessage(message);
+                                }
+                            } catch (IOException e) {
+                                reconnectLock.lock();
+                                reconnectCondition.signal();
+                                reconnectLock.unlock();
+                            }
+                        }
+                    });
+
+                    readThread.start();
+
+                    Thread writeThread = new Thread(new Runnable() {
+                        public void run() {
+                            try {
+                                while (!shouldStop.get()) {
+                                    writeLock.lock();
+                                    try {
+                                        while (toWrite.size() == 0 && !shouldStop.get()) {
+                                            writeCondition.await();
+                                        }
+                                    } finally {
+                                        writeLock.unlock();
+                                    }
+
+                                    byte[] s = null;
+                                    writeLock.lock();
+                                    if (toWrite.size() > 0) {
+                                        s = toWrite.get(0);
+                                    }
+                                    writeLock.unlock();
+                                    if (s != null) {
+                                        socket.getOutputStream().write((s.length >> 24) & 0xff);
+                                        socket.getOutputStream().write((s.length >> 16) & 0xff);
+                                        socket.getOutputStream().write((s.length >> 8) & 0xff);
+                                        socket.getOutputStream().write((s.length >> 0) & 0xff);
+                                        socket.getOutputStream().write(s);
+                                        writeLock.lock();
+                                        toWrite.remove(0);
+                                        writeLock.unlock();
+                                    }
+                                }
+                            } catch (IOException e) {
+                                reconnectLock.lock();
+                                reconnectCondition.signal();
+                                reconnectLock.unlock();
+                            } catch (InterruptedException e) {
+                                reconnectLock.lock();
+                                reconnectCondition.signal();
+                                reconnectLock.unlock();
+                            }
+                        }
+                    });
+
+                    writeThread.start();
+
                     try {
-                        synchronized (mutex) {
-                            /* Connect */
-                            socket = new Socket(hostName, port);
-                            socket.setSoTimeout(timeout);
-                        }
-
-                        /* Keep going until there is a problem on read */
-
-                        while (true) {
-                            byte[] b = getData(socket, 4);
-
-                            if (b.length != 4) {
-                                break;
-                            }
-
-                            int length = ((b[0] & 0xff) << 24) | ((b[1] & 0xff) << 16) | ((b[2] & 0xff) << 8) | (b[3] & 0xff);
-                            if (length < 0 || length > (1024 * 1024)) {
-                                /* Don't like the sound of that */
-                                Log.e("Toast", "Strange length " + length);
-                                break;
-                            }
-
-                            byte[] d = getData(socket, length);
-
-                            if (d.length != length) {
-                                break;
-                            }
-
-                            handler(d);
-                        }
-
-                        synchronized (mutex) {
-                            /* Close the socket and go back round to connect again */
-                            socket.close();
-                            socket = null;
-                        }
-
-                    } catch (ConnectException e) {
-                        Log.e("Toast", "ConnectException");
-                    } catch (UnknownHostException e) {
-                        Log.e("Toast", "UnknownHostException");
-                    } catch (IOException e) {
-                        Log.e("Client", "IOException");
-                    } finally {
-                        try {
-                            Thread.sleep(timeout);
-                        } catch (java.lang.InterruptedException e) {
-
-                        }
-                    }
-                }
-            }
-        });
-
-        readThread.start();
-
-        /* Thread to send stuff to the server */
-        writeThread = new Thread(new Runnable() {
-
-            public void run() {
-
-                while (!stop.get()) {
-
-                    lock.lock();
-                    try {
-                        while (toWrite.size() == 0 && !stop.get()) {
-                            writeCondition.await();
-                        }
-                    } catch (InterruptedException e) {
-
-                    } finally {
-                        lock.unlock();
-                    }
-
-                    byte[] s = null;
-                    lock.lock();
-                    if (toWrite.size() > 0) {
-                        s = toWrite.get(0);
-                        toWrite.remove(0);
-                    }
-                    lock.unlock();
-
-                    synchronized (mutex) {
-                        try {
-                            if (socket != null && s != null) {
-                                socket.getOutputStream().write((s.length >> 24) & 0xff);
-                                socket.getOutputStream().write((s.length >> 16) & 0xff);
-                                socket.getOutputStream().write((s.length >> 8) & 0xff);
-                                socket.getOutputStream().write((s.length >> 0) & 0xff);
-                                socket.getOutputStream().write(s);
-                            }
-                        } catch (IOException e) {
-                            Log.e("Toast", "IOException in write");
-                        }
-                    }
-                }
-            }
-        });
-
-        writeThread.start();
-
-        /* Thread to send pings every so often */
-        pingThread = new Thread(new Runnable() {
-            public void run() {
-                while (!stop.get()) {
-                    if (ping.get() == true && pong.get() == false) {
-                        for (Handler h : handlers) {
-                            h.sendEmptyMessage(0);
-                        }
-                        setConnected(false);
-                    }
-                    pong.set(false);
-                    try {
-                        send(new byte[] { State.OP_PING});
-                        ping.set(true);
-                        Thread.sleep(pingInterval);
+                        reconnectLock.lock();
+                        reconnectCondition.await();
+                        reconnectLock.unlock();
                     } catch (InterruptedException e) {
                     }
 
+                    try {
+                        readThread.interrupt();
+                        readThread.join();
+                        writeThread.interrupt();
+                        writeThread.join();
+                    } catch (InterruptedException e) {
+
+                    }
+
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+
+                    }
+
+                    setConnected(false);
                 }
             }
         });
 
-        pingThread.start();
+        connectThread.start();
     }
 
-    private void handler(byte[] data) {
-        if (data[0] == State.OP_PONG) {
-            setConnected(true);
-            pong.set(true);
-        } else {
-           for (Handler h : handlers) {
-               Message m = Message.obtain();
-               Bundle b = new Bundle();
-               b.putByteArray("data", data);
-               m.setData(b);
-               h.sendMessage(m);
-           }
-        }
-    }
-
-    /** Send to server */
     public void send(byte[] data) {
-        lock.lock();
+        writeLock.lock();
         try {
             toWrite.add(data);
             writeCondition.signal();
         } finally {
-            lock.unlock();
+            writeLock.unlock();
         }
     }
 
     public void stop() {
-        stop.set(true);
+        shouldStop.set(true);
+        if (controlThread != null   ) {
+            controlThread.interrupt();
+            try {
+                controlThread.join();
+            } catch (InterruptedException e) {
 
-        /* Wake the write thread so it notices that we want to stop */
-        lock.lock();
-        try {
-            writeCondition.signal();
-        } finally {
-            lock.unlock();
-        }
-
-        /* This interrupts blocking reads in the read thread */
-        try {
-            synchronized (mutex) {
-                if (socket != null) {
-                    socket.close();
-                }
             }
-        } catch (IOException e) {
         }
-
-        /* Interrupt the ping thread */
-        pingThread.interrupt();
-
-        /* Interrupt sleeps in the read thread */
-        readThread.interrupt();
-
-        try {
-            readThread.join();
-            writeThread.join();
-            pingThread.join();
-        } catch (InterruptedException e) {
-        }
-    }
-
-    /** Add a handler which will be called with an empty message
-     *  when connection state changes, or a message containing
-     *  a JSON block (with key "json").
-     */
-    void addHandler(Handler handler) {
-        handlers.add(handler);
     }
 
     private void setConnected(boolean c) {
@@ -309,10 +216,7 @@ public class Client {
         }
 
         connected.set(c);
-
-        for (Handler h : handlers) {
-            h.sendEmptyMessage(0);
-        }
+        handler.sendEmptyMessage(0);
     }
 
     public boolean getConnected() {

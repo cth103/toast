@@ -34,9 +34,6 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -109,38 +106,31 @@ import java.util.List;
            We also need to know when the client connects or disconnects.
         */
 
-        try {
-            client = new Client();
+        client = new Client(
+                new Handler() {
+                    public void handleMessage(Message message) {
+                        Bundle data = message.getData();
 
-            client.addHandler(new Handler() {
-                public void handleMessage(Message message) {
-
-                    Bundle data = message.getData();
-
-                    if (data != null && data.getString("data") != null) {
-                        /* Some state changed */
-                        state.setFromBinary(data.getByteArray("data"));
-                    } else {
-
-                        /* Connected or disconnected */
-                        if (getConnected()) {
-                            /* Newly connected: ask the server to tell us the basics
-                               and then the full temperature history.  The full history
-                               can be moderately slow to parse as it can be a few
-                               hundred kilobytes.
-                            */
-                            client.send(new byte[] { State.OP_SEND_BASIC });
-                            client.send(new byte[] { State.OP_SEND_ALL });
+                        if (data != null && data.getByteArray("data") != null) {
+                            /* Some state changed */
+                            state.setFromBinary(data.getByteArray("data"));
+                        } else {
+                            /* Connected or disconnected */
+                            if (getConnected()) {
+                                /* Newly connected: ask the server to tell us the basics
+                                   and then the full temperature history.
+                                   XXX this was to cope with the fact that the whole history
+                                   takes a long time to parse: may not be a problem with
+                                   binary transfer.
+                                */
+                                client.send(new byte[]{State.OP_SEND_BASIC});
+                                client.send(new byte[]{State.OP_SEND_ALL});
+                            }
                         }
                     }
-                }
-            });
+                });
 
-            client.start(prefs.getString("hostname", "192.168.1.1"), Integer.parseInt(prefs.getString("port", "80")));
-
-        } catch (IOException e) {
-            Log.e("Toast", "IOException in startClient", e);
-        }
+        client.start(prefs.getString("hostname", "192.168.1.1"), Integer.parseInt(prefs.getString("port", "80")));
     }
 
     public static class Adapter extends FragmentPagerAdapter {

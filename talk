@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-import json
+import datetime
 import socket
 import util
 import messages
@@ -13,14 +13,94 @@ parser.add_argument('--host', help='host to send to', type=str, default='localho
 parser.add_argument('commands', nargs='*')
 args = parser.parse_args()
 
+def error(m):
+    print m
+    sys.exit(1)
+
+def get_string(b, p):
+    sl = b[p]
+    return (p+sl+1, b[p+1:p+sl+1].decode('UTF-8'))
+
+def get_float(b, p):
+    return float(b[p] | b[p+1] << 8) / 16
+
+def get_int16(b, p):
+    return b[p] | b[p+1] << 8
+
+def get_datum(b, p):
+    s = b[p] | b[p+1] << 8 | b[p+2] << 16 | b[p+3] << 24 | b[p+4] << 32 | b[p+5] << 40 | b[p+6] << 48 | b[p+7] << 56
+    v = get_float(b, p + 8)
+    return (s, v)
+
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((args.host, args.port))
 for c in args.commands:
     b = bytearray()
     if c == 'ping':
         b.append(messages.OP_PING)
+    elif c == 'send-basic':
+        b.append(messages.OP_SEND_BASIC)
+    elif c == 'send-all':
+        b.append(messages.OP_SEND_ALL)
     util.send_bytearray(s, b)
     reply = util.get_bytearray(s)
     if len(reply) > 0 and reply[0] == messages.OP_PONG:
         print 'PONG'
+    elif len(reply) > 0 and (c == 'send-basic' or c == 'send-all'):
+        p = 0
+        op = reply[p]
+        if op == messages.OP_ALL:
+            print 'Receiving all information'
+        else:
+            print 'Receiving unknown information subset'
+        p += 1
+
+        if op == messages.OP_ALL or op == messages.OP_HEATING_ENABLED:
+            print 'Heating enabled: %d' % reply[p]
+            p += 1
+        if op == messages.OP_ALL or op == messages.OP_BOILER_ON:
+            print 'Boiler on: %d' % reply[p]
+            p += 1
+
+        zones = reply[p]
+        zone_names = []
+        p += 1
+        for i in range(0, zones):
+            (p, name) = get_string(reply, p)
+            zone_names.append(name)
+
+        for z in range(0, zones):
+            print '%s:' % zone_names[z]
+            if op == messages.OP_ALL or op == messages.OP_ZONE_HEATING_ENABLED:
+                print '\theating enabled: %d' % reply[p]
+                p += 1
+            if op == messages.OP_ALL or op == messages.OP_TARGET:
+                print '\ttarget: %f' % get_float(reply, p)
+                p += 2
+            if op == messages.OP_ALL or op == messages.OP_TEMPERATURES:
+                N = get_int16(reply, p)
+                p += 2
+                print '\t%d temperatures' % N
+                for i in range(0, N):
+                    d = get_datum(reply, p)
+                    p += 10
+                    print '\t\t%s: %f' % (datetime.datetime.fromtimestamp(d[0]), d[1])
+            if op == messages.OP_ALL or op == messages.OP_HUMIDITIES:
+                N = get_int16(reply, p)
+                p += 2
+                print '\t%d humidities' % N
+                for i in range(0, N):
+                    d = get_datum(reply, p)
+                    p += 10
+                    print '\t\t%s: %f' % (datetime.datetime.fromtimestamp(d[0]), d[1])
+
+        if op == messages.OP_ALL or op == messages.OP_RULES:
+            rules = reply[p]
+            p += 1
+            print '%d rules' % rules
+            # XXX
+
+        if op == messages.OP_ALL:
+            (p, exp) = get_string(reply, p)
+            print exp
 s.close()

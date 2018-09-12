@@ -38,6 +38,7 @@ import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -206,9 +207,12 @@ public class GraphFragment extends Fragment {
 
         period.setEnabled(true);
 
-        graph.setData(Datum.TYPE_TEMPERATURE, getGraphData(state.getTemperatures().get(zone.getSelectedItem())));
-        graph.setData(Datum.TYPE_HUMIDITY, getGraphData(state.getHumidities().get(zone.getSelectedItem())));
+        ArrayList<Datum> temps = state.getTemperatures().get(zone.getSelectedItem());
+        graph.setData(Datum.TYPE_TEMPERATURE, getGraphData(temps));
+        ArrayList<Datum> hums = state.getHumidities().get(zone.getSelectedItem());
+        graph.setData(Datum.TYPE_HUMIDITY, getGraphData(hums));
 
         graph.setTimeRange(endTime.getTime() - startTime.getTime());
     }
 }
+
