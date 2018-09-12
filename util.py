@@ -70,7 +70,7 @@ def get_json(socket, verbose=False):
     s = get_bytearray(socket)
     if verbose:
         print '<- %s' % s
-    return json.loads(s)
+    return json.loads(s.decode('UTF-8'))
 
 def get_bytearray(sock):
     """Receive a bytearray from a socket"""
@@ -84,3 +84,18 @@ def get_bytearray(sock):
         raise Error('could not get data from socket (got %d instead of %d)' % (len(s), size))
 
     return s
+
+def receive_json(socket, verbose=False):
+    """Receive some JSON from a socket"""
+    s = get_data(socket, 4)
+    if len(s) < 4:
+        return None
+
+    size = (s[0] << 24) | (s[1] << 16) | (s[2] << 8) | s[3]
+    s = get_data(socket, size)
+    if len(s) != size:
+        raise Error('could not get data from socket (got %d instead of %d)' % (len(s), size))
+
+    if verbose:
+        print '<- %s' % s
+    return json.loads(s.decode('UTF-8'))
