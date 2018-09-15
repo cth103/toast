@@ -20,6 +20,7 @@
 import sys
 import json
 import datetime
+import time
 
 class Error(Exception):
     def __init__(self, value):
@@ -101,3 +102,11 @@ def receive_json(socket, verbose=False):
     if verbose:
         print '<- %s' % s
     return json.loads(s.decode('UTF-8'))
+
+class Datum(object):
+    def __init__(self, value, timestamp=None):
+        self.value = value
+        if timestamp is None:
+            self.time = time.localtime()
+        else:
+            self.time = timestamp

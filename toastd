@@ -37,7 +37,9 @@ import traceback
 
 import binary_server
 import util
+from util import Datum
 import messages
+import weather
 
 # GPIO pin of boiler relay
 BOILER_GPIO = 2
@@ -45,15 +47,17 @@ BOILER_GPIO = 2
 HYSTERESIS = 0.2
 # Interval in seconds to check state and update hardware
 CHECK_INTERVAL = 1
-# Minutes to keep sensor readings in memory
-MEMORY_LOG_MINUTES = 60 * 24 * 7
+# Number of sensor readings to keep in memory
+MEMORY_LOG_COUNT = 60 * 24 * 7
 # Hours of the day to turn off heating automatically in
 # case somebody has forgotten
 AUTO_OFF_HOURS = [0, 1, 2, 3, 4, 5, 6, 10]
 # Default target temperature
 DEFAULT_TARGET = 19.0
-HUMIDITY_HIGH_THRESHOLD = 72.0
-HUMIDITY_LOW_THRESHOLD = 68.0
+# RH high threshold above current Met Office measurement
+HUMIDITY_HIGH_THRESHOLD = 6
+# RH low threshold above current Met Office measurement
+HUMIDITY_LOW_THRESHOLD = 2
 # Port to talk to nodes on
 NODE_PORT = 9142
 # Port to listen for ESP8266 UDP broadcasts
@@ -93,14 +97,6 @@ def binary_datum(s):
     b.append((seconds & 0xff00000000000000) >> 56)
     b.extend(binary_float(s.value))
     return b
-
-class Datum(object):
-    def __init__(self, value, timestamp=None):
-        self.value = value
-        if timestamp is None:
-            self.time = time.localtime()
-        else:
-            self.time = timestamp
 
 class NodeProperties(object):
     def __init__(self, zone, name, actuators, sensors):
@@ -394,6 +390,8 @@ class State:
         self.temperatures = {}
         # Room relative humidities in each zome, relative to outside humidity (positive = more humid)
         self.humidities = {}
+        self.outside_temperatures = []
+        self.outside_humidities = []
         self.rules = []
 
         self.mutex = threading.Lock()
@@ -447,7 +445,7 @@ class State:
             if not zone in self.temperatures:
                 self.temperatures[zone] = []
             self.temperatures[zone].append(t)
-            if len(self.temperatures[zone]) > MEMORY_LOG_MINUTES:
+            if len(self.temperatures[zone]) > MEMORY_LOG_COUNT:
                 state.temperatures[zone].pop(0)
 
     def add_humidity(self, zone, h):
@@ -456,7 +454,7 @@ class State:
             if not zone in self.humidities:
                 self.humidities[zone] = []
             self.humidities[zone].append(h)
-            if len(self.humidities[zone]) > MEMORY_LOG_MINUTES:
+            if len(self.humidities[zone]) > MEMORY_LOG_COUNT:
                 state.humidities[zone].pop(0)
 
     def set_rules(self, r):
@@ -469,6 +467,19 @@ class State:
         if changed:
             server.send(self.as_binary(True, messages.OP_RULES, "rules"))
 
+    def maybe_add_outside_humidity(self, h):
+        with self.mutex:
+            if len(self.outside_humidities) == 0 or self.outside_humidities[-1].time != h.time:
+                self.outside_humidities.append(h)
+            if len(self.outside_humidities) > MEMORY_LOG_COUNT:
+                state.outside_humidities.pop(0)
+
+    def maybe_add_outside_temperature(self, t):
+        with self.mutex:
+            if len(self.outside_temperatures) == 0 or self.outside_temperatures[-1].time != t.time:
+                self.outside_temperatures.append(t)
+            if len(self.outside_temperatures) > MEMORY_LOG_COUNT:
+                state.outside_temperatures.pop(0)
 
     # Get methods for use by the server
 
@@ -514,117 +525,90 @@ class State:
         with self.mutex:
             return [r for r in self.rules if r.active()]
 
-
     # Misc
 
+    def one_or_all(self, out, values, all):
+        if all:
+            out.extend(binary_int16(len(values)))
+            for i in values:
+                out.extend(binary_datum(i))
+        elif len(values) > 0:
+            out.extend(binary_int16(1))
+            out.extend(binary_datum(values[-1]))
+        else:
+            out.extend(binary_int16(0))
+
     def as_binary(self, all_values=True, op=messages.OP_ALL):
-        out = bytearray()
-        out.append(op)
-        if op == messages.OP_ALL or op == messages.OP_HEATING_ENABLED:
-            out.append(self.heating_enabled)
-        if op == messages.OP_ALL or op == messages.OP_BOILER_ON:
-            out.append(self.boiler_on)
+        with self.mutex:
+            out = bytearray()
+            out.append(op)
+            if op == messages.OP_ALL or op == messages.OP_HEATING_ENABLED:
+                out.append(self.heating_enabled)
+            if op == messages.OP_ALL or op == messages.OP_BOILER_ON:
+                out.append(self.boiler_on)
+            if op == messages.OP_ALL or op == messages.OP_OUTSIDE_HUMIDITIES:
+                self.one_or_all(out, self.outside_humidities, all_values)
+            if op == messages.OP_ALL or op == messages.OP_OUTSIDE_TEMPERATURES:
+                self.one_or_all(out, self.outside_temperatures, all_values)
 
-        out.append(len(zones()))
-        for z in zones():
-            out.extend(binary_string(z))
+            out.append(len(zones()))
+            for z in zones():
+                out.extend(binary_string(z))
 
-        for z in zones():
-            if op == messages.OP_ALL or op == messages.OP_ZONE_HEATING_ENABLED:
-                if z in self.zone_heating_enabled:
-                    out.append(self.zone_heating_enabled[z])
-                else:
-                    out.append(0)
-            if op == messages.OP_ALL or op == messages.OP_TARGET:
-                if z in self.target:
-                    out.extend(binary_float(self.target[z]))
-                else:
-                    out.extend(binary_float(0))
-            if op == messages.OP_ALL or op == messages.OP_TEMPERATURES:
-                v = []
-                if z in self.temperatures:
-                    v = self.temperatures[z]
-                if all_values:
-                    out.extend(binary_int16(len(v)))
-                    for i in v:
-                        out.extend(binary_datum(i))
-                elif len(v) > 0:
-                    out.extend(binary_int16(1))
-                    out.extend(binary_datum(v[-1]))
-                else:
-                    out.extend(binary_int16(0))
-
-            if op == messages.OP_ALL or op == messages.OP_HUMIDITIES:
-                v = []
-                if z in self.humidities:
-                    v = self.humidities[z]
-                if all_values:
-                    out.extend(binary_int16(len(v)))
-                    for i in v:
-                        out.extend(binary_datum(i))
-                elif len(v) > 0:
-                    out.extend(binary_int16(1))
-                    out.extend(binary_datum(v[-1]))
-                else:
-                    out.extend(binary_int16(0))
-
-
-        if op == messages.OP_ALL or op == messages.OP_RULES:
-            assert(len(self.rules) < 256)
-            out.append(len(self.rules))
-            for r in self.rules:
-                out.extend(r.as_binary())
-
-        if op == messages.OP_ALL:
-            any_zone_heating_enabled = False
-            for k, v in self.zone_heating_enabled.iteritems():
-                if v:
-                    any_zone_heating_enabled = True
-
-            explanation = ""
-
-            if self.boiler_on:
-                if self.heating_enabled:
-                    explanation = "Heating"
-                else:
-                    explanation = "Heating to programmed target"
-            else:
-                if self.heating_enabled:
-                    if any_zone_heating_enabled:
-                        explanation = "Target temperatures reached"
+            for z in zones():
+                if op == messages.OP_ALL or op == messages.OP_ZONE_HEATING_ENABLED:
+                    if z in self.zone_heating_enabled:
+                        out.append(self.zone_heating_enabled[z])
                     else:
-                        explanation = "All rooms switched off"
+                        out.append(0)
+                if op == messages.OP_ALL or op == messages.OP_TARGET:
+                    if z in self.target:
+                        out.extend(binary_float(self.target[z]))
+                    else:
+                        out.extend(binary_float(0))
+                if op == messages.OP_ALL or op == messages.OP_TEMPERATURES:
+                    v = []
+                    if z in self.temperatures:
+                        v = self.temperatures[z]
+                    self.one_or_all(out, v, all_values)
+                if op == messages.OP_ALL or op == messages.OP_HUMIDITIES:
+                    v = []
+                    if z in self.humidities:
+                        v = self.humidities[z]
+                    self.one_or_all(out, v, all_values)
+
+
+            if op == messages.OP_ALL or op == messages.OP_RULES:
+                assert(len(self.rules) < 256)
+                out.append(len(self.rules))
+                for r in self.rules:
+                    out.extend(r.as_binary())
+
+            if op == messages.OP_ALL:
+                any_zone_heating_enabled = False
+                for k, v in self.zone_heating_enabled.iteritems():
+                    if v:
+                        any_zone_heating_enabled = True
+
+                explanation = ""
+
+                if self.boiler_on:
+                    if self.heating_enabled:
+                        explanation = "Heating"
+                    else:
+                        explanation = "Heating to programmed target"
                 else:
-                    explanation = "Heating is switched off"
+                    if self.heating_enabled:
+                        if any_zone_heating_enabled:
+                            explanation = "Target temperatures reached"
+                        else:
+                            explanation = "All rooms switched off"
+                    else:
+                        explanation = "Heating is switched off"
 
-            out.extend(binary_string(explanation))
+                out.extend(binary_string(explanation))
 
-        return out
-
-    def set_from_dict(self, c):
-        """Set up this object from a dict"""
-        if 'heating_enabled' in c:
-            self.set_heating_enabled(c['heating_enabled'])
-        if 'zone_heating_enabled' in c:
-            for z in c['zone_heating_enabled']:
-                self.set_zone_heating_enabled(z['zone'], z['zone_heating_enabled'])
-        if 'target' in c:
-            for z in c['target']:
-                self.set_target(z['zone'], z['target'])
-        if 'boiler_on' in c:
-            self.set_boiler_on(c['boiler_on'])
-        # We never expect to receive these data here, since
-        # they are managed by the server, sent out to the client(s)
-        # and a client never sends them back.
-        assert(not 'temperatures' in c)
-        assert(not 'humidities' in c)
-        if 'rules' in c:
-            rules = []
-            for dr in c['rules']:
-                r = Rule()
-                r.read_dict(dr)
-                rules.append(r)
-            self.set_rules(rules)
+            return out
 
 def setup():
     global args
@@ -721,11 +705,11 @@ def update():
     for z in zones():
         hum = state.get_current_humidity(z)
         if hum is not None:
-            if hum.value > HUMIDITY_HIGH_THRESHOLD:
+            if hum.value > (weather.state.get_humidity().value + HUMIDITY_HIGH_THRESHOLD):
                 for n in zone_nodes(z):
                     if n.has_actuator('fan'):
                         n.set_actuator('fan', True)
-            elif hum.value < HUMIDITY_LOW_THRESHOLD:
+            elif hum.value < (weather.state.get_humidity().value + HUMIDITY_LOW_THRESHOLD):
                 for n in zone_nodes(z):
                     if n.has_actuator('fan'):
                         n.set_actuator('fan', False)
@@ -804,6 +788,9 @@ def log():
                         f.close()
 
                     state.add_humidity(z, datum)
+
+        state.maybe_add_outside_temperature(weather.state.get_temperature())
+        state.maybe_add_outside_humidity(weather.state.get_humidity())
 
         time.sleep(args.log_interval)
 
