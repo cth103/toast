@@ -17,7 +17,9 @@ public class Datum {
 
     public static final int TYPE_TEMPERATURE = 0;
     public static final int TYPE_HUMIDITY = 1;
-    public static final int TYPE_COUNT = 2;
+    public static final int TYPE_OUTSIDE_HUMIDITY = 2;
+    public static final int TYPE_OUTSIDE_TEMPERATURE = 3;
+    public static final int TYPE_COUNT = 4;
 
     public static final int BINARY_LENGTH = 10;
 

@@ -48,7 +48,9 @@ public class ControlFragment extends Fragment {
     private class Zone {
 
         private TextView temperature;
+        private TextView outsideTemperature;
         private TextView humidity;
+        private TextView outsideHumidity;
         private CheckBox target;
         private Button warmer;
         private Button colder;

@@ -49,7 +49,9 @@ public class State {
     public static final int HUMIDITIES = 5;
     /** Rules (programmed targets at particular times) */
     public static final int RULES = 6;
-    public static final int ALL = 7;
+    public static final int OUTSIDE_HUMIDITIES = 7;
+    public static final int OUTSIDE_TEMPERATURES = 8;
+    public static final int ALL = 0xf;
 
     private Context context;
     /** Handlers that will be notified when there is a change in state */
@@ -61,6 +63,8 @@ public class State {
     private boolean boilerOn = false;
     private HashMap<String, ArrayList<Datum>> temperatures = new HashMap<>();
     private HashMap<String, ArrayList<Datum>> humidities = new HashMap<>();
+    private ArrayList<Datum> outsideHumidities = new ArrayList<>();
+    private ArrayList<Datum> outsideTemperatures = new ArrayList<>();
     private ArrayList<Rule> rules = new ArrayList<>();
     private String explanation;
     private ArrayList<String> zones = new ArrayList<>();
@@ -110,6 +114,10 @@ public class State {
         return humidities;
     }
 
+    public synchronized ArrayList<Datum> getOutsideHumidities() { return outsideHumidities; }
+
+    public synchronized ArrayList<Datum> getOutsideTemperatures() { return outsideTemperatures; }
+
     public synchronized ArrayList<Rule> getRules() {
         return rules;
     }
@@ -126,6 +134,11 @@ public class State {
             s.write(heatingEnabled ? 1 : 0);
         } else if (id == ZONE_HEATING_ENABLED) {
             s.write(OP_CHANGE | ZONE_HEATING_ENABLED);
+        } else if (id == TARGET) {
+            s.write(OP_CHANGE | TARGET);
+        } else if (id == BOILER_ON) {
+            s.write(OP_CHANGE | BOILER_ON);
+            s.write(boilerOn ? 1 : 0);
         }
 
         s.write(zones.size());
@@ -142,7 +155,6 @@ public class State {
                 }
             }
         } else if (id == TARGET) {
-            s.write(OP_CHANGE | TARGET);
             for (int i = 0; i < zones.size(); ++i) {
                 if (target.containsKey(zones.get(i))) {
                     Util.putFloat(s, target.get(zones.get(i)));
@@ -150,9 +162,6 @@ public class State {
                     Util.putFloat(s, 0);
                 }
             }
-        } else if (id == BOILER_ON) {
-            s.write(OP_CHANGE | BOILER_ON);
-            s.write(boilerOn ? 1 : 0);
         } else if (id == RULES) {
             /* XXX */
         }
@@ -211,6 +220,16 @@ public class State {
         changed(HUMIDITIES);
     }
 
+    public synchronized void setOutsideHumidities(ArrayList<Datum> h) {
+        outsideHumidities = h;
+        changed(OUTSIDE_HUMIDITIES);
+    }
+
+    public synchronized void setOutsideTemperatures(ArrayList<Datum> t) {
+        outsideTemperatures = t;
+        changed(OUTSIDE_TEMPERATURES);
+    }
+
     public synchronized void addOrReplace(Rule rule) {
         boolean done = false;
         for (Rule r : rules) {
@@ -245,6 +264,16 @@ public class State {
         }
     }
 
+    private int getDatumArray(byte[] data, int offset, ArrayList<Datum> d) {
+        int num = Util.getInt16(data, offset);
+        offset += 2;
+        for (int j = 0; j < num; ++j) {
+            d.add(new Datum(data, offset));
+            offset += Datum.BINARY_LENGTH;
+        }
+        return offset;
+    }
+
     public synchronized void setFromBinary(byte[] data) {
         int o = 0;
         final int op = data[o++];
@@ -257,6 +286,18 @@ public class State {
 
         if (all || op == (OP_CHANGE | BOILER_ON)) {
             setBoilerOn(data[o++] == 1);
+        }
+
+        if (all || op == (OP_CHANGE | OUTSIDE_HUMIDITIES)) {
+            ArrayList<Datum> t = new ArrayList<>();
+            o = getDatumArray(data, o, t);
+            setOutsideHumidities(t);
+        }
+
+        if (all || op == (OP_CHANGE | OUTSIDE_TEMPERATURES)) {
+            ArrayList<Datum> t = new ArrayList<>();
+            o = getDatumArray(data, o, t);
+            setOutsideTemperatures(t);
         }
 
         int numZones = data[o++];
@@ -276,23 +317,13 @@ public class State {
                 o += 2;
             }
             if (all || op == (OP_CHANGE | TEMPERATURES)) {
-                int num = Util.getInt16(data, o);
-                o += 2;
                 ArrayList<Datum> t = new ArrayList<>();
-                for (int j = 0; j < num; ++j) {
-                    t.add(new Datum(data, o));
-                    o += Datum.BINARY_LENGTH;
-                }
+                o = getDatumArray(data, o, t);
                 setTemperatures(name, t);
             }
             if (all || op == (OP_CHANGE | HUMIDITIES)) {
-                int num = Util.getInt16(data, o);
-                o += 2;
                 ArrayList<Datum> t = new ArrayList<>();
-                for (int j = 0; j < num; ++j) {
-                    t.add(new Datum(data, o));
-                    o += Datum.BINARY_LENGTH;
-                }
+                o = getDatumArray(data, o, t);
                 setHumidities(name, t);
             }
         }

@@ -19,29 +19,19 @@
 
 package net.carlh.toast;
 
-import android.app.Activity;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.util.AttributeSet;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.LinearLayout;
 import android.widget.Spinner;
-
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /** Fragment to plot graphs of temperature */
 public class GraphFragment extends Fragment {
@@ -162,7 +152,7 @@ public class GraphFragment extends Fragment {
     }
 
 
-    private ArrayList<Graph.Point> getGraphData(ArrayList<Datum> data) {
+    private ArrayList<Graph.Point> getSmoothedGraphData(ArrayList<Datum> data) {
         if (data == null) {
             return null;
         }
@@ -190,6 +180,41 @@ public class GraphFragment extends Fragment {
         return graphData;
     }
 
+    private ArrayList<Graph.Point> getSparseGraphData(ArrayList<Datum> data) {
+        if (data == null) {
+            return null;
+        }
+
+        ArrayList<Graph.Point> graphData = new ArrayList<>();
+        double lastBefore = 0;
+        double firstAfter = 0;
+        for (Datum i: data) {
+            if (i.time.compareTo(startTime) < 0) {
+                /* before range */
+                lastBefore = i.value;
+                firstAfter = i.value;
+            } else if (startTime.compareTo(i.time) <= 0 && i.time.compareTo(endTime) < 0) {
+                /* in range */
+                graphData.add(new Graph.Point(i.time.getTime() - startTime.getTime(), (float) i.value));
+                if (lastBefore == 0) {
+                    lastBefore = i.value;
+                }
+                firstAfter = i.value;
+            } else if (endTime.compareTo(i.time) < 0) {
+                /* after range */
+                if (lastBefore == 0) {
+                    lastBefore = i.value;
+                }
+                firstAfter = i.value;
+            }
+        }
+
+        graphData.add(0, new Graph.Point(0, (float) lastBefore));
+        graphData.add(new Graph.Point(endTime.getTime() - startTime.getTime(), (float) firstAfter));
+
+        return graphData;
+    }
+
     public void update() {
         if (period == null) {
             /* The UI hasn't been created yet */
@@ -208,9 +233,12 @@ public class GraphFragment extends Fragment {
         period.setEnabled(true);
 
         ArrayList<Datum> temps = state.getTemperatures().get(zone.getSelectedItem());
-        graph.setData(Datum.TYPE_TEMPERATURE, getGraphData(temps));
+        graph.setData(Datum.TYPE_TEMPERATURE, getSmoothedGraphData(temps));
         ArrayList<Datum> hums = state.getHumidities().get(zone.getSelectedItem());
-        graph.setData(Datum.TYPE_HUMIDITY, getGraphData(hums));
+        graph.setData(Datum.TYPE_HUMIDITY, getSmoothedGraphData(hums));
+
+        graph.setData(Datum.TYPE_OUTSIDE_TEMPERATURE, getSparseGraphData(state.getOutsideTemperatures()));
+        graph.setData(Datum.TYPE_OUTSIDE_HUMIDITY, getSparseGraphData(state.getOutsideHumidities()));
 
         graph.setTimeRange(endTime.getTime() - startTime.getTime());
     }
