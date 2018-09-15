@@ -428,7 +428,6 @@ class State:
                 self.target[zone] = target
                 changed = True
         if changed and server is not None:
-            server.send(self.as_binary(True, messages.OP_TARGET))
             request_update()
 
     def set_boiler_on(self, on):
@@ -898,6 +897,9 @@ def get_string(b, p):
     sl = b[p]
     return (p+sl+1, b[p+1:p+sl+1].decode('UTF-8'))
 
+def get_float(b, p):
+    return float(b[p] | b[p+1] << 8) / 16
+
 def zones_from_message(data, off):
     zones = data[off]
     off += 1
@@ -926,6 +928,14 @@ def handler(data):
             state.set_zone_heating_enabled(z, data[off])
             off += 1
         return state.as_binary(False, messages.OP_ZONE_HEATING_ENABLED)
+    elif data[0] == messages.OP_TARGET:
+        global state
+        off = 1
+        (off, zone_names) = zones_from_message(data, off)
+        for z in zone_names:
+            state.set_target(z, get_float(data, off))
+            off += 2
+        return state.as_binary(False, messages.OP_TARGET)
 
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     test()
