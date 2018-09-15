@@ -388,7 +388,7 @@ class State:
         self.boiler_on = False
         # Temperatures in each zone
         self.temperatures = {}
-        # Room relative humidities in each zome, relative to outside humidity (positive = more humid)
+        # Room relative humidities in each zone
         self.humidities = {}
         self.outside_temperatures = []
         self.outside_humidities = []
