@@ -437,7 +437,7 @@ class State:
                     RPi.GPIO.output(BOILER_GPIO, self.boiler_on)
                 changed = True
         if changed:
-            server.send(self.as_binary(True, messages.OP_BOILER_ON))
+            request_update()
 
     def add_temperature(self, zone, t):
         assert(isinstance(t, Datum))
@@ -576,7 +576,15 @@ class State:
                     if z in self.humidities:
                         v = self.humidities[z]
                     self.one_or_all(out, v, all_values)
-
+                if op == messages.OP_ALL or op == messages.OP_ACTUATORS:
+                    actuators = {}
+                    for n in zone_nodes(z):
+                        for a in n.actuators:
+                            actuators[a] = n.get_actuator(a)
+                    out.append(len(actuators))
+                    for k, v in actuators.iteritems():
+                        out.extend(binary_string(k))
+                        out.append(v)
 
             if op == messages.OP_ALL or op == messages.OP_RULES:
                 assert(len(self.rules) < 256)
@@ -905,7 +913,7 @@ def handler(data):
         return state.as_binary()
     elif data[0] == messages.OP_HEATING_ENABLED:
         global state
-        state.set_heating_enabled(data[1]);
+        state.set_heating_enabled(data[1])
         return state.as_binary(False, messages.OP_HEATING_ENABLED)
     elif data[0] == messages.OP_ZONE_HEATING_ENABLED:
         global state

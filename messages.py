@@ -12,4 +12,5 @@ OP_HUMIDITIES                   = OP_CHANGE | 5
 OP_RULES                        = OP_CHANGE | 6
 OP_OUTSIDE_HUMIDITIES           = OP_CHANGE | 7
 OP_OUTSIDE_TEMPERATURES         = OP_CHANGE | 8
+OP_ACTUATORS                    = OP_CHANGE | 9
 OP_ALL                          = OP_CHANGE | 0xf
