@@ -36,3 +36,19 @@ class Weather(object):
         return Datum(self.temperature, self.time.timetuple())
 
 state = Weather()
+
+def convert_relative_humidity(from_hum, from_temp, to_temp):
+    """Taken from https://www.vaisala.com/sites/default/files/documents/Humidity_Conversion_Formulas_B210973EN-F.pdf"
+
+    # Magic constants
+    A = 6.116441
+    m = 7.591386
+    T_n = 240.2763
+    C = 2.16679
+    Az = 273.15
+
+    P_w = A * (10 ** ((m * from_temp) / (from_temp + T_n))) * from_hum / 100
+    abs_hum = C * (P_w * 100) / (Az + from_temp)
+
+    P_w2 = (Az + to_temp) * abs_hum / C
+    return P_w2 / (A * (10 ** ((m * to_temp) / (to_temp + T_n))))
