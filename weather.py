@@ -38,7 +38,7 @@ class Weather(object):
 state = Weather()
 
 def convert_relative_humidity(from_hum, from_temp, to_temp):
-    """Taken from https://www.vaisala.com/sites/default/files/documents/Humidity_Conversion_Formulas_B210973EN-F.pdf"
+    """Taken from https://www.vaisala.com/sites/default/files/documents/Humidity_Conversion_Formulas_B210973EN-F.pdf"""
 
     # Magic constants
     A = 6.116441
