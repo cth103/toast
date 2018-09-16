@@ -55,9 +55,9 @@ AUTO_OFF_HOURS = [0, 1, 2, 3, 4, 5, 6, 10]
 # Default target temperature
 DEFAULT_TARGET = 19.0
 # RH high threshold above current Met Office measurement
-HUMIDITY_HIGH_THRESHOLD = 6
+HUMIDITY_HIGH_THRESHOLD = 3
 # RH low threshold above current Met Office measurement
-HUMIDITY_LOW_THRESHOLD = 2
+HUMIDITY_LOW_THRESHOLD = -3
 # Port to talk to nodes on
 NODE_PORT = 9142
 # Port to listen for ESP8266 UDP broadcasts
@@ -584,7 +584,10 @@ class State:
                     out.append(len(actuators))
                     for k, v in actuators.iteritems():
                         out.extend(binary_string(k))
-                        out.append(v)
+                        if v is None:
+                            out.append(0)
+                        else:
+                            out.append(v)
 
             if op == messages.OP_ALL or op == messages.OP_RULES:
                 assert(len(self.rules) < 256)
