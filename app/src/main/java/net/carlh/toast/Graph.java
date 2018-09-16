@@ -159,17 +159,14 @@ public class Graph extends View {
 
         for (int i = 0; i < Datum.TYPE_COUNT; ++i) {
             if (data.get(i) != null) {
-                Log.e("plot", "drawing shit for " + i);
                 Path path = new Path();
                 boolean first = true;
                 for (Point j : data.get(i)) {
                     if (first) {
                         path.moveTo(j.x, j.y - rangeMin[i]);
-                        Log.e("plot", "move " + j.x + " " + (j.y - rangeMin[i]));
                         first = false;
                     } else {
                         path.lineTo(j.x, j.y - rangeMin[i]);
-                        Log.e("plot", "line " + j.x + " " + (j.y - rangeMin[i]));
                     }
                 }
                 Matrix sm = new Matrix();

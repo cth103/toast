@@ -54,6 +54,7 @@ public class ControlFragment extends Fragment {
         private CheckBox target;
         private Button warmer;
         private Button colder;
+        private ImageView fan;
 
         /** Controls for a zone */
         public Zone(final String name, boolean first) {
@@ -70,22 +71,22 @@ public class ControlFragment extends Fragment {
                 TextView l = new TextView(a);
                 l.setText(name);
                 l.setTextSize(size);
-                l.setPadding(32, first ? 32 : 0, 0, 0);
+                l.setPadding(24, first ? 64 : 0, 0, 0);
                 l.setTypeface(null, Typeface.BOLD);
 
-                ImageView iv = new ImageView(a);
-                iv.setImageResource(R.drawable.ic_fan);
-                iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                fan = new ImageView(a);
+                fan.setImageResource(R.drawable.ic_fan);
+                fan.setScaleType(ImageView.ScaleType.FIT_CENTER);
 
                 LinearLayout state = new LinearLayout(a);
                 state.addView(l);
-                state.addView(iv);
+                state.addView(fan);
                 state.setGravity(Gravity.BOTTOM);
-                //iv.setVisibility(View.GONE);
+                fan.setVisibility(View.GONE);
 
-                LinearLayout.LayoutParams linear_params = (LinearLayout.LayoutParams) iv.getLayoutParams();
+                LinearLayout.LayoutParams linear_params = (LinearLayout.LayoutParams) fan.getLayoutParams();
                 linear_params.height = 64;
-                iv.setLayoutParams(linear_params);
+                fan.setLayoutParams(linear_params);
 
                 r.addView(state);
 
@@ -112,6 +113,7 @@ public class ControlFragment extends Fragment {
                 TableRow r = new TableRow(a);
 
                 target = new CheckBox(a);
+                target.setPadding(32, 0, 0, 0);
                 r.addView(target);
 
                 warmer = new Button(a);
@@ -185,6 +187,16 @@ public class ControlFragment extends Fragment {
 
         public void clearHumidity() {
             humidity.setText("");
+        }
+
+        public void setActuator(String name, boolean state) {
+            if (name.equals("fan")) {
+                if (state) {
+                    fan.setVisibility(View.VISIBLE);
+                } else {
+                    fan.setVisibility(View.GONE);
+                }
+            }
         }
     }
 
@@ -278,6 +290,15 @@ public class ControlFragment extends Fragment {
                 Zone z = zones.get(i.getKey());
                 if (z != null) {
                     z.setTarget(i.getValue());
+                }
+            }
+
+            for (Map.Entry<String, HashMap<String, Boolean>> i: state.getActuators().entrySet()) {
+                Zone z = zones.get(i.getKey());
+                if (z != null) {
+                    for (Map.Entry<String, Boolean> j: i.getValue().entrySet()) {
+                        z.setActuator(j.getKey(), j.getValue());
+                    }
                 }
             }
 

@@ -20,7 +20,7 @@
           android:layout_width="0dp"
           android:gravity="center_vertical"
           android:textSize="10pt"
-          android:paddingLeft="16dp"
+          android:paddingLeft="8dp"
 	      android:text="Heating"
           android:layout_span="2"/>
 
@@ -43,7 +43,7 @@
             android:gravity="center_vertical"
             android:id="@+id/on"
             android:textSize="10pt"
-            android:paddingLeft="16dp"
+            android:paddingLeft="8dp"
             android:text="..."
 	    android:layout_span="3" />
     </TableRow>
@@ -55,7 +55,7 @@
             android:gravity="center_vertical"
             android:id="@+id/explanation"
             android:textSize="8pt"
-            android:paddingLeft="16dp"
+            android:paddingLeft="8dp"
             android:text="..."
 	    android:layout_span="3" />
     </TableRow>

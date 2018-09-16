@@ -51,6 +51,7 @@ public class State {
     public static final int RULES = 6;
     public static final int OUTSIDE_HUMIDITIES = 7;
     public static final int OUTSIDE_TEMPERATURES = 8;
+    public static final int ACTUATORS = 9;
     public static final int ALL = 0xf;
 
     private Context context;
@@ -65,6 +66,7 @@ public class State {
     private HashMap<String, ArrayList<Datum>> humidities = new HashMap<>();
     private ArrayList<Datum> outsideHumidities = new ArrayList<>();
     private ArrayList<Datum> outsideTemperatures = new ArrayList<>();
+    private HashMap<String, HashMap<String, Boolean>> actuators = new HashMap<>();
     private ArrayList<Rule> rules = new ArrayList<>();
     private String explanation;
     private ArrayList<String> zones = new ArrayList<>();
@@ -169,6 +171,8 @@ public class State {
         return s.toByteArray();
     }
 
+    public HashMap<String, HashMap<String, Boolean>> getActuators () { return actuators; }
+
 
     /* Set */
 
@@ -228,6 +232,11 @@ public class State {
     public synchronized void setOutsideTemperatures(ArrayList<Datum> t) {
         outsideTemperatures = t;
         changed(OUTSIDE_TEMPERATURES);
+    }
+
+    public synchronized void setActuators(String zone, HashMap<String, Boolean> v) {
+        actuators.put(zone, v);
+        changed(ACTUATORS);
     }
 
     public synchronized void addOrReplace(Rule rule) {
@@ -325,6 +334,16 @@ public class State {
                 ArrayList<Datum> t = new ArrayList<>();
                 o = getDatumArray(data, o, t);
                 setHumidities(name, t);
+            }
+            if (all || op == (OP_CHANGE | ACTUATORS)) {
+                HashMap<String, Boolean> act = new HashMap<>();
+                int N = data[o++];
+                for (int i = 0; i < N; ++i) {
+                    String actName = Util.getString(data, o);
+                    o += actName.length() + 1;
+                    act.put(actName, data[o++] > 0);
+                }
+                setActuators(name, act);
             }
         }
 
