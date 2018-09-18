@@ -781,12 +781,16 @@ def log():
         log_file = os.path.join(args.log_directory, time.strftime("%d-%m-%Y.log"))
 
         for z in zones():
+            log_z = z.replace(' ', '_')
             for n in zone_nodes(z):
                 datum = get_sensor(n, 'temperature')
                 if datum is not None:
                     if write_logs:
+                        act = 'X'
+                        if n.has_actuator('radiator'):
+                            act = '%d' % n.get_actuator('radiator')
                         f = open(log_file, 'a')
-                        print>>f,'%s %f %f %d %d' % (time.strftime("%H:%M:%S"), datum.value, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
+                        print>>f,'%s %s temp %f %s %f %d %d' % (time.strftime("%H:%M:%S"), log_z, datum.value, act, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
                         f.close()
 
                     state.add_temperature(z, datum)
@@ -794,8 +798,11 @@ def log():
                 datum = get_sensor(n, 'humidity')
                 if datum is not None:
                     if write_logs:
+                        act = 'X'
+                        if n.has_actuator('fan'):
+                            act = '%d' % n.get_actuator('fan')
                         f = open(log_file, 'a')
-                        print>>f,'%s %d %f %d %d' % (time.strftime("%H:%M:%S"), datum.value, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
+                        print>>f,'%s %s hum %f %s' % (time.strftime("%H:%M:%S"), log_z, datum.value, act)
                         f.close()
 
                     state.add_humidity(z, datum)
