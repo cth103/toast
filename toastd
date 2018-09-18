@@ -54,10 +54,10 @@ MEMORY_LOG_COUNT = 60 * 24 * 7
 AUTO_OFF_HOURS = [0, 1, 2, 3, 4, 5, 6, 10]
 # Default target temperature
 DEFAULT_TARGET = 19.0
-# RH high threshold above current Met Office measurement
-HUMIDITY_HIGH_THRESHOLD = 3
-# RH low threshold above current Met Office measurement
-HUMIDITY_LOW_THRESHOLD = -3
+# RH rising threshold
+HUMIDITY_HIGH_THRESHOLD = 78
+# RH falling threshold
+HUMIDITY_LOW_THRESHOLD = 72
 # Port to talk to nodes on
 NODE_PORT = 9142
 # Port to listen for ESP8266 UDP broadcasts
@@ -716,11 +716,11 @@ def update():
     for z in zones():
         hum = state.get_current_humidity(z)
         if hum is not None:
-            if hum.value > (weather.state.get_humidity().value + HUMIDITY_HIGH_THRESHOLD):
+            if hum.value > HUMIDITY_HIGH_THRESHOLD:
                 for n in zone_nodes(z):
                     if n.has_actuator('fan'):
                         n.set_actuator('fan', True)
-            elif hum.value < (weather.state.get_humidity().value + HUMIDITY_LOW_THRESHOLD):
+            elif hum.value < HUMIDITY_LOW_THRESHOLD:
                 for n in zone_nodes(z):
                     if n.has_actuator('fan'):
                         n.set_actuator('fan', False)
