@@ -658,10 +658,10 @@ def update():
     global state
 
     # Apply auto-off
-    time = datetime.datetime.now()
-    if time.minute == 0 and time.hour in AUTO_OFF_HOURS and state.get_heating_enabled():
+    now = datetime.datetime.now()
+    if now.minute == 0 and now.hour in AUTO_OFF_HOURS and state.get_heating_enabled():
         state.set_heating_enabled(False)
-        util.verbose('turned off automatically at %d:%02d' % (time.hour, time.minute))
+        util.verbose('turned off automatically at %d:%02d' % (now.hour, now.minute))
 
     # Work out whether each zone's heating is enabled and what its temperature should be
 
@@ -717,8 +717,14 @@ def update():
 
     # Humidity
     for z in zones():
+        hum = state.get_current_humidity(z)
+        if hum is None:
+            continue
         proc = state.get_humidity_processor(z)
-        fan_on = proc.add(state.get_current_humidity(z))
+        if (time.mktime(hum.time) - time.mktime(time.localtime())) > 600:
+            # This reading is very old
+            proc.reset()
+        fan_on = proc.add(hum.value)
         for n in zone_nodes(z):
             if n.has_actuator('fan'):
                 n.set_actuator('fan', fan_on)
@@ -797,7 +803,7 @@ def log():
                 if datum is not None:
                     if write_logs:
                         act = 'X'
-                        if n.has_actuator('fan'):
+                        if n.has_actuator('fan') and n.get_actuator('fan') is not None:
                             act = '%d' % n.get_actuator('fan')
                         f = open(log_file, 'a')
                         print>>f,'%s %s hum %f %s' % (time.strftime("%H:%M:%S"), log_z, datum.value, act)

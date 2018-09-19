@@ -116,6 +116,9 @@ class HumidityProcessor(object):
         self.maf_len = maf_len
         self.rising = rising
         self.falling = falling
+        self.reset()
+
+    def reset(self):
         self.fan_on = False
         self.maf = []
         self.last = None
