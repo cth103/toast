@@ -718,7 +718,7 @@ def update():
     # Humidity
     for z in zones():
         proc = state.get_humidity_processor(z)
-        fan_on = proc.add(state.get_current_humidity[z])
+        fan_on = proc.add(state.get_current_humidity(z))
         for n in zone_nodes(z):
             if n.has_actuator('fan'):
                 n.set_actuator('fan', fan_on)
