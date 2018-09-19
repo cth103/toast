@@ -54,10 +54,11 @@ MEMORY_LOG_COUNT = 60 * 24 * 7
 AUTO_OFF_HOURS = [0, 1, 2, 3, 4, 5, 6, 10]
 # Default target temperature
 DEFAULT_TARGET = 19.0
-# RH rising threshold
-HUMIDITY_HIGH_THRESHOLD = 78
-# RH falling threshold
-HUMIDITY_LOW_THRESHOLD = 72
+# Length of moving-average filter to smooth humidity values with
+HUMIDITY_FILTER_LENGTH = 10
+# Threshold of smoothed increase in humidity (between two readings) to turn the fan on
+HUMIDITY_RISING_THRESHOLD = 4
+HUMIDITY_FALLING_THRESHOLD = 0
 # Port to talk to nodes on
 NODE_PORT = 9142
 # Port to listen for ESP8266 UDP broadcasts
@@ -390,6 +391,7 @@ class State:
         self.temperatures = {}
         # Room relative humidities in each zone
         self.humidities = {}
+        self.humidity_processor = {}
         self.outside_temperatures = []
         self.outside_humidities = []
         self.rules = []
@@ -525,6 +527,11 @@ class State:
         with self.mutex:
             return [r for r in self.rules if r.active()]
 
+    def get_humidity_processor(self, z):
+        if not z in self.humidity_processor:
+            self.humidity_processor[z] = util.HumidityProcessor(HUMIDITY_FILTER_LENGTH, HUMIDITY_RISING_THRESHOLD, HUMIDITY_FALLING_THRESHOLD)
+        return self.humidity_processor[z]
+
     # Misc
 
     def one_or_all(self, out, values, all):
@@ -642,7 +649,7 @@ def setup():
 
     # Try to remove buffering for stdout
     sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-
+    
 def update():
     """
     The actual decision-making part: take inputs and decide which actuators should be on and
@@ -680,8 +687,6 @@ def update():
             zone_heating_enabled[z] = state.get_zone_heating_enabled(z)
             target[z] = state.get_target(z)
 
-    note = ''
-
     # Zone radiators on or off
     for z in zones():
         for n in zone_nodes(z):
@@ -693,10 +698,8 @@ def update():
                     if t is not None:
                         if t.value > (target[z] + HYSTERESIS):
                             n.set_actuator('radiator', False)
-                            note += '%s off ' % z
                         elif t.value < (target[z] - HYSTERESIS):
                             n.set_actuator('radiator', True)
-                            note += '%s on ' % z
                 else:
                     n.set_actuator('radiator', False)
             except (socket.error, util.Error) as e:
@@ -714,16 +717,11 @@ def update():
 
     # Humidity
     for z in zones():
-        hum = state.get_current_humidity(z)
-        if hum is not None:
-            if hum.value > HUMIDITY_HIGH_THRESHOLD:
-                for n in zone_nodes(z):
-                    if n.has_actuator('fan'):
-                        n.set_actuator('fan', True)
-            elif hum.value < HUMIDITY_LOW_THRESHOLD:
-                for n in zone_nodes(z):
-                    if n.has_actuator('fan'):
-                        n.set_actuator('fan', False)
+        proc = state.get_humidity_processor(z)
+        fan_on = proc.add(state.get_current_humidity[z])
+        for n in zone_nodes(z):
+            if n.has_actuator('fan'):
+                n.set_actuator('fan', fan_on)
 
 def broadcast_listen():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

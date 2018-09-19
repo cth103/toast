@@ -110,3 +110,31 @@ class Datum(object):
             self.time = time.localtime()
         else:
             self.time = timestamp
+
+class HumidityProcessor(object):
+    def __init__(self, maf_len, rising, falling):
+        self.maf_len = maf_len
+        self.rising = rising
+        self.falling = falling
+        self.fan_on = False
+        self.maf = []
+        self.last = None
+        self.base = None
+
+    def add(self, v):
+        # Smooth the values
+        self.maf.append(v)
+        if len(self.maf) <= self.maf_len:
+            return self.fan_on
+        del self.maf[0]
+        v = sum(self.maf) / self.maf_len
+        if self.last is not None and not self.fan_on and (v - self.last) > self.rising:
+            # The change between this reading and the last was above threshold: fan on
+            # and store the rough level before this rise happened
+            self.fan_on = True
+            self.base = self.maf[0]
+        elif self.fan_on and (v - self.base) < self.falling:
+            # We've gone back down below the baseline that was saved when the humidity rose
+            self.fan_on = False
+        self.last = v
+        return self.fan_on
