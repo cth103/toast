@@ -458,6 +458,7 @@ class State:
             self.humidities[zone].append(h)
             if len(self.humidities[zone]) > MEMORY_LOG_COUNT:
                 state.humidities[zone].pop(0)
+            self.get_humidity_processor(z).add(h)
 
     def set_rules(self, r):
         assert(type(r) is list)
@@ -717,14 +718,7 @@ def update():
 
     # Humidity
     for z in zones():
-        hum = state.get_current_humidity(z)
-        if hum is None:
-            continue
-        proc = state.get_humidity_processor(z)
-        if (time.mktime(hum.time) - time.mktime(time.localtime())) > 600:
-            # This reading is very old
-            proc.reset()
-        fan_on = proc.add(hum.value)
+        fan_on = state.get_humidity_processor(z).get_fan()
         for n in zone_nodes(z):
             if n.has_actuator('fan'):
                 n.set_actuator('fan', fan_on)

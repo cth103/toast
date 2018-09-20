@@ -1,3 +1,4 @@
+
 #!/usr/bin/python
 #
 #    Copyright (C) 2014-2018 Carl Hetherington <cth@carlh.net>
@@ -140,4 +141,6 @@ class HumidityProcessor(object):
             # We've gone back down below the baseline that was saved when the humidity rose
             self.fan_on = False
         self.last = v
+
+    def get_fan(self):
         return self.fan_on
