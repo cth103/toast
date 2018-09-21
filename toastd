@@ -458,7 +458,7 @@ class State:
             self.humidities[zone].append(h)
             if len(self.humidities[zone]) > MEMORY_LOG_COUNT:
                 state.humidities[zone].pop(0)
-            self.get_humidity_processor(z).add(h)
+            self.get_humidity_processor(zone).add(h.value)
 
     def set_rules(self, r):
         assert(type(r) is list)
