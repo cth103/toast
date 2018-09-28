@@ -73,13 +73,13 @@ conversion_cb(void* arg)
 
 #ifdef WITH_I2C
 LOCAL int ICACHE_FLASH_ATTR
-read_sht30(float* temp, float* humidity)
+read_sht30(int address, float* temp, float* humidity)
 {
 	char i2c_data[6];
 	int i;
 
 	i2c_master_start();
-	i2c_master_writeByte(SHT30_ADDRESS << 1);
+	i2c_master_writeByte(address << 1);
 	if (!i2c_master_checkAck()) {
 		return 1;
 	}
@@ -92,7 +92,7 @@ read_sht30(float* temp, float* humidity)
 	os_delay_us(500000);
 
 	i2c_master_start();
-	i2c_master_writeByte((SHT30_ADDRESS << 1) + 1);
+	i2c_master_writeByte((address << 1) + 1);
 	i2c_master_checkAck();
 	for (i = 0; i < 6; ++i) {
 		i2c_data[i] = i2c_master_readByte();
@@ -177,7 +177,7 @@ receive_cb(void* arg, char* data, unsigned short length)
 		}
 #endif
 #ifdef WITH_I2C
-		r = read_sht30(&temp, &humidity);
+		r = read_sht30((length > 4 && data[4] == '2') ? SHT30_2_ADDRESS : SHT30_1_ADDRESS, &temp, &humidity);
 		if (r) {
 			os_sprintf(reply, "error 1\r\n");
 			espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
@@ -207,7 +207,7 @@ receive_cb(void* arg, char* data, unsigned short length)
 		system_os_post(DHTXX_TASK, DHTXX_SIGNAL_START, 0);
 #endif
 #ifdef WITH_I2C
-		r = read_sht30(&temp, &humidity);
+		r = read_sht30((length > 8 && data[8] == '2') ? SHT30_2_ADDRESS : SHT30_1_ADDRESS, &temp, &humidity);
 		if (r) {
 			os_sprintf(reply, "error 1\r\n");
 			espconn_sent((struct espconn *) arg, reply, os_strlen(reply));
