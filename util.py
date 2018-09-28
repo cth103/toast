@@ -126,18 +126,30 @@ class HumidityProcessor(object):
         self.base = None
 
     def add(self, v):
+        print 'humproc adds %f' % v
         # Smooth the values
         self.maf.append(v)
+        print 'maf len now %d' % len(self.maf)
         if len(self.maf) <= self.maf_len:
+            print 'maf too short'
             return self.fan_on
         del self.maf[0]
         v = sum(self.maf) / self.maf_len
+        print 'movavg is %f' % v
+        if self.last is not None:
+            print 'last is %f' % self.last
+        else:
+            print 'last is None'
+        print 'fanon is %d' % self.fan_on
+        print 'rising is %d'% self.rising
         if self.last is not None and not self.fan_on and (v - self.last) > self.rising:
             # The change between this reading and the last was above threshold: fan on
             # and store the rough level before this rise happened
             self.fan_on = True
             self.base = self.maf[0]
+            print 'fan on!'
         elif self.fan_on and (v - self.base) < self.falling:
+            print 'fell below baseline; off'
             # We've gone back down below the baseline that was saved when the humidity rose
             self.fan_on = False
         self.last = v
