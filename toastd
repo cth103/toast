@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 #    Copyright (C) 2014-2018 Carl Hetherington <cth@carlh.net>
 #
@@ -23,7 +23,6 @@ try:
 except:
     have_gpio = False
 
-import BaseHTTPServer
 import threading
 import json
 import time
@@ -32,8 +31,8 @@ import sys
 import datetime
 import socket
 import argparse
-import urlparse
 import traceback
+import faulthandler
 
 import binary_server
 import util
@@ -648,9 +647,6 @@ def setup():
             util.warning('could not create log directory `%s\'; logging disabled' % args.log_directory)
             write_logs = False
 
-    # Try to remove buffering for stdout
-    sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-    
 def update():
     """
     The actual decision-making part: take inputs and decide which actuators should be on and
@@ -728,7 +724,7 @@ def broadcast_listen():
     sock.bind(("0.0.0.0", BROADCAST_PORT))
     while True:
         data, addr = sock.recvfrom(64)
-        if data.startswith('Hello heating'):
+        if data.startswith(b'Hello heating'):
             mac = data[14:]
             try:
                 dynamic_nodes_mutex.acquire()
@@ -788,7 +784,7 @@ def log():
                         if n.has_actuator('radiator'):
                             act = '%d' % n.get_actuator('radiator')
                         f = open(log_file, 'a')
-                        print>>f,'%s %s temp %f %s %f %d %d' % (time.strftime("%H:%M:%S"), log_z, datum.value, act, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled())
+                        print('%s %s temp %f %s %f %d %d' % (time.strftime("%H:%M:%S"), log_z, datum.value, act, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled()), file=f)
                         f.close()
 
                     state.add_temperature(z, datum)
@@ -800,7 +796,7 @@ def log():
                         if n.has_actuator('fan') and n.get_actuator('fan') is not None:
                             act = '%d' % n.get_actuator('fan')
                         f = open(log_file, 'a')
-                        print>>f,'%s %s hum %f %s' % (time.strftime("%H:%M:%S"), log_z, datum.value, act)
+                        print('%s %s hum %f %s' % (time.strftime("%H:%M:%S"), log_z, datum.value, act), file=f)
                         f.close()
 
                     state.add_humidity(z, datum)
@@ -913,18 +909,15 @@ def zones_from_message(data, off):
     return (off, zone_names)
 
 def handler(data):
+    global state
     if data[0] == messages.OP_SEND_BASIC:
-        global state
         return state.as_binary(all_values=False)
     elif data[0] == messages.OP_SEND_ALL:
-        global state
         return state.as_binary()
     elif data[0] == messages.OP_HEATING_ENABLED:
-        global state
         state.set_heating_enabled(data[1])
         return state.as_binary(False, messages.OP_HEATING_ENABLED)
     elif data[0] == messages.OP_ZONE_HEATING_ENABLED:
-        global state
         off = 1
         (off, zone_names) = zones_from_message(data, off)
         for z in zone_names:
@@ -932,7 +925,6 @@ def handler(data):
             off += 1
         return state.as_binary(False, messages.OP_ZONE_HEATING_ENABLED)
     elif data[0] == messages.OP_TARGET:
-        global state
         off = 1
         (off, zone_names) = zones_from_message(data, off)
         for z in zone_names:
@@ -940,22 +932,7 @@ def handler(data):
             off += 2
         return state.as_binary(False, messages.OP_TARGET)
 
-import code, traceback, signal
-
-def debug(sig, frame):
-    """Interrupt running process, and provide a python prompt for
-    interactive debugging.  Trigger with os.kill(pid, signal.SIGUSR1)"""
-    d={'_frame':frame}
-    d.update(frame.f_globals)
-    d.update(frame.f_locals)
-
-    i = code.InteractiveConsole(d)
-    message  = "Signal received : entering python shell.\nTraceback:\n"
-    message += ''.join(traceback.format_stack(frame))
-    i.interact(message)
-
-def listen():
-    signal.signal(signal.SIGUSR1, debug)
+faulthandler.enable()
 
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     test()

@@ -33,6 +33,7 @@ class Server:
 
     # Start the server
     def start(self):
+        error = None
         for res in socket.getaddrinfo(None, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM, 0, socket.AI_PASSIVE):
             af, socktype, proto, canonname, sa = res
             try:
@@ -48,12 +49,13 @@ class Server:
             except socket.error as msg:
                 s.close()
                 s = None
+                error = msg
                 continue
 
             break
 
         if s is None:
-            raise util.Error('could not open socket (%s)' % msg)
+            raise util.Error('could not open socket (%s)' % error)
 
         self.accept_thread = threading.Thread(target=self.run, args=(s,))
         self.accept_thread.start()

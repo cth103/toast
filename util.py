@@ -32,11 +32,11 @@ class Error(Exception):
         return str(self)
 
 def warning(w):
-    print '%s WARNING: %s' % (datetime.datetime.now(), w)
+    print('%s WARNING: %s' % (datetime.datetime.now(), w))
     sys.stdout.flush()
 
 def verbose(v):
-    print '%s: %s' % (datetime.datetime.now(), v)
+    print('%s: %s' % (datetime.datetime.now(), v))
     sys.stdout.flush()
 
 def send_bytearray(socket, data):
@@ -53,7 +53,7 @@ def send_json(socket, data, verbose=False):
     """Send a dict as JSON to a socket"""
     send_bytearray(socket, json.dumps(data))
     if verbose:
-        print '-> %s' % data
+        print('-> %s' % data)
 
 def get_data(sock, length):
     """recv() from a socket into a Python bytearray"""
@@ -73,7 +73,7 @@ def get_json(socket, verbose=False):
     """Receive some JSON from a socket"""
     s = get_bytearray(socket)
     if verbose:
-        print '<- %s' % s
+        print('<- %s' % s)
     return json.loads(s.decode('UTF-8'))
 
 def get_bytearray(sock):
@@ -101,7 +101,7 @@ def receive_json(socket, verbose=False):
         raise Error('could not get data from socket (got %d instead of %d)' % (len(s), size))
 
     if verbose:
-        print '<- %s' % s
+        print('<- %s' % s)
     return json.loads(s.decode('UTF-8'))
 
 class Datum(object):
@@ -126,30 +126,30 @@ class HumidityProcessor(object):
         self.base = None
 
     def add(self, v):
-        print 'humproc adds %f' % v
+        print('humproc adds %f' % v)
         # Smooth the values
         self.maf.append(v)
-        print 'maf len now %d' % len(self.maf)
+        print('maf len now %d' % len(self.maf))
         if len(self.maf) <= self.maf_len:
-            print 'maf too short'
+            print('maf too short')
             return self.fan_on
         del self.maf[0]
         v = sum(self.maf) / self.maf_len
-        print 'movavg is %f' % v
+        print('movavg is %f' % v)
         if self.last is not None:
-            print 'last is %f' % self.last
+            print('last is %f' % self.last)
         else:
-            print 'last is None'
-        print 'fanon is %d' % self.fan_on
-        print 'rising is %d'% self.rising
+            print('last is None')
+        print('fanon is %d' % self.fan_on)
+        print('rising is %d'% self.rising)
         if self.last is not None and not self.fan_on and (v - self.last) > self.rising:
             # The change between this reading and the last was above threshold: fan on
             # and store the rough level before this rise happened
             self.fan_on = True
             self.base = self.maf[0]
-            print 'fan on!'
+            print('fan on!')
         elif self.fan_on and (v - self.base) < self.falling:
-            print 'fell below baseline; off'
+            print('fell below baseline; off')
             # We've gone back down below the baseline that was saved when the humidity rose
             self.fan_on = False
         self.last = v
