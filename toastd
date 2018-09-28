@@ -105,8 +105,8 @@ class NodeProperties(object):
         self.actuators = actuators
         self.sensors = sensors
 
-node_properties = { '600194189ed3': NodeProperties('Bathroom', 'radiator', ['radiator'], ['temperature']),
-                    '5ccf7f3cd919': NodeProperties('Bathroom', 'fan', ['fan'], ['humidity', 'ref_humidity']),
+node_properties = { b'600194189ed3': NodeProperties('Bathroom', 'radiator', ['radiator'], ['temperature']),
+                    b'68c63ac4a3b3': NodeProperties('Bathroom', 'fan', ['fan'], ['temperature', 'ref_temperature', 'humidity', 'ref_humidity']),
                     }
 
 class Node(object):
@@ -181,7 +181,6 @@ class JSONNode(Node):
 
     def get_sensor(self, name):
         super(JSONNode, self).get_sensor(name)
-        util.verbose("Connecting for temperature of %s:%s" % (self.zone, self.name))
         s = self.connect()
         util.send_json(s, {'type': 'get'})
         j = util.get_json(s)['temperature']
@@ -213,9 +212,9 @@ class ESP8266Node(Node):
             self.lock.acquire()
             s = self.connect()
             if on:
-                s.send('on')
+                s.send(b'on')
             else:
-                s.send('off')
+                s.send(b'off')
             s.close()
         finally:
             self.lock.release()
@@ -226,16 +225,18 @@ class ESP8266Node(Node):
         super(ESP8266Node, self).get_sensor(name)
         try:
             self.lock.acquire()
-            util.verbose("Connecting for %s of %s:%s" % (name, self.zone, self.name))
             s = self.connect()
             if name == 'temperature':
-                s.send('temp')
+                s.send(b'temp')
+                r = int(s.recv(64)) / 10000.0
+            elif name == 'ref_temperature':
+                s.send(b'temp2')
                 r = int(s.recv(64)) / 10000.0
             elif name == 'humidity':
-                s.send('humidity')
+                s.send(b'humidity')
                 r = int(s.recv(64)) / 10.0
             elif name == 'ref_humidity':
-                s.send('humidity2')
+                s.send(b'humidity2')
                 r = int(s.recv(64)) / 10.0
             util.verbose("Received %s %f of %s:%s" % (name, r, self.zone, self.name))
             s.close()
@@ -774,45 +775,47 @@ def log():
     global stop
     global args
 
+    def temp(z, sensor_name, log_name, add_to_state):
+        global write_logs
+        log_z = z.replace(' ', '_')
+        for n in zone_nodes(z):
+            datum = get_sensor(n, sensor_name)
+            if datum is not None:
+                if write_logs:
+                    act = 'X'
+                    if n.has_actuator('radiator'):
+                        act = '%d' % n.get_actuator('radiator')
+                    f = open(log_file, 'a')
+                    print('%s %s %s %f %s %f %d %d' % (time.strftime("%H:%M:%S"), log_z, log_name, datum.value, act, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled()), file=f)
+                    f.close()
+                
+                if add_to_state:
+                    state.add_temperature(z, datum)
+
+    def humidity(z, sensor_name, log_name, add_to_state):
+        global write_logs
+        log_z = z.replace(' ', '_')
+        for n in zone_nodes(z):
+            datum = get_sensor(n, sensor_name)
+            if datum is not None:
+                if write_logs:
+                    act = 'X'
+                    if n.has_actuator('fan') and n.get_actuator('fan') is not None:
+                        act = '%d' % n.get_actuator('fan')
+                    f = open(log_file, 'a')
+                    print('%s %s %s %f %s' % (time.strftime("%H:%M:%S"), log_z, log_name, datum.value, act), file=f)
+                    f.close()
+
+                state.add_humidity(z, datum)
+
     while not stop:
         log_file = os.path.join(args.log_directory, time.strftime("%d-%m-%Y.log"))
 
         for z in zones():
-            log_z = z.replace(' ', '_')
-            for n in zone_nodes(z):
-                datum = get_sensor(n, 'temperature')
-                if datum is not None:
-                    if write_logs:
-                        act = 'X'
-                        if n.has_actuator('radiator'):
-                            act = '%d' % n.get_actuator('radiator')
-                        f = open(log_file, 'a')
-                        print('%s %s temp %f %s %f %d %d' % (time.strftime("%H:%M:%S"), log_z, datum.value, act, state.get_target(z), state.get_boiler_on(), state.get_heating_enabled()), file=f)
-                        f.close()
-
-                    state.add_temperature(z, datum)
-
-                datum = get_sensor(n, 'humidity')
-                if datum is not None:
-                    if write_logs:
-                        act = 'X'
-                        if n.has_actuator('fan') and n.get_actuator('fan') is not None:
-                            act = '%d' % n.get_actuator('fan')
-                        f = open(log_file, 'a')
-                        print('%s %s hum %f %s' % (time.strftime("%H:%M:%S"), log_z, datum.value, act), file=f)
-                        f.close()
-
-                    state.add_humidity(z, datum)
-
-                datum = get_sensor(n, 'ref_humidity')
-                if datum is not None:
-                    if write_logs:
-                        act = 'X'
-                        if n.has_actuator('fan') and n.get_actuator('fan') is not None:
-                            act = '%d' % n.get_actuator('fan')
-                        f = open(log_file, 'a')
-                        print('%s %s ref_hum %f %s' % (time.strftime("%H:%M:%S"), log_z, datum.value, act), file=f)
-                        f.close()
+            temp(z, 'temperature', 'temp', True)
+            temp(z, 'ref_temperature', 'ref_temp', False)
+            humidity(z, 'humidity', 'hum', True)
+            humidity(z, 'ref_humidity', 'ref_hum', False)
 
         state.maybe_add_outside_temperature(weather.state.get_temperature())
         state.maybe_add_outside_humidity(weather.state.get_humidity())
