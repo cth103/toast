@@ -106,7 +106,7 @@ class NodeProperties(object):
         self.sensors = sensors
 
 node_properties = { '600194189ed3': NodeProperties('Bathroom', 'radiator', ['radiator'], ['temperature']),
-                    '5ccf7f3cd919': NodeProperties('Bathroom', 'fan', ['fan'], ['humidity']),
+                    '5ccf7f3cd919': NodeProperties('Bathroom', 'fan', ['fan'], ['humidity', 'ref_humidity']),
                     }
 
 class Node(object):
@@ -233,6 +233,9 @@ class ESP8266Node(Node):
                 r = int(s.recv(64)) / 10000.0
             elif name == 'humidity':
                 s.send('humidity')
+                r = int(s.recv(64)) / 10.0
+            elif name == 'ref_humidity':
+                s.send('humidity2')
                 r = int(s.recv(64)) / 10.0
             util.verbose("Received %s %f of %s:%s" % (name, r, self.zone, self.name))
             s.close()
@@ -800,6 +803,16 @@ def log():
                         f.close()
 
                     state.add_humidity(z, datum)
+
+                datum = get_sensor(n, 'ref_humidity')
+                if datum is not None:
+                    if write_logs:
+                        act = 'X'
+                        if n.has_actuator('fan') and n.get_actuator('fan') is not None:
+                            act = '%d' % n.get_actuator('fan')
+                        f = open(log_file, 'a')
+                        print('%s %s ref_hum %f %s' % (time.strftime("%H:%M:%S"), log_z, datum.value, act), file=f)
+                        f.close()
 
         state.maybe_add_outside_temperature(weather.state.get_temperature())
         state.maybe_add_outside_humidity(weather.state.get_humidity())
