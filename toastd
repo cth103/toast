@@ -57,7 +57,7 @@ DEFAULT_TARGET = 19.0
 # Length of moving-average filter to smooth humidity values with
 HUMIDITY_FILTER_LENGTH = 10
 # Threshold of smoothed increase in humidity (between two readings) to turn the fan on
-HUMIDITY_RISING_THRESHOLD = 4
+HUMIDITY_RISING_THRESHOLD = 2
 HUMIDITY_FALLING_THRESHOLD = 0
 # Port to talk to nodes on
 NODE_PORT = 9142
@@ -939,6 +939,23 @@ def handler(data):
             state.set_target(z, get_float(data, off))
             off += 2
         return state.as_binary(False, messages.OP_TARGET)
+
+import code, traceback, signal
+
+def debug(sig, frame):
+    """Interrupt running process, and provide a python prompt for
+    interactive debugging.  Trigger with os.kill(pid, signal.SIGUSR1)"""
+    d={'_frame':frame}
+    d.update(frame.f_globals)
+    d.update(frame.f_locals)
+
+    i = code.InteractiveConsole(d)
+    message  = "Signal received : entering python shell.\nTraceback:\n"
+    message += ''.join(traceback.format_stack(frame))
+    i.interact(message)
+
+def listen():
+    signal.signal(signal.SIGUSR1, debug)
 
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     test()
