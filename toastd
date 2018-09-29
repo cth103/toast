@@ -593,7 +593,7 @@ class State:
                         for a in n.actuators:
                             actuators[a] = n.get_actuator(a)
                     out.append(len(actuators))
-                    for k, v in actuators.iteritems():
+                    for k, v in actuators.items():
                         out.extend(binary_string(k))
                         if v is None:
                             out.append(0)
@@ -608,7 +608,7 @@ class State:
 
             if op == messages.OP_ALL:
                 any_zone_heating_enabled = False
-                for k, v in self.zone_heating_enabled.iteritems():
+                for k, v in self.zone_heating_enabled.items():
                     if v:
                         any_zone_heating_enabled = True
 
