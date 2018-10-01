@@ -1,9 +1,11 @@
 sources = """
           broadcast_listener.cc
+          control_server.cc
           datum.cc
           esp8266_node.cc
           node.cc
           sensor.cc
+          server.cc
           state.cc
           toast_socket.cc
           toastd.cc

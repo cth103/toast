@@ -2,6 +2,7 @@
 #include "config.h"
 #include "node.h"
 #include "state.h"
+#include "control_server.h"
 #include "esp8266_node.h"
 #include <iostream>
 
@@ -25,9 +26,12 @@ node_broadcast_received(string mac, boost::asio::ip::address ip)
 
 	if (!got) {
 		/* XXX */
+		/* "temperature"/"humidity" here are special values which dictate what the state class will send
+		   to clients requesting those types.
+		*/
 		if (mac == "600194189ed3") {
 			shared_ptr<Node> node(new ESP8266Node(ip, "spare-room", mac));
-			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "temp", "temperature-low", "Bathroom")));
+			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "temp", "temperature", "Bathroom")));
 			Node::add(node);
 		} else if (mac == "68c63ac4a3b3") {
 			shared_ptr<Node> node(new ESP8266Node(ip, "loft", mac));
@@ -53,7 +57,7 @@ gather()
 		for (auto i: Node::all()) {
 			for (auto j: i->sensors()) {
 				auto d = j->get();
-				state.add(i, j, d);
+				state.add(j, d);
 				if (log) {
 					time_t const t = d.time();
 					struct tm tm = *localtime(&t);
@@ -81,6 +85,9 @@ main(int argc, char* argv[])
 	b->run();
 
 	thread gather_thread(gather);
+
+	ControlServer* s = new ControlServer(&state, SERVER_PORT);
+	thread control_server_thread(bind(&ControlServer::run, s));
 
 	while (true) {
 		sleep(60);

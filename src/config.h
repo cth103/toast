@@ -3,3 +3,4 @@
 #define GATHER_INTERVAL 5
 #define LOG_DIRECTORY "/home/carl/src/toast/test_logs"
 #define SENSOR_TIMEOUT 30
+#define SERVER_PORT 9999
