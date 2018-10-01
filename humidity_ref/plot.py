@@ -17,7 +17,7 @@ def moving_average(a, n=3):
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
 
-with open('28-09-2018.log', 'r') as f:
+with open('01-10-2018.log', 'r') as f:
     for line in f:
         s = line.strip().split()
         if s[1] == 'Bathroom':
@@ -51,12 +51,30 @@ def convert_relative_humidity(from_hum, from_temp, to_temp):
 
 pred_hum = []
 for x in range(0, len(temp)):
+    print len(ref_hum), len(ref_temp), len(temp)    
     pred_hum.append(convert_relative_humidity(ref_hum[x][1], ref_temp[x][1], temp[x][1]))
 
+hum_diff = []
+for x in range(0, len(temp)):
+    hum_diff.append(hum[x][1] - ref_hum[x][1])
+
+on = []
+curr = False
+up = 8
+down = 5
+for x in hum_diff:
+    if not curr and x > up:
+        curr = True
+    elif curr and x < down:
+        curr = False
+    on.append(curr * 25)
+
 plt.plot([i[0] for i in hum], [i[1] for i in hum], label='room_hum')
-plt.plot([i[0] for i in ref_hum], [i[1] for i in ref_hum], label='att hum')
-plt.plot([i[0] for i in temp], [i[1] for i in temp], label='room temp')
-plt.plot([i[0] for i in ref_temp], [i[1] for i in ref_temp], label='att temp')
-plt.plot([i[0] for i in temp], pred_hum, label='pred room')
+plt.plot([i[0] for i in ref_hum], [i[1] for i in ref_hum], label='ref hum')
+#plt.plot([i[0] for i in temp], [i[1] for i in temp], label='room temp')
+#plt.plot([i[0] for i in ref_temp], [i[1] for i in ref_temp], label='ref temp')
+#plt.plot([i[0] for i in temp], pred_hum, label='pred room')
+plt.plot([i[0] for i in temp], hum_diff, label='humidity diff')
+plt.plot([i[0] for i in temp], on, label='fan on')
 plt.legend()
 plt.show()

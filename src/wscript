@@ -1,0 +1,17 @@
+sources = """
+          broadcast_listener.cc
+          datum.cc
+          esp8266_node.cc
+          node.cc
+          sensor.cc
+          state.cc
+          toast_socket.cc
+          toastd.cc
+          """
+
+def build(bld):
+    obj = bld(features='cxx cxxprogram')
+    obj.name = 'toastd'
+    obj.target = 'toastd'
+    obj.uselib = 'BOOST_SYSTEM'
+    obj.source = sources
