@@ -32,6 +32,7 @@ node_broadcast_received(string mac, boost::asio::ip::address ip)
 		if (mac == "600194189ed3") {
 			shared_ptr<Node> node(new ESP8266Node(ip, "spare-room", mac));
 			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "temp", "temperature", "Bathroom")));
+			node->add_actuator(shared_ptr<Actuator>(new Actuator(node, "radiator", "Bathroom")));
 			Node::add(node);
 		} else if (mac == "68c63ac4a3b3") {
 			shared_ptr<Node> node(new ESP8266Node(ip, "loft", mac));
@@ -39,6 +40,7 @@ node_broadcast_received(string mac, boost::asio::ip::address ip)
 			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "humidity", "humidity", "Bathroom")));
 			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "temp2", "temperature", "Landing")));
 			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "humidity2", "humidity", "Landing")));
+			node->add_actuator(shared_ptr<Actuator>(new Actuator(node, "fan", "Bathroom")));
 			Node::add(node);
 		}
 	}

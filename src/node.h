@@ -33,6 +33,10 @@ public:
 		return _sensors;
 	}
 
+	void add_actuator(std::shared_ptr<Actuator> a) {
+		_actuators.push_back(a);
+	}
+
 	std::list<std::shared_ptr<Actuator>> actuators() const {
 		return _actuators;
 	}

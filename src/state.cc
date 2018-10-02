@@ -160,11 +160,16 @@ State::get(bool all_values, uint8_t types) const
 			}
 		}
 		if (all_or(types, OP_ACTUATORS)) {
-			/* XXX */
-			// send all actuator states; name, state
+			for (auto j: Node::all()) {
+				for (auto k: j->actuators()) {
+					put(p, k->name());
+					*p++ = k->state().value_or(false) ? 1 : 0;
+				}
+			}
 		}
 
 		/* XXX rules */
+		*p++ = 0;
 
 		if (types == OP_ALL) {
 			bool any_zone_heating_enabled = false;

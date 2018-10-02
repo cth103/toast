@@ -9,8 +9,8 @@ class Node;
 class Transducer
 {
 public:
-	Transducer(std::shared_ptr<Node> node, std::string id, std::string name, std::string zone)
-		: _node(node), _id(id), _name(name), _zone(zone)
+	Transducer(std::shared_ptr<Node> node, std::string name, std::string zone)
+		: _node(node), _name(name), _zone(zone)
 	{}
 
 	std::string name() const {
@@ -23,7 +23,6 @@ public:
 
 protected:
 	std::shared_ptr<Node> _node;
-	std::string _id;
 
 private:
 	std::string _name;
