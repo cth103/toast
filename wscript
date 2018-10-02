@@ -5,6 +5,8 @@ def configure(conf):
     conf.load('compiler_cxx')
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-std=c++17'])
     conf.check(lib=['boost_system', 'pthread'], uselib_store='BOOST_SYSTEM', msg="Checking for library boost-system")
+    conf.recurse('test')
 
 def build(bld):
     bld.recurse('src')
+    bld.recurse('test')

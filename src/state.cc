@@ -2,6 +2,7 @@
 #include "node.h"
 #include "types.h"
 #include "sensor.h"
+#include "util.h"
 #include <iostream>
 #include <set>
 
@@ -72,41 +73,6 @@ static bool
 all_or(uint8_t types, uint8_t t)
 {
 	return types == OP_ALL || types == t;
-}
-
-static void
-put(uint8_t*& p, string s)
-{
-	*p++ = s.length();
-	strncpy(reinterpret_cast<char *>(p), s.c_str(), s.length());
-	p += s.length();
-}
-
-static void
-put_int16(uint8_t*& p, int16_t v)
-{
-	*p++ = v & 0xff;
-	*p++ = (v & 0xff00) >> 8;
-}
-
-static void
-put_float(uint8_t*& p, float f)
-{
-	put_int16(p, static_cast<int16_t>(f * 16));
-}
-
-static void
-put(uint8_t*& p, Datum d)
-{
-	*p++ = d.time() & 0xff;
-	*p++ = (d.time() & 0xff00) >> 8;
-	*p++ = (d.time() & 0xff0000) >> 16;
-	*p++ = (d.time() & 0xff000000) >> 24;
-	*p++ = (d.time() & 0xff00000000) >> 32;
-	*p++ = (d.time() & 0xff0000000000) >> 40;
-	*p++ = (d.time() & 0xff000000000000) >> 48;
-	*p++ = (d.time() & 0xff00000000000000) >> 56;
-	put_float(p, d.value());
 }
 
 static

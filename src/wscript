@@ -9,6 +9,7 @@ sources = """
           state.cc
           toast_socket.cc
           toastd.cc
+          util.cc
           """
 
 def build(bld):
