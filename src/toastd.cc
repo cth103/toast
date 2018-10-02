@@ -4,6 +4,7 @@
 #include "state.h"
 #include "control_server.h"
 #include "esp8266_node.h"
+#include "json_node.h"
 #include <iostream>
 
 using std::cout;
@@ -12,15 +13,19 @@ using std::bind;
 using std::thread;
 using std::shared_ptr;
 using std::optional;
+using std::list;
+using std::dynamic_pointer_cast;
 
 State state;
+list<int> auto_off_hours;
 
 void
 node_broadcast_received(string mac, boost::asio::ip::address ip)
 {
 	bool got = false;
 	for (auto i: Node::all()) {
-		if (i->mac() == mac) {
+		auto e = dynamic_pointer_cast<ESP8266Node>(i);
+		if (e && e->mac() == mac) {
 			got = true;
 		}
 	}
@@ -85,25 +90,43 @@ control()
 {
 	while (true) {
 
-		/* XXX: auto-off */
-		/* XXX: rules */
+		/* Auto off */
+		time_t const t = time(0);
+		struct tm tm = *localtime(&t);
+		if (tm.tm_min == 0 && find(auto_off_hours.begin(), auto_off_hours.end(), tm.tm_hour) != auto_off_hours.end() && state.heating_enabled()) {
+			state.set_heating_enabled(false);
+		}
 
+		/* Copy our current state */
+		State active_state = state.thin_clone();
+
+		/* Override interactive settings with active rules */
+		for (auto i: state.rules()) {
+			if (i.active()) {
+				active_state.set_heating_enabled(true);
+				active_state.set_zone_heating_enabled(i.zone(), true);
+				active_state.set_target(i.zone(), i.target());
+			}
+		}
+
+		/* Set radiators */
 		for (auto i: Node::all()) {
 			shared_ptr<Sensor> se = i->sensor("radiator");
 			if (!se) {
 				continue;
 			}
-			if (state.zone_heating_enabled(se->zone())) {
+			if (active_state.zone_heating_enabled(se->zone())) {
 				string zone = i->sensor("temperature")->zone();
-				optional<Datum> const t = state.get(zone, "temperature");
-				if (t && t->value() > state.target(zone).value_or(0) + HYSTERESIS) {
+				optional<Datum> const t = active_state.get(zone, "temperature");
+				if (t && t->value() > active_state.target(zone).value_or(0) + HYSTERESIS) {
 					i->actuator("radiator")->set(false);
-				} else if (t && t->value() < state.target(zone).value_or(0) - HYSTERESIS) {
+				} else if (t && t->value() < active_state.target(zone).value_or(0) - HYSTERESIS) {
 					i->actuator("radiator")->set(true);
 				}
 			}
 		}
 
+		/* Decide if we need heat */
 		bool heat_required = false;
 		for (auto i: Node::all()) {
 			if (i->actuator("radiator") && i->actuator("radiator")->state().value_or(false)) {
@@ -111,7 +134,7 @@ control()
 			}
 		}
 
-		state.set_boiler_on(state.heating_enabled() && heat_required);
+		state.set_boiler_on(active_state.heating_enabled() && heat_required);
 
 		/* XXX: humidity */
 
@@ -122,6 +145,19 @@ control()
 int
 main(int argc, char* argv[])
 {
+	/* XXX */
+	auto_off_hours.push_back(0);
+	auto_off_hours.push_back(1);
+	auto_off_hours.push_back(2);
+	auto_off_hours.push_back(3);
+	auto_off_hours.push_back(4);
+	auto_off_hours.push_back(5);
+	auto_off_hours.push_back(6);
+	auto_off_hours.push_back(10);
+	shared_ptr<Node> hall(new JSONNode(boost::asio::ip::address::from_string("127.0.0.1"), "hall"));
+	hall->add_sensor(shared_ptr<Sensor>(new Sensor(hall, "", "temperature", "Sitting room")));
+	Node::add(hall);
+
 	BroadcastListener* b = new BroadcastListener();
 	b->Received.connect(bind(&node_broadcast_received, _1, _2));
 	b->run();
@@ -130,9 +166,5 @@ main(int argc, char* argv[])
 	thread control_thread(control);
 
 	ControlServer* s = new ControlServer(&state, SERVER_PORT);
-	thread control_server_thread(bind(&ControlServer::run, s));
-
-	while (true) {
-		sleep(60);
-	}
+	s->run();
 }

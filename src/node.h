@@ -11,16 +11,12 @@
 class Node
 {
 public:
-	Node(boost::asio::ip::address ip, std::string name, std::string mac)
-		: _ip(ip), _name(name), _mac(mac)
+	Node(boost::asio::ip::address ip, std::string name)
+		: _ip(ip), _name(name)
 	{}
 
 	std::string name() const {
 		return _name;
-	}
-
-	std::string mac() const {
-		return _mac;
 	}
 
 	virtual Datum get(std::string id) const = 0;
@@ -53,7 +49,6 @@ protected:
 
 private:
 	std::string _name;
-	std::string _mac;
 	std::list<std::shared_ptr<Sensor>> _sensors;
 	std::list<std::shared_ptr<Actuator>> _actuators;
 

@@ -8,12 +8,16 @@ def configure(conf):
 def build(bld):
     obj = bld(features='cxx cxxprogram')
     obj.name   = 'unit-tests'
-    obj.uselib =  'BOOST_TEST'
+    obj.uselib =  'BOOST_TEST BOOST_SYSTEM'
     obj.use    = 'libdcpomatic2'
     obj.source = """
                  ../src/rule.cc
                  ../src/util.cc
+                 ../src/json_node.cc
+                 ../src/toast_socket.cc
+                 ../src/datum.cc
                  rule_test.cc
+                 json_node_test.cc
                  test.cc
                  """
     obj.target = 'unit-tests'

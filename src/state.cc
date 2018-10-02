@@ -225,3 +225,47 @@ State::target(string z) const
 	}
 	return i->second;
 }
+
+list<Rule>
+State::rules() const
+{
+	scoped_lock lm(_mutex);
+	return _rules;
+}
+
+/** @return A copy of this object with only the most recent sensor reading for each sensor */
+State
+State::thin_clone() const
+{
+	State s;
+	s._heating_enabled = _heating_enabled;
+	s._boiler_on = _boiler_on;
+	s._zone_heating_enabled = _zone_heating_enabled;
+	s._target = _target;
+	s._rules = _rules;
+	for (auto i: _data) {
+		list<Datum> d;
+		if (!i.second.empty()) {
+			d.push_back(i.second.back());
+		}
+		s._data[i.first] = d;
+	}
+	return s;
+}
+
+State::State()
+	: _heating_enabled(false)
+	, _boiler_on(false)
+{
+
+}
+
+State::State(State const& other)
+{
+	_heating_enabled = other._heating_enabled;
+	_boiler_on = other._boiler_on;
+	_zone_heating_enabled = other._zone_heating_enabled;
+	_target = other._target;
+	_rules = other._rules;
+	_data = other._data;
+}

@@ -17,6 +17,14 @@ public:
 	bool active(std::optional<struct tm> at = std::optional<struct tm>()) const;
 	void get(uint8_t*& p) const;
 
+	std::string zone() const {
+		return _zone;
+	}
+
+	float target() const {
+		return _target;
+	}
+
 private:
 	uint8_t _id;
 	int _days;

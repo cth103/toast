@@ -3,6 +3,7 @@ sources = """
           control_server.cc
           datum.cc
           esp8266_node.cc
+          json_node.cc
           node.cc
           rule.cc
           sensor.cc
