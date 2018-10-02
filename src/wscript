@@ -4,6 +4,7 @@ sources = """
           datum.cc
           esp8266_node.cc
           node.cc
+          rule.cc
           sensor.cc
           server.cc
           state.cc

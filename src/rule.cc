@@ -22,12 +22,9 @@ Rule::Rule(int days, int on_hour, int on_minute, int off_hour, int off_minute, f
 
 }
 
-pair<shared_ptr<uint8_t[]>, int>
-Rule::get() const
+void
+Rule::get(uint8_t*& p) const
 {
-	int const length = 6 + 2 + 1 + _zone.length();
-	shared_ptr<uint8_t[]> out(new uint8_t[length]);
-	uint8_t* p = out.get();
 	*p++ = _id;
 	*p++ = _days;
 	*p++ = _on_hour;
@@ -36,7 +33,6 @@ Rule::get() const
 	*p++ = _off_minute;
 	put_float(p, _target);
 	put(p, _zone);
-	return make_pair(out, length);
 }
 
 bool

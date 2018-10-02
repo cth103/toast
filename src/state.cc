@@ -158,8 +158,10 @@ State::get(bool all_values, uint8_t types) const
 			}
 		}
 
-		/* XXX rules */
-		*p++ = 0;
+		*p++ = _rules.size();
+		for (auto i: _rules) {
+			i.get(p);
+		}
 
 		if (types == OP_ALL) {
 			bool any_zone_heating_enabled = false;

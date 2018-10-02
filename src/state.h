@@ -1,4 +1,5 @@
 #include "datum.h"
+#include "rule.h"
 #include <memory>
 #include <mutex>
 #include <map>
@@ -30,5 +31,6 @@ private:
 	bool _boiler_on;
 	std::map<std::string, bool> _zone_heating_enabled;
 	std::map<std::string, float> _target;
+	std::list<Rule> _rules;
 	std::map<std::shared_ptr<Sensor>, std::list<Datum>> _data;
 };

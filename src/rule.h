@@ -15,7 +15,7 @@ public:
 	Rule(int days, int on_hour, int on_minute, int off_hour, int off_minute, float target, std::string zone);
 
 	bool active(std::optional<struct tm> at = std::optional<struct tm>()) const;
-	std::pair<std::shared_ptr<uint8_t[]>, int> get() const;
+	void get(uint8_t*& p) const;
 
 private:
 	uint8_t _id;
