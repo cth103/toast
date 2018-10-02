@@ -5,6 +5,7 @@ using std::list;
 using std::shared_ptr;
 using std::scoped_lock;
 using std::mutex;
+using std::string;
 using std::cout;
 
 list<shared_ptr<Node>> Node::_all;
@@ -21,6 +22,29 @@ void
 Node::add(shared_ptr<Node> node)
 {
 	scoped_lock lm(_all_mutex);
-	cout << node->name() << " is here.\n";
 	_all.push_back(node);
+}
+
+shared_ptr<Sensor>
+Node::sensor(string name) const
+{
+	for (auto i: _sensors) {
+		if (i->name() == name) {
+			return i;
+		}
+	}
+
+	return shared_ptr<Sensor>();
+}
+
+shared_ptr<Actuator>
+Node::actuator(string name) const
+{
+	for (auto i: _actuators) {
+		if (i->name() == name) {
+			return i;
+		}
+	}
+
+	return shared_ptr<Actuator>();
 }

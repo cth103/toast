@@ -11,6 +11,7 @@ using std::string;
 using std::bind;
 using std::thread;
 using std::shared_ptr;
+using std::optional;
 
 State state;
 
@@ -79,6 +80,45 @@ gather()
 	}
 }
 
+void
+control()
+{
+	while (true) {
+
+		/* XXX: auto-off */
+		/* XXX: rules */
+
+		for (auto i: Node::all()) {
+			shared_ptr<Sensor> se = i->sensor("radiator");
+			if (!se) {
+				continue;
+			}
+			if (state.zone_heating_enabled(se->zone())) {
+				string zone = i->sensor("temperature")->zone();
+				optional<Datum> const t = state.get(zone, "temperature");
+				if (t && t->value() > state.target(zone).value_or(0) + HYSTERESIS) {
+					i->actuator("radiator")->set(false);
+				} else if (t && t->value() < state.target(zone).value_or(0) - HYSTERESIS) {
+					i->actuator("radiator")->set(true);
+				}
+			}
+		}
+
+		bool heat_required = false;
+		for (auto i: Node::all()) {
+			if (i->actuator("radiator") && i->actuator("radiator")->state().value_or(false)) {
+				heat_required = true;
+			}
+		}
+
+		state.set_boiler_on(state.heating_enabled() && heat_required);
+
+		/* XXX: humidity */
+
+		sleep(CONTROL_INTERVAL);
+	}
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -87,6 +127,7 @@ main(int argc, char* argv[])
 	b->run();
 
 	thread gather_thread(gather);
+	thread control_thread(control);
 
 	ControlServer* s = new ControlServer(&state, SERVER_PORT);
 	thread control_server_thread(bind(&ControlServer::run, s));

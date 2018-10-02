@@ -11,11 +11,18 @@ class State
 {
 public:
 	void add(std::shared_ptr<Sensor> sensor, Datum datum);
+	void set_boiler_on(bool o);
 	void set_heating_enabled(bool e);
 	void set_zone_heating_enabled(std::string z, bool e);
 	void set_target(std::string z, float t);
 
+	std::optional<float> target(std::string z) const;
+
+	bool heating_enabled() const;
+	bool zone_heating_enabled(std::string z) const;
+
 	std::pair<std::shared_ptr<uint8_t[]>, int> get(bool all_values, uint8_t types) const;
+	std::optional<Datum> get(std::string zone, std::string sensor_name);
 
 private:
 	mutable std::mutex _mutex;
