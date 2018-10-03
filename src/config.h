@@ -33,6 +33,12 @@ public:
 	int boiler_gpio() const {
 		return _boiler_gpio;
 	}
+	float humidity_rising_threshold() const {
+		return _humidity_rising_threshold;
+	}
+	float humidity_falling_threshold() const {
+		return _humidity_falling_threshold;
+	}
 
 	static Config* instance();
 
@@ -49,6 +55,8 @@ private:
 	float _hysteresis;
 	float _default_target;
 	int _boiler_gpio;
+	float _humidity_rising_threshold;
+	float _humidity_falling_threshold;
 
 	static Config* _instance;
 };

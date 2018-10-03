@@ -11,7 +11,7 @@ public:
 		: Transducer(node, name, zone)
 	{}
 
-	std::optional<bool> state() const {
+	std::optional<bool> get() const {
 		return _state;
 	}
 

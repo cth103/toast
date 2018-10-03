@@ -142,7 +142,7 @@ control()
 		/* Decide if we need heat */
 		bool heat_required = false;
 		for (auto i: Node::all()) {
-			if (i->actuator("radiator") && i->actuator("radiator")->state().value_or(false)) {
+			if (i->actuator("radiator") && i->actuator("radiator")->get().value_or(false)) {
 				heat_required = true;
 			}
 		}
@@ -150,7 +150,24 @@ control()
 		LOG("heating_enabled=%1 heat_required=%2", active_state.heating_enabled(), heat_required);
 		state.set_boiler_on(active_state.heating_enabled() && heat_required);
 
-		/* XXX: humidity */
+		for (auto i: Node::all()) {
+			shared_ptr<Actuator> fan = i->actuator("fan");
+			if (!fan) {
+				continue;
+			}
+			optional<Datum> const current = active_state.get(fan->zone(), "humidity");
+			/* XXX */
+			optional<Datum> const ref = active_state.get("Landing", "humidity");
+			if (current && ref) {
+				Config* config = Config::instance();
+				float diff = current->value() - ref->value();
+				if (fan->get().value_or(false) && diff > config->humidity_rising_threshold()) {
+					fan->set(true);
+				} else if (fan->get().value_or(false) && diff < config->humidity_falling_threshold()) {
+					fan->set(false);
+				}
+			}
+		}
 
 		sleep(Config::instance()->control_interval());
 	}

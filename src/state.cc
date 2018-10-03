@@ -176,7 +176,7 @@ State::get(bool all_values, uint8_t types) const
 			for (auto j: Node::all()) {
 				for (auto k: j->actuators()) {
 					put_string(p, k->name());
-					*p++ = k->state().value_or(false) ? 1 : 0;
+					*p++ = k->get().value_or(false) ? 1 : 0;
 				}
 			}
 		}
