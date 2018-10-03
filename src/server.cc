@@ -1,5 +1,6 @@
 #include "server.h"
 #include "toast_socket.h"
+#include "log.h"
 
 using std::shared_ptr;
 using std::scoped_lock;
@@ -51,6 +52,8 @@ Server::handle_accept(shared_ptr<Socket> socket, boost::system::error_code const
 	if (error) {
 		return;
 	}
+
+	LOG_NC("Client connection started.");
 
 	handle(socket);
 	start_accept();

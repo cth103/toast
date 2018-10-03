@@ -5,6 +5,7 @@
 #include "control_server.h"
 #include "esp8266_node.h"
 #include "json_node.h"
+#include "log.h"
 #include <iostream>
 
 using std::cout;
@@ -15,6 +16,7 @@ using std::shared_ptr;
 using std::optional;
 using std::list;
 using std::dynamic_pointer_cast;
+using std::runtime_error;
 
 State state;
 list<int> auto_off_hours;
@@ -22,6 +24,8 @@ list<int> auto_off_hours;
 void
 node_broadcast_received(string mac, boost::asio::ip::address ip)
 {
+	LOG("Received broadcast from %1 %2", mac, ip.to_string());
+
 	bool got = false;
 	for (auto i: Node::all()) {
 		auto e = dynamic_pointer_cast<ESP8266Node>(i);
@@ -64,16 +68,20 @@ gather()
 
 		for (auto i: Node::all()) {
 			for (auto j: i->sensors()) {
-				auto d = j->get();
-				state.add(j, d);
-				if (log) {
-					time_t const t = d.time();
-					struct tm tm = *localtime(&t);
-					fprintf(
-						log,
-						"%02d:%02d:%02d %s %s %s %f\n",
-						tm.tm_hour, tm.tm_min, tm.tm_sec, i->name().c_str(), j->name().c_str(), j->zone().c_str(), d.value()
-						);
+				try {
+					auto d = j->get();
+					state.add(j, d);
+					if (log) {
+						time_t const t = d.time();
+						struct tm tm = *localtime(&t);
+						fprintf(
+							log,
+							"%02d:%02d:%02d %s %s %s %f\n",
+							tm.tm_hour, tm.tm_min, tm.tm_sec, i->name().c_str(), j->name().c_str(), j->zone().c_str(), d.value()
+							);
+					}
+				} catch (runtime_error& e) {
+					LOG("Could not get value from %1: %2", j->name(), e.what());
 				}
 			}
 		}
@@ -94,6 +102,7 @@ control()
 		time_t const t = time(0);
 		struct tm tm = *localtime(&t);
 		if (tm.tm_min == 0 && find(auto_off_hours.begin(), auto_off_hours.end(), tm.tm_hour) != auto_off_hours.end() && state.heating_enabled()) {
+			LOG_NC("Doing auto-off");
 			state.set_heating_enabled(false);
 		}
 
@@ -103,6 +112,7 @@ control()
 		/* Override interactive settings with active rules */
 		for (auto i: state.rules()) {
 			if (i.active()) {
+				LOG_NC("Have an active rule");
 				active_state.set_heating_enabled(true);
 				active_state.set_zone_heating_enabled(i.zone(), true);
 				active_state.set_target(i.zone(), i.target());
@@ -134,6 +144,7 @@ control()
 			}
 		}
 
+		LOG("heating_enabled=%1 heat_required=%2", active_state.heating_enabled(), heat_required);
 		state.set_boiler_on(active_state.heating_enabled() && heat_required);
 
 		/* XXX: humidity */
@@ -158,13 +169,17 @@ main(int argc, char* argv[])
 	hall->add_sensor(shared_ptr<Sensor>(new Sensor(hall, "", "temperature", "Sitting room")));
 	Node::add(hall);
 
+	LOG_NC("Starting broadcast listener");
 	BroadcastListener* b = new BroadcastListener();
 	b->Received.connect(bind(&node_broadcast_received, _1, _2));
 	b->run();
 
+	LOG_NC("Starting gather thread");
 	thread gather_thread(gather);
+	LOG_NC("Starting control thread");
 	thread control_thread(control);
 
+	LOG_NC("Starting control server");
 	ControlServer* s = new ControlServer(&state, SERVER_PORT);
 	s->run();
 }
