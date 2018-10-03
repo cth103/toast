@@ -3,8 +3,10 @@
 #include "toast_socket.h"
 #include "types.h"
 #include "log.h"
+#include <iostream>
 
 using std::list;
+using std::cout;
 using std::string;
 using std::shared_ptr;
 using std::runtime_error;
@@ -53,7 +55,6 @@ try
 		return;
 	}
 
-
 	uint32_t length = (len[0] << 24) | (len[1] << 16) | (len[2] << 8) | len[3];
 	LOG("Client sending %1 bytes", length);
 	shared_ptr<uint8_t[]> data(new uint8_t[length]);
@@ -91,5 +92,5 @@ try
 }
 catch (runtime_error& e)
 {
-	LOG("ControlServer conversion died: %1", e.what());
+	LOG("ControlServer conversation died: %1", e.what());
 }
