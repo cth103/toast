@@ -19,7 +19,7 @@ public:
 	void set_zone_heating_enabled(std::string z, bool e);
 	void set_target(std::string z, float t);
 
-	std::optional<float> target(std::string z) const;
+	float target(std::string z) const;
 	bool heating_enabled() const;
 	bool zone_heating_enabled(std::string z) const;
 	std::list<Rule> rules() const;
@@ -31,6 +31,7 @@ public:
 
 private:
 	State(State const &);
+	float target_unlocked(std::string z) const;
 
 	mutable std::mutex _mutex;
 	bool _heating_enabled;

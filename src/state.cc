@@ -3,6 +3,7 @@
 #include "types.h"
 #include "sensor.h"
 #include "util.h"
+#include "config.h"
 #include <iostream>
 #include <set>
 
@@ -75,8 +76,8 @@ all_or(uint8_t types, uint8_t t)
 	return types == OP_ALL || types == t;
 }
 
-static
-void put_data(uint8_t*& p, bool all_values, list<Datum> const & data)
+static void
+put_data(uint8_t*& p, bool all_values, list<Datum> const & data)
 {
 	if (all_values) {
 		put_int16(p, data.size());
@@ -130,12 +131,7 @@ State::get(bool all_values, uint8_t types) const
 			}
 		}
                 if (all_or(types, OP_TARGET)) {
-			auto j = _target.find(i);
-			if (j != _target.end()) {
-				put_float(p, j->second);
-			} else {
-				put_float(p, 0.0);
-			}
+			put_float(p, target_unlocked(i));
 		}
 		if (all_or(types, OP_TEMPERATURES)) {
 			bool done = false;
@@ -176,44 +172,44 @@ State::get(bool all_values, uint8_t types) const
 				}
 			}
 		}
+	}
 
-		if (all_or(types, OP_RULES)) {
-			*p++ = _rules.size();
-			for (auto i: _rules) {
-				i.get(p);
+	if (all_or(types, OP_RULES)) {
+		*p++ = _rules.size();
+		for (auto i: _rules) {
+			i.get(p);
+		}
+	}
+
+	if (types == OP_ALL) {
+		bool any_zone_heating_enabled = false;
+		for (auto i: _zone_heating_enabled) {
+			if (i.second) {
+				any_zone_heating_enabled = true;
 			}
 		}
 
-		if (types == OP_ALL) {
-			bool any_zone_heating_enabled = false;
-			for (auto i: _zone_heating_enabled) {
-				if (i.second) {
-					any_zone_heating_enabled = true;
-				}
+		string explanation;
+
+		if (_boiler_on) {
+			if (_heating_enabled) {
+				explanation = "Heating";
+			} else {
+				explanation = "Heating to programmed target";
 			}
-
-			string explanation;
-
-			if (_boiler_on) {
-				if (_heating_enabled) {
-					explanation = "Heating";
+		} else {
+			if (_heating_enabled) {
+				if (any_zone_heating_enabled) {
+					explanation = "Target temperatures reached";
 				} else {
-					explanation = "Heating to programmed target";
+					explanation = "All rooms switched off";
 				}
 			} else {
-				if (_heating_enabled) {
-					if (any_zone_heating_enabled) {
-						explanation = "Target temperatures reached";
-					} else {
-						explanation = "All rooms switched off";
-					}
-				} else {
-					explanation = "Heating is switched off";
-				}
+				explanation = "Heating is switched off";
 			}
-
-			put_string(p, explanation);
 		}
+
+		put_string(p, explanation);
 	}
 
 	long int length = reinterpret_cast<long int>(p - data.get());
@@ -237,12 +233,19 @@ State::get(string zone, string sensor_name)
 	return optional<Datum>();
 }
 
-optional<float>
+float
 State::target(string z) const
+{
+	scoped_lock lm(_mutex);
+	return target_unlocked(z);
+}
+
+float
+State::target_unlocked(string z) const
 {
 	auto i = _target.find(z);
 	if (i == _target.end()) {
-		return optional<float>();
+		return Config::instance()->default_target();
 	}
 	return i->second;
 }
