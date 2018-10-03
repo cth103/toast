@@ -35,6 +35,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ConnectException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
@@ -51,7 +52,7 @@ public class Client {
     private Thread pingThread;
     /** Socket timeout in ms */
     private int timeout = 5000;
-    private int pingInterval = 1000;
+    private int pingInterval = 2000;
     private final Lock reconnectLock = new ReentrantLock();
     private final Condition reconnectCondition = reconnectLock.newCondition();
     /** true if all threads should stop */
@@ -65,6 +66,7 @@ public class Client {
     private ArrayList<byte[]> toWrite = new ArrayList<>();
     /** Handler that will be told about incoming messages */
     Handler handler;
+    private Socket socket;
 
     public Client(Handler handler) {
         this.handler = handler;
@@ -72,16 +74,18 @@ public class Client {
 
     public void start(final String hostName, final int port) {
         commsThread = new Thread(new Runnable() {
-
-            Socket socket = null;
-
             public void run() {
                 while (!shouldStop.get()) {
                     try {
                         /* Connect */
                         try {
-                            socket = new Socket(hostName, port);
+                            socket = new Socket();
+                            socket.connect(new InetSocketAddress(hostName, port));
                             socket.setSoTimeout(timeout);
+                        } catch (ConnectException e) {
+                            /* We couldn't connect to the server; relax awhile */
+                            Thread.sleep(1000);
+                            throw e;
                         } catch (IOException e) {
                             connected.set(false);
                             throw e;
@@ -131,9 +135,7 @@ public class Client {
                         message.setData(bundle);
                         handler.sendMessage(message);
                     } catch(InterruptedException e){
-
                     } catch(IOException e){
-
                     } finally {
                         try {
                             if (socket != null) {
@@ -205,6 +207,13 @@ public class Client {
 
     public void stop() {
         shouldStop.set(true);
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (IOException e) {
+
+            }
+        }
         if (commsThread != null) {
             commsThread.interrupt();
             try {
