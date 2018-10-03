@@ -59,7 +59,9 @@ State::zone_heating_enabled(string z) const
 {
 	scoped_lock lm(_mutex);
 	auto i = _zone_heating_enabled.find(z);
-	assert(i != _zone_heating_enabled.end());
+	if (i == _zone_heating_enabled.end()) {
+		return false;
+	}
 	return i->second;
 }
 
