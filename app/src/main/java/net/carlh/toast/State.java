@@ -259,7 +259,6 @@ public class State {
     private int getDatumArray(byte[] data, int offset, ArrayList<Datum> d) {
         int num = Util.getInt16(data, offset);
         offset += 2;
-        Log.e("test", "we have " + num + " data.");
         for (int j = 0; j < num; ++j) {
             d.add(new Datum(data, offset));
             offset += Datum.BINARY_LENGTH;
@@ -270,7 +269,6 @@ public class State {
     public synchronized void setFromBinary(byte[] data) {
         int o = 0;
         final int op = data[o++];
-        Log.e("test", "op is " + op + " " + data.length);
         boolean all = op == (OP_CHANGE | ALL);
 
         if (all || op == (OP_CHANGE | HEATING_ENABLED)) {
@@ -282,12 +280,10 @@ public class State {
         }
 
         int numZones = data[o++];
-        Log.e("test", "numZones=" + numZones);
         zones.clear();
         for (int i = 0; i < numZones; ++i) {
             String name = Util.getString(data, o);
             o += name.length() + 1;
-            Log.e("test", "zone is " + name);
             zones.add(name);
         }
 
@@ -323,13 +319,12 @@ public class State {
 
         if (all || op == (OP_CHANGE | RULES)) {
             int num = data[o++];
-            /* XXX
-            ArrayList<Rule> r = new ArrayList<>();
+            rules.clear();
             for (int i = 0; i < num; ++i) {
-                r.add(new Rule(data, o));
-                o += Rule.binary_length;
+                Rule r = new Rule(data, o);
+                rules.add(r);
+                o += r.binaryLength();
             }
-            */
         }
 
         if (all) {
