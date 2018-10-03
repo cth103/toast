@@ -1,4 +1,5 @@
 #include "toast_socket.h"
+#include "compose.hpp"
 #include <iostream>
 
 using std::bind;
@@ -84,8 +85,8 @@ Socket::read(uint8_t* data, int size)
 		_io_service.run_one();
 	} while (ec == boost::asio::error::would_block);
 
-	if (ec != boost::asio::error::eof) {
-		throw runtime_error("error during async_read");
+	if (ec && ec != boost::asio::error::eof) {
+		throw runtime_error(String::compose("error during async_read (%1)", ec));
 	}
 
 	return received;
