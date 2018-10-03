@@ -172,6 +172,11 @@ main()
 	hall->add_sensor(shared_ptr<Sensor>(new Sensor(hall, "", "temperature", "Sitting room")));
 	Node::add(hall);
 
+#ifdef TOAST_HAVING_WIRINGPI
+	wiringPiSetup();
+	pinMode(Config::instance()->boiler_gpio(), OUTPUT);
+#endif
+
 	LOG_NC("Starting broadcast listener");
 	BroadcastListener* b = new BroadcastListener();
 	b->Received.connect(bind(&node_broadcast_received, _1, _2));

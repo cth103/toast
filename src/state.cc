@@ -4,6 +4,9 @@
 #include "sensor.h"
 #include "util.h"
 #include "config.h"
+#ifdef TOAST_HAVE_WIRINGPI
+#include <wiringpi.h>
+#endif
 #include <iostream>
 #include <set>
 
@@ -45,6 +48,9 @@ State::set_boiler_on(bool s)
 {
 	scoped_lock lm(_mutex);
 	_boiler_on = s;
+#ifdef TOAST_HAVE_WIRINGPI
+	digitalWrite(Config::instance()->boiler_gpio(), s ? HIGH : LOW);
+#endif
 }
 
 void

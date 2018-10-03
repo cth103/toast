@@ -10,6 +10,7 @@ def configure(conf):
     else:
         conf.env.append_value('CXXFLAGS', '-O2')
     conf.check(lib=['boost_system', 'pthread'], uselib_store='BOOST_SYSTEM', msg="Checking for library boost-system")
+    conf.check(lib=['wiringPi'], uselib_store='WIRINGPI', define_name='TOAST_HAVE_WIRINGPI', mandatory=False)
     conf.recurse('test')
 
 def build(bld):

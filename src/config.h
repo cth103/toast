@@ -30,6 +30,9 @@ public:
 	float default_target() const {
 		return _default_target;
 	}
+	int boiler_gpio() const {
+		return _boiler_gpio;
+	}
 
 	static Config* instance();
 
@@ -45,6 +48,7 @@ private:
 	int _server_port;
 	float _hysteresis;
 	float _default_target;
+	int _boiler_gpio;
 
 	static Config* _instance;
 };

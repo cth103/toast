@@ -20,6 +20,7 @@ Config::Config()
 	, _server_port(9999)
 	, _hysteresis(0.2)
 	, _default_target(19)
+	, _boiler_gpio(2)
 {
 	char config_file[256];
 	snprintf(config_file, sizeof(config_file), "%s/.config/toastd", getenv("HOME"));
@@ -52,6 +53,8 @@ Config::Config()
 				_hysteresis = atof(value.c_str());
 			} else if (key == "default_target") {
 				_default_target = atof(value.c_str());
+			} else if (key == "boiler_gpio") {
+				_boiler_gpio = atoi(value.c_str());
 			} else {
 				throw runtime_error(String::compose("Unknown key %1 in configuration", key));
 			}
