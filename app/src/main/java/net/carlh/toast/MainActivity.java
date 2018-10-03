@@ -72,7 +72,7 @@ import java.util.List;
                    that only goes server -> client).
                 */
                 int property = message.getData().getInt("property");
-                if (property != State.TEMPERATURES && property != State.HUMIDITIES && client != null) {
+                if (property != State.TEMPERATURES && property != State.HUMIDITIES && property != State.ACTUATORS && client != null) {
                     client.sendImmediate(state.getBinary(property));
                 }
 
