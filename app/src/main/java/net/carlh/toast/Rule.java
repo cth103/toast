@@ -50,19 +50,20 @@ public class Rule implements Serializable {
         this.target = target;
     }
 
-    public Rule(JSONObject json) {
-        try {
-            id = json.getInt("id");
-            days = json.getInt("days");
-            onHour = json.getInt("on_hour");
-            onMinute = json.getInt("on_minute");
-            offHour = json.getInt("off_hour");
-            offMinute = json.getInt("off_minute");
-            zone = json.getString("zone");
-            target = json.getDouble("target");
-        } catch (JSONException e) {
-            Log.e("Toast", "Exception", e);
-        }
+    public Rule(byte[] data, int offset) {
+        id = data[offset++];
+        days = data[offset++];
+        onHour = data[offset++];
+        onMinute = data[offset++];
+        offHour = data[offset++];
+        offMinute = data[offset++];
+        target = Util.getFloat(data, offset);
+        offset += 2;
+        zone = Util.getString(data, offset);
+    }
+
+    public int binaryLength() {
+        return 8 + 1 + zone.length();
     }
 
     public Rule(Rule r) {
@@ -78,38 +79,6 @@ public class Rule implements Serializable {
         offMinute = r.offMinute;
         zone = r.zone;
         target = r.target;
-    }
-
-    JSONObject asJSON() {
-        JSONObject json = new JSONObject();
-        try {
-            if (id != -1) {
-                json.put("id", id);
-            }
-            json.put("days", days);
-            json.put("on_hour", onHour);
-            json.put("on_minute", onMinute);
-            json.put("off_hour", offHour);
-            json.put("off_minute", offMinute);
-            json.put("zone", zone);
-            json.put("target", target);
-        } catch (JSONException e) {
-            Log.e("Toast", "Exception", e);
-        }
-        return json;
-    }
-
-    public static ArrayList<Rule> readJSON(JSONArray json) {
-        ArrayList<Rule> out = new ArrayList<Rule>();
-        try {
-            for (int i = 0; i < json.length(); i++) {
-                out.add(new Rule(json.getJSONObject(i)));
-            }
-        } catch (JSONException e) {
-            Log.e("Toast", "Exception", e);
-        }
-
-        return out;
     }
 
     private static String period(int from, int to) {
