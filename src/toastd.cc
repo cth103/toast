@@ -121,19 +121,21 @@ control()
 
 		/* Set radiators */
 		for (auto i: Node::all()) {
-			shared_ptr<Sensor> se = i->sensor("radiator");
-			if (!se) {
+			shared_ptr<Actuator> rad = i->actuator("radiator");
+			if (!rad) {
 				continue;
 			}
-			if (active_state.zone_heating_enabled(se->zone())) {
+			if (active_state.zone_heating_enabled(rad->zone())) {
 				string zone = i->sensor("temperature")->zone();
 				optional<Datum> const t = active_state.get(zone, "temperature");
 				float const hysteresis = Config::instance()->hysteresis();
 				if (t && t->value() > active_state.target(zone) + hysteresis) {
-					i->actuator("radiator")->set(false);
+					rad->set(false);
 				} else if (t && t->value() < active_state.target(zone) - hysteresis) {
-					i->actuator("radiator")->set(true);
+					rad->set(true);
 				}
+			} else {
+				rad->set(false);
 			}
 		}
 
