@@ -30,6 +30,7 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -37,7 +38,7 @@ import android.view.MenuItem;
 import java.io.IOException;
 import java.util.List;
 
-    public class MainActivity extends FragmentActivity {
+    public class MainActivity extends ActionBarActivity {
 
     private State state;
     private Client client;
