@@ -129,9 +129,9 @@ control()
 				string zone = i->sensor("temperature")->zone();
 				optional<Datum> const t = active_state.get(zone, "temperature");
 				float const hysteresis = Config::instance()->hysteresis();
-				if (t && t->value() > active_state.target(zone).value_or(0) + hysteresis) {
+				if (t && t->value() > active_state.target(zone) + hysteresis) {
 					i->actuator("radiator")->set(false);
-				} else if (t && t->value() < active_state.target(zone).value_or(0) - hysteresis) {
+				} else if (t && t->value() < active_state.target(zone) - hysteresis) {
 					i->actuator("radiator")->set(true);
 				}
 			}
