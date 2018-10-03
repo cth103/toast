@@ -1,5 +1,6 @@
 #include "broadcast_listener.h"
 #include "config.h"
+#include "log.h"
 #include <boost/asio.hpp>
 #include <functional>
 #include <iostream>
@@ -7,6 +8,7 @@
 using std::bind;
 using std::cout;
 using std::string;
+using std::runtime_error;
 
 BroadcastListener::BroadcastListener()
 {
@@ -44,12 +46,18 @@ try
 	_socket->bind(listen_endpoint);
 
 	_socket->async_receive_from(
-		boost::asio::buffer(_buffer, sizeof(_buffer)),
+		boost::asio::buffer(_buffer, sizeof(_buffer) - 1),
 		_send_endpoint,
-		bind(&BroadcastListener::received, this)
+		bind(&BroadcastListener::received, this, std::placeholders::_2)
 		);
 
 	_io_service.run();
+}
+catch (runtime_error& e)
+{
+	/* XXX: no point in storing if nobody ever re-throws */
+	LOG("Broadcast listener error: %1", e.what());
+	store_current();
 }
 catch (...)
 {
@@ -57,15 +65,15 @@ catch (...)
 }
 
 void
-BroadcastListener::received()
+BroadcastListener::received(int bytes)
 {
-	_buffer[sizeof(_buffer) - 1] = '\0';
+	_buffer[bytes] = '\0';
 	string msg(_buffer);
 	if (msg.size() == 26 && msg.substr(0, 13) == "Hello heating") {
 		Received(msg.substr(14, 12), _send_endpoint.address());
 	}
 	_socket->async_receive_from(
 		boost::asio::buffer(_buffer, sizeof(_buffer)),
-		_send_endpoint, bind(&BroadcastListener::received, this)
+		_send_endpoint, bind(&BroadcastListener::received, this, std::placeholders::_2)
 		);
 }

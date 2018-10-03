@@ -15,7 +15,7 @@ public:
 
 private:
 	void thread();
-	void received();
+	void received(int bytes);
 
 	std::thread* _thread;
 	boost::asio::ip::udp::socket* _socket;
