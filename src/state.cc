@@ -81,13 +81,13 @@ void put_data(uint8_t*& p, bool all_values, list<Datum> const & data)
 	if (all_values) {
 		put_int16(p, data.size());
 		for (auto k: data) {
-			put(p, k);
+			put_datum(p, k);
 		}
 	} else if (data.size() == 1) {
 		put_int16(p, 1);
-		put(p, data.back());
+		put_datum(p, data.back());
 	} else {
-		put(p, 0);
+		put_int16(p, 0);
 	}
 }
 
@@ -114,8 +114,10 @@ State::get(bool all_values, uint8_t types) const
 		zones.insert(i.first->zone());
 	}
 
+	*p++ = zones.size();
+
 	for (auto i: zones) {
-		put(p, i);
+		put_string(p, i);
 	}
 
 	for (auto i: zones) {
@@ -136,31 +138,50 @@ State::get(bool all_values, uint8_t types) const
 			}
 		}
 		if (all_or(types, OP_TEMPERATURES)) {
+			bool done = false;
 			for (auto j: _data) {
 				if (j.first->zone() == i && j.first->name() == "temperature") {
 					put_data(p, all_values, j.second);
+					done = true;
 				}
+			}
+			if (!done) {
+				put_int16(p, 0);
 			}
 		}
                 if (all_or(types, OP_HUMIDITIES)) {
+			bool done = false;
 			for (auto j: _data) {
 				if (j.first->zone() == i && j.first->name() == "humidity") {
 					put_data(p, all_values, j.second);
+					done = true;
 				}
+			}
+			if (!done) {
+				put_int16(p, 0);
 			}
 		}
 		if (all_or(types, OP_ACTUATORS)) {
+			int N = 0;
 			for (auto j: Node::all()) {
 				for (auto k: j->actuators()) {
-					put(p, k->name());
+					++N;
+				}
+			}
+			*p++ = N;
+			for (auto j: Node::all()) {
+				for (auto k: j->actuators()) {
+					put_string(p, k->name());
 					*p++ = k->state().value_or(false) ? 1 : 0;
 				}
 			}
 		}
 
-		*p++ = _rules.size();
-		for (auto i: _rules) {
-			i.get(p);
+		if (all_or(types, OP_RULES)) {
+			*p++ = _rules.size();
+			for (auto i: _rules) {
+				i.get(p);
+			}
 		}
 
 		if (types == OP_ALL) {
@@ -191,7 +212,7 @@ State::get(bool all_values, uint8_t types) const
 				}
 			}
 
-			put(p, explanation);
+			put_string(p, explanation);
 		}
 	}
 
