@@ -65,33 +65,17 @@ public class Graph extends View {
         dataPaint[Datum.TYPE_TEMPERATURE].setStyle(Paint.Style.STROKE);
         dataPaint[Datum.TYPE_TEMPERATURE].setTextAlign(Paint.Align.RIGHT);
 
-        dataPaint[Datum.TYPE_OUTSIDE_TEMPERATURE] = new Paint(Paint.ANTI_ALIAS_FLAG);
-        dataPaint[Datum.TYPE_OUTSIDE_TEMPERATURE].setColor(0xdddd0000);
-        dataPaint[Datum.TYPE_OUTSIDE_TEMPERATURE].setStrokeWidth(2);
-        dataPaint[Datum.TYPE_OUTSIDE_TEMPERATURE].setStyle(Paint.Style.STROKE);
-        dataPaint[Datum.TYPE_OUTSIDE_TEMPERATURE].setPathEffect(new DashPathEffect(new float[]{4, 4}, 0));
-
         dataPaint[Datum.TYPE_HUMIDITY] = new Paint(Paint.ANTI_ALIAS_FLAG);
         dataPaint[Datum.TYPE_HUMIDITY].setColor(0xffffff00);
         dataPaint[Datum.TYPE_HUMIDITY].setStrokeWidth(4);
         dataPaint[Datum.TYPE_HUMIDITY].setStyle(Paint.Style.STROKE);
 
-        dataPaint[Datum.TYPE_OUTSIDE_HUMIDITY] = new Paint(Paint.ANTI_ALIAS_FLAG);
-        dataPaint[Datum.TYPE_OUTSIDE_HUMIDITY].setColor(0xffffff00);
-        dataPaint[Datum.TYPE_OUTSIDE_HUMIDITY].setStrokeWidth(2);
-        dataPaint[Datum.TYPE_OUTSIDE_HUMIDITY].setStyle(Paint.Style.STROKE);
-        dataPaint[Datum.TYPE_OUTSIDE_HUMIDITY].setPathEffect(new DashPathEffect(new float[]{4, 4}, 0));
-
         rangeMin = new int[Datum.TYPE_COUNT];
         rangeMax = new int[Datum.TYPE_COUNT];
         rangeMin[Datum.TYPE_TEMPERATURE] = 5;
         rangeMax[Datum.TYPE_TEMPERATURE] = 25;
-        rangeMin[Datum.TYPE_OUTSIDE_TEMPERATURE] = 5;
-        rangeMax[Datum.TYPE_OUTSIDE_TEMPERATURE] = 25;
         rangeMin[Datum.TYPE_HUMIDITY] = 0;
         rangeMax[Datum.TYPE_HUMIDITY] = 100;
-        rangeMin[Datum.TYPE_OUTSIDE_HUMIDITY] = 0;
-        rangeMax[Datum.TYPE_OUTSIDE_HUMIDITY] = 100;
 
         data = new ArrayList<>();
         for (int i = 0; i < Datum.TYPE_COUNT; ++i) {

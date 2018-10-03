@@ -23,6 +23,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
@@ -49,9 +50,7 @@ public class State {
     public static final int HUMIDITIES = 5;
     /** Rules (programmed targets at particular times) */
     public static final int RULES = 6;
-    public static final int OUTSIDE_HUMIDITIES = 7;
-    public static final int OUTSIDE_TEMPERATURES = 8;
-    public static final int ACTUATORS = 9;
+    public static final int ACTUATORS = 7;
     public static final int ALL = 0xf;
 
     private Context context;
@@ -64,8 +63,6 @@ public class State {
     private boolean boilerOn = false;
     private HashMap<String, ArrayList<Datum>> temperatures = new HashMap<>();
     private HashMap<String, ArrayList<Datum>> humidities = new HashMap<>();
-    private ArrayList<Datum> outsideHumidities = new ArrayList<>();
-    private ArrayList<Datum> outsideTemperatures = new ArrayList<>();
     private HashMap<String, HashMap<String, Boolean>> actuators = new HashMap<>();
     private ArrayList<Rule> rules = new ArrayList<>();
     private String explanation;
@@ -115,10 +112,6 @@ public class State {
     public synchronized HashMap<String, ArrayList<Datum>> getHumidities() {
         return humidities;
     }
-
-    public synchronized ArrayList<Datum> getOutsideHumidities() { return outsideHumidities; }
-
-    public synchronized ArrayList<Datum> getOutsideTemperatures() { return outsideTemperatures; }
 
     public synchronized ArrayList<Rule> getRules() {
         return rules;
@@ -224,16 +217,6 @@ public class State {
         changed(HUMIDITIES);
     }
 
-    public synchronized void setOutsideHumidities(ArrayList<Datum> h) {
-        outsideHumidities = h;
-        changed(OUTSIDE_HUMIDITIES);
-    }
-
-    public synchronized void setOutsideTemperatures(ArrayList<Datum> t) {
-        outsideTemperatures = t;
-        changed(OUTSIDE_TEMPERATURES);
-    }
-
     public synchronized void setActuators(String zone, HashMap<String, Boolean> v) {
         actuators.put(zone, v);
         changed(ACTUATORS);
@@ -276,6 +259,7 @@ public class State {
     private int getDatumArray(byte[] data, int offset, ArrayList<Datum> d) {
         int num = Util.getInt16(data, offset);
         offset += 2;
+        Log.e("test", "we have " + num + " data.");
         for (int j = 0; j < num; ++j) {
             d.add(new Datum(data, offset));
             offset += Datum.BINARY_LENGTH;
@@ -286,7 +270,7 @@ public class State {
     public synchronized void setFromBinary(byte[] data) {
         int o = 0;
         final int op = data[o++];
-
+        Log.e("test", "op is " + op + " " + data.length);
         boolean all = op == (OP_CHANGE | ALL);
 
         if (all || op == (OP_CHANGE | HEATING_ENABLED)) {
@@ -297,23 +281,13 @@ public class State {
             setBoilerOn(data[o++] == 1);
         }
 
-        if (all || op == (OP_CHANGE | OUTSIDE_HUMIDITIES)) {
-            ArrayList<Datum> t = new ArrayList<>();
-            o = getDatumArray(data, o, t);
-            setOutsideHumidities(t);
-        }
-
-        if (all || op == (OP_CHANGE | OUTSIDE_TEMPERATURES)) {
-            ArrayList<Datum> t = new ArrayList<>();
-            o = getDatumArray(data, o, t);
-            setOutsideTemperatures(t);
-        }
-
         int numZones = data[o++];
+        Log.e("test", "numZones=" + numZones);
         zones.clear();
         for (int i = 0; i < numZones; ++i) {
             String name = Util.getString(data, o);
             o += name.length() + 1;
+            Log.e("test", "zone is " + name);
             zones.add(name);
         }
 
