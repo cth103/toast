@@ -237,9 +237,6 @@ public class GraphFragment extends Fragment {
         ArrayList<Datum> hums = state.getHumidities().get(zone.getSelectedItem());
         graph.setData(Datum.TYPE_HUMIDITY, getSmoothedGraphData(hums));
 
-        graph.setData(Datum.TYPE_OUTSIDE_TEMPERATURE, getSparseGraphData(state.getOutsideTemperatures()));
-        graph.setData(Datum.TYPE_OUTSIDE_HUMIDITY, getSparseGraphData(state.getOutsideHumidities()));
-
         graph.setTimeRange(endTime.getTime() - startTime.getTime());
     }
 }
