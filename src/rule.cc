@@ -32,7 +32,7 @@ Rule::get(uint8_t*& p) const
 	*p++ = _off_hour;
 	*p++ = _off_minute;
 	put_float(p, _target);
-	put(p, _zone);
+	put_string(p, _zone);
 }
 
 bool
