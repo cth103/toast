@@ -85,6 +85,7 @@ try
 		p++;
 		for (auto i: zones_from_message(p)) {
 			_state->set_target(i, static_cast<float>(p[0] | (p[1] << 8)) / 16);
+			p += 2;
 		}
 		auto s = _state->get(false, OP_TARGET);
 		write(socket, s.first.get(), s.second);
