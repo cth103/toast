@@ -39,7 +39,7 @@ BroadcastListener::thread()
 try
 {
 	boost::asio::ip::address address = boost::asio::ip::address_v4::any();
-	boost::asio::ip::udp::endpoint listen_endpoint(address, BROADCAST_PORT);
+	boost::asio::ip::udp::endpoint listen_endpoint(address, Config::instance()->broadcast_port());
 
 	_socket = new boost::asio::ip::udp::socket(_io_service);
 	_socket->open(listen_endpoint.protocol());

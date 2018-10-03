@@ -11,11 +11,12 @@ def build(bld):
     obj.uselib =  'BOOST_TEST BOOST_SYSTEM'
     obj.use    = 'libdcpomatic2'
     obj.source = """
-                 ../src/rule.cc
-                 ../src/util.cc
-                 ../src/json_node.cc
-                 ../src/toast_socket.cc
+                 ../src/config.cc
                  ../src/datum.cc
+                 ../src/json_node.cc
+                 ../src/rule.cc
+                 ../src/toast_socket.cc
+                 ../src/util.cc
                  rule_test.cc
                  json_node_test.cc
                  test.cc

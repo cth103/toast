@@ -4,13 +4,20 @@
 
 using std::cout;
 using std::string;
+using std::scoped_lock;
+using std::mutex;
+
+mutex Log::_mutex;
 
 void
 Log::log(string s)
 {
-	FILE* f = fopen(LOG_DIRECTORY "/toastd.log", "a+");
+	scoped_lock lm(_mutex);
+
+	string const log_path = Config::instance()->log_directory() + "/toastd.log";
+	FILE* f = fopen(log_path.c_str(), "a+");
 	if (!f) {
-		cout << "Could not open log file.\n";
+		cout << String::compose("Could not open log file %1", log_path) << "\n";
 		return;
 	}
 

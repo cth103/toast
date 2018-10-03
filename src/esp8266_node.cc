@@ -9,8 +9,9 @@ using std::cout;
 Datum
 ESP8266Node::get(string id) const
 {
-	Socket socket(SENSOR_TIMEOUT);
-	socket.connect(boost::asio::ip::tcp::endpoint(_ip, SENSOR_PORT));
+	Config* config = Config::instance();
+	Socket socket(config->sensor_timeout());
+	socket.connect(boost::asio::ip::tcp::endpoint(_ip, config->sensor_port()));
 	char buffer[64];
 	snprintf(buffer, sizeof(buffer), "%s\r\n", id.c_str());
 	socket.write(reinterpret_cast<uint8_t*>(buffer), strlen(buffer));

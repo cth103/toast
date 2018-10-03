@@ -63,7 +63,7 @@ gather()
 		time_t t = time(0);
 		struct tm tm = *localtime(&t);
 		char log_file[256];
-		snprintf(log_file, 256, "%s/%02d-%02d-%d.log", LOG_DIRECTORY, tm.tm_mday, tm.tm_mon, tm.tm_year + 1900);
+		snprintf(log_file, 256, "%s/%02d-%02d-%d.log", Config::instance()->log_directory().c_str(), tm.tm_mday, tm.tm_mon, tm.tm_year + 1900);
 		FILE* log = fopen(log_file, "a+");
 
 		for (auto i: Node::all()) {
@@ -89,7 +89,7 @@ gather()
 		if (log) {
 			fclose(log);
 		}
-		sleep(GATHER_INTERVAL);
+		sleep(Config::instance()->gather_interval());
 	}
 }
 
@@ -128,9 +128,10 @@ control()
 			if (active_state.zone_heating_enabled(se->zone())) {
 				string zone = i->sensor("temperature")->zone();
 				optional<Datum> const t = active_state.get(zone, "temperature");
-				if (t && t->value() > active_state.target(zone).value_or(0) + HYSTERESIS) {
+				float const hysteresis = Config::instance()->hysteresis();
+				if (t && t->value() > active_state.target(zone).value_or(0) + hysteresis) {
 					i->actuator("radiator")->set(false);
-				} else if (t && t->value() < active_state.target(zone).value_or(0) - HYSTERESIS) {
+				} else if (t && t->value() < active_state.target(zone).value_or(0) - hysteresis) {
 					i->actuator("radiator")->set(true);
 				}
 			}
@@ -149,12 +150,12 @@ control()
 
 		/* XXX: humidity */
 
-		sleep(CONTROL_INTERVAL);
+		sleep(Config::instance()->control_interval());
 	}
 }
 
 int
-main(int argc, char* argv[])
+main()
 {
 	/* XXX */
 	auto_off_hours.push_back(0);
@@ -180,6 +181,6 @@ main(int argc, char* argv[])
 	thread control_thread(control);
 
 	LOG_NC("Starting control server");
-	ControlServer* s = new ControlServer(&state, SERVER_PORT);
+	ControlServer* s = new ControlServer(&state, Config::instance()->server_port());
 	s->run();
 }

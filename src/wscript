@@ -1,5 +1,6 @@
 sources = """
           broadcast_listener.cc
+          config.cc
           control_server.cc
           datum.cc
           esp8266_node.cc
