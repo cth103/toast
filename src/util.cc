@@ -17,7 +17,7 @@ put_float(uint8_t*& p, float f)
 }
 
 void
-put(uint8_t*& p, string s)
+put_string(uint8_t*& p, string s)
 {
 	*p++ = s.length();
 	strncpy(reinterpret_cast<char *>(p), s.c_str(), s.length());
@@ -25,7 +25,7 @@ put(uint8_t*& p, string s)
 }
 
 void
-put(uint8_t*& p, Datum d)
+put_datum(uint8_t*& p, Datum d)
 {
 	*p++ = d.time() & 0xff;
 	*p++ = (d.time() & 0xff00) >> 8;
