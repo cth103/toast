@@ -27,6 +27,9 @@ public:
 	float hysteresis() const {
 		return _hysteresis;
 	}
+	float default_target() const {
+		return _default_target;
+	}
 
 	static Config* instance();
 
@@ -41,6 +44,7 @@ private:
 	int _sensor_timeout;
 	int _server_port;
 	float _hysteresis;
+	float _default_target;
 
 	static Config* _instance;
 };
