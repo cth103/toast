@@ -34,7 +34,6 @@
 #ifndef STRING_COMPOSE_H
 #define STRING_COMPOSE_H
 
-#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <string>
 #include <list>
