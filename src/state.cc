@@ -220,7 +220,7 @@ State::get(bool all_values, uint8_t types) const
 		put_string(p, explanation);
 	}
 
-	long int length = reinterpret_cast<long int>(p - data.get());
+	ptrdiff_t length = p - data.get();
 	shared_ptr<uint8_t[]> out(new uint8_t[length]);
 	memcpy(out.get(), data.get(), length);
 	return make_pair(out, length);
