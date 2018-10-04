@@ -11,8 +11,13 @@ def configure(conf):
         conf.env.append_value('CXXFLAGS', '-O2')
     conf.check(lib=['boost_system', 'pthread'], uselib_store='BOOST_SYSTEM', msg="Checking for library boost-system")
     conf.check(lib=['wiringPi'], uselib_store='WIRINGPI', define_name='TOAST_HAVE_WIRINGPI', mandatory=False)
-    conf.recurse('test')
+    conf.check_cxx(fragment="""
+                            #define BOOST_TEST_MODULE Config test\n
+    			    #include <boost/test/unit_test.hpp>\n
+                            int main() {}
+                            """, msg='Checking for boost unit testing library', lib='boost_unit_test_framework', uselib_store='BOOST_TEST', mandatory=False)
 
 def build(bld):
     bld.recurse('src')
-    bld.recurse('test')
+    if 'LIB_BOOST_TEST' in bld.env:
+        bld.recurse('test')
