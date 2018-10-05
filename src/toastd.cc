@@ -6,6 +6,9 @@
 #include "esp8266_node.h"
 #include "json_node.h"
 #include "log.h"
+#ifdef TOAST_HAVE_WIRINGPI
+#include <wiringPi.h>
+#endif
 #include <iostream>
 
 using std::cout;
@@ -189,7 +192,7 @@ main()
 	hall->add_sensor(shared_ptr<Sensor>(new Sensor(hall, "", "temperature", "Sitting room")));
 	Node::add(hall);
 
-#ifdef TOAST_HAVING_WIRINGPI
+#ifdef TOAST_HAVE_WIRINGPI
 	wiringPiSetup();
 	pinMode(Config::instance()->boiler_gpio(), OUTPUT);
 #endif
