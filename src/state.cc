@@ -5,7 +5,7 @@
 #include "util.h"
 #include "config.h"
 #ifdef TOAST_HAVE_WIRINGPI
-#include <wiringpi.h>
+#include <wiringPi.h>
 #endif
 #include <iostream>
 #include <set>
