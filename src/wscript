@@ -20,5 +20,5 @@ def build(bld):
     obj = bld(features='cxx cxxprogram')
     obj.name = 'toastd'
     obj.target = 'toastd'
-    obj.uselib = 'BOOST_SYSTEM'
+    obj.uselib = 'BOOST_SYSTEM WIRINGPI'
     obj.source = sources
