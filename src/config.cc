@@ -27,6 +27,10 @@ Config::Config()
 	char config_file[256];
 	snprintf(config_file, sizeof(config_file), "%s/.config/toastd", getenv("HOME"));
 	FILE* f = fopen(config_file, "r");
+	if (!f) {
+		return;
+	}
+
 	while (!feof(f)) {
 		char* buf = 0;
 		size_t n = 0;
