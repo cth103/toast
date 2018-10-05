@@ -56,14 +56,14 @@ try
 	}
 
 	uint32_t length = (len[0] << 24) | (len[1] << 16) | (len[2] << 8) | len[3];
-	LOG("Client sending %1 bytes", length);
+	LOG_CLIENT("Client sending %1 bytes", length);
 	shared_ptr<uint8_t[]> data(new uint8_t[length]);
 	if (socket->read(data.get(), length) != static_cast<int>(length)) {
 		return;
 	}
 
 	uint8_t* p = data.get();
-	LOG("Opcode is %1", static_cast<int>(p[0]));
+	LOG_CLIENT("Opcode is %1", static_cast<int>(p[0]));
 	if (p[0] == OP_SEND_BASIC) {
 		auto s = _state->get(false, OP_ALL);
 		write(socket, s.first.get(), s.second);
@@ -93,5 +93,5 @@ try
 }
 catch (runtime_error& e)
 {
-	LOG("ControlServer conversation died: %1", e.what());
+	LOG_CLIENT("ControlServer conversation died: %1", e.what());
 }

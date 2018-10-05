@@ -56,7 +56,7 @@ try
 catch (runtime_error& e)
 {
 	/* XXX: no point in storing if nobody ever re-throws */
-	LOG("Broadcast listener error: %1", e.what());
+	LOG_NODE("Broadcast listener error: %1", e.what());
 	store_current();
 }
 catch (...)

@@ -39,6 +39,9 @@ public:
 	float humidity_falling_threshold() const {
 		return _humidity_falling_threshold;
 	}
+	int log_types() const {
+		return _log_types;
+	}
 
 	static Config* instance();
 
@@ -57,6 +60,7 @@ private:
 	int _boiler_gpio;
 	float _humidity_rising_threshold;
 	float _humidity_falling_threshold;
+	int _log_types;
 
 	static Config* _instance;
 };

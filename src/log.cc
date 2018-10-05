@@ -8,11 +8,15 @@ using std::scoped_lock;
 using std::mutex;
 
 mutex Log::_mutex;
+int Log::_types = 0xff;
 
 void
-Log::log(string s)
+Log::log(int type, string s)
 {
 	scoped_lock lm(_mutex);
+	if (type && ((type & _types) == 0)) {
+		return;
+	}
 
 	string const log_path = Config::instance()->log_directory() + "/toastd.log";
 	FILE* f = fopen(log_path.c_str(), "a+");

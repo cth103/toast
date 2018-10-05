@@ -1,5 +1,6 @@
 #include "config.h"
 #include "compose.hpp"
+#include "log.h"
 #include <string>
 #include <stdexcept>
 #include <iostream>
@@ -23,6 +24,7 @@ Config::Config()
 	, _boiler_gpio(2)
 	, _humidity_rising_threshold(8)
 	, _humidity_falling_threshold(5)
+	, _log_types(Log::STARTUP)
 {
 	char config_file[256];
 	snprintf(config_file, sizeof(config_file), "%s/.config/toastd", getenv("HOME"));
@@ -65,6 +67,8 @@ Config::Config()
 				_humidity_rising_threshold = atof(value.c_str());
 			} else if (key == "humidity_falling_threshold") {
 				_humidity_falling_threshold = atof(value.c_str());
+			} else if (key == "log_types") {
+				_log_types = atoi(value.c_str());
 			} else {
 				throw runtime_error(String::compose("Unknown key %1 in configuration", key));
 			}

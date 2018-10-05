@@ -53,7 +53,7 @@ Server::handle_accept(shared_ptr<Socket> socket, boost::system::error_code const
 		return;
 	}
 
-	LOG_NC("Client connection started.");
+	LOG_CLIENT_NC("Client connection started.");
 
 	handle(socket);
 	start_accept();

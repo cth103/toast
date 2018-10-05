@@ -24,7 +24,7 @@ list<int> auto_off_hours;
 void
 node_broadcast_received(string mac, boost::asio::ip::address ip)
 {
-	LOG("Received broadcast from %1 %2", mac, ip.to_string());
+	LOG_NODE("Received broadcast from %1 %2", mac, ip.to_string());
 
 	bool got = false;
 	for (auto i: Node::all()) {
@@ -81,7 +81,7 @@ gather()
 							);
 					}
 				} catch (runtime_error& e) {
-					LOG("Could not get value from %1: %2", j->name(), e.what());
+					LOG_ERROR("Could not get value from %1: %2", j->name(), e.what());
 				}
 			}
 		}
@@ -102,7 +102,7 @@ control()
 		time_t const t = time(0);
 		struct tm tm = *localtime(&t);
 		if (tm.tm_min == 0 && find(auto_off_hours.begin(), auto_off_hours.end(), tm.tm_hour) != auto_off_hours.end() && state.heating_enabled()) {
-			LOG_NC("Doing auto-off");
+			LOG_DECISION_NC("Doing auto-off");
 			state.set_heating_enabled(false);
 		}
 
@@ -112,7 +112,7 @@ control()
 		/* Override interactive settings with active rules */
 		for (auto i: state.rules()) {
 			if (i.active()) {
-				LOG_NC("Have an active rule");
+				LOG_DECISION_NC("Have an active rule");
 				active_state.set_heating_enabled(true);
 				active_state.set_zone_heating_enabled(i.zone(), true);
 				active_state.set_target(i.zone(), i.target());
@@ -147,7 +147,7 @@ control()
 			}
 		}
 
-		LOG("heating_enabled=%1 heat_required=%2", active_state.heating_enabled(), heat_required);
+		LOG_DECISION("heating_enabled=%1 heat_required=%2", active_state.heating_enabled(), heat_required);
 		state.set_boiler_on(active_state.heating_enabled() && heat_required);
 
 		for (auto i: Node::all()) {
@@ -194,17 +194,17 @@ main()
 	pinMode(Config::instance()->boiler_gpio(), OUTPUT);
 #endif
 
-	LOG_NC("Starting broadcast listener");
+	LOG_STARTUP_NC("Starting broadcast listener");
 	BroadcastListener* b = new BroadcastListener();
 	b->Received.connect(bind(&node_broadcast_received, _1, _2));
 	b->run();
 
-	LOG_NC("Starting gather thread");
+	LOG_STARTUP_NC("Starting gather thread");
 	thread gather_thread(gather);
-	LOG_NC("Starting control thread");
+	LOG_STARTUP_NC("Starting control thread");
 	thread control_thread(control);
 
-	LOG_NC("Starting control server");
+	LOG_STARTUP_NC("Starting control server");
 	ControlServer* s = new ControlServer(&state, Config::instance()->server_port());
 	s->run();
 }
