@@ -194,6 +194,7 @@ main()
 
 #ifdef TOAST_HAVE_WIRINGPI
 	wiringPiSetup();
+	wiringPiSetupGpio();
 	pinMode(Config::instance()->boiler_gpio(), OUTPUT);
 #endif
 
