@@ -8,13 +8,12 @@ using std::scoped_lock;
 using std::mutex;
 
 mutex Log::_mutex;
-int Log::_types = 0xff;
 
 void
 Log::log(int type, string s)
 {
 	scoped_lock lm(_mutex);
-	if (type && ((type & _types) == 0)) {
+	if (type && ((type & Config::instance()->log_types()) == 0)) {
 		return;
 	}
 

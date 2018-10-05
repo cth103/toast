@@ -15,7 +15,6 @@ public:
 
 private:
 	static std::mutex _mutex;
-	static int _types;
 };
 
 #define LOG_CLIENT(...) Log::log(Log::CLIENT, String::compose(__VA_ARGS__));
