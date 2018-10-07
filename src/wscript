@@ -1,4 +1,5 @@
 sources = """
+          actuator.cc
           broadcast_listener.cc
           config.cc
           control_server.cc

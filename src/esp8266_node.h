@@ -13,6 +13,7 @@ public:
 	}
 
 	Datum get(std::string id) const;
+	void set(bool s);
 
 private:
 	std::string _mac;

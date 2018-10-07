@@ -20,6 +20,7 @@ public:
 	}
 
 	virtual Datum get(std::string id) const = 0;
+	virtual void set(bool s) = 0;
 
 	void add_sensor(std::shared_ptr<Sensor> s) {
 		_sensors.push_back(s);

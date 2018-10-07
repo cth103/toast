@@ -22,3 +22,14 @@ ESP8266Node::get(string id) const
 		return Datum(atof(buffer) / 10);
 	}
 }
+
+void
+ESP8266Node::set(bool s)
+{
+	Config* config = Config::instance();
+	Socket socket(config->sensor_timeout());
+	socket.connect(boost::asio::ip::tcp::endpoint(_ip, config->sensor_port()));
+	char buffer[64];
+	snprintf(buffer, sizeof(buffer), "%s\r\n", s ? "on" : "off");
+	socket.write(reinterpret_cast<uint8_t*>(buffer), strlen(buffer));
+}

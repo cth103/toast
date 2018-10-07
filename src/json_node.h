@@ -10,6 +10,9 @@ public:
 	{}
 
 	Datum get(std::string id) const;
+	void set(bool s) {
+		/* JSON nodes don't have actuators at the moment */
+	}
 
 private:
 	friend struct json_node_test;

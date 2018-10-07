@@ -15,9 +15,7 @@ public:
 		return _state;
 	}
 
-	void set(bool s) {
-		_state = s;
-	}
+	void set(bool s);
 
 private:
 	std::optional<bool> _state;
