@@ -1,4 +1,8 @@
+#include <boost/filesystem.hpp>
 #include <string>
+#include <list>
+
+class config_test;
 
 class Config
 {
@@ -42,11 +46,16 @@ public:
 	int log_types() const {
 		return _log_types;
 	}
+	std::list<std::string> hidden_zones() const {
+		return _hidden_zones;
+	}
 
 	static Config* instance();
 
 private:
-	Config();
+	friend class ::config_test;
+
+	Config(std::optional<boost::filesystem::path> file = std::optional<boost::filesystem::path>());
 
 	int _sensor_port;
 	int _broadcast_port;
@@ -61,6 +70,7 @@ private:
 	float _humidity_rising_threshold;
 	float _humidity_falling_threshold;
 	int _log_types;
+	std::list<std::string> _hidden_zones;
 
 	static Config* _instance;
 };

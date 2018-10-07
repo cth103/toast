@@ -1,0 +1,4 @@
+log_types 9
+server_port 1234
+log_directory /dev/null
+hidden_zone Landing

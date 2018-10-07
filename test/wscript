@@ -10,6 +10,7 @@ def build(bld):
                  ../src/rule.cc
                  ../src/toast_socket.cc
                  ../src/util.cc
+                 config_test.cc
                  rule_test.cc
                  json_node_test.cc
                  test.cc

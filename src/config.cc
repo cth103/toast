@@ -7,11 +7,12 @@
 
 using std::cout;
 using std::string;
+using std::optional;
 using std::runtime_error;
 
 Config* Config::_instance = 0;
 
-Config::Config()
+Config::Config(optional<boost::filesystem::path> file)
 	: _sensor_port(9142)
 	, _broadcast_port(9143)
 	, _gather_interval(5)
@@ -26,9 +27,16 @@ Config::Config()
 	, _humidity_falling_threshold(5)
 	, _log_types(Log::STARTUP)
 {
-	char config_file[256];
-	snprintf(config_file, sizeof(config_file), "%s/.config/toastd", getenv("HOME"));
-	FILE* f = fopen(config_file, "r");
+	FILE* f = 0;
+
+	if (file) {
+		f = fopen(file->string().c_str(), "r");
+	} else {
+		char config_file[256];
+		snprintf(config_file, sizeof(config_file), "%s/.config/toastd", getenv("HOME"));
+		f = fopen(config_file, "r");
+	}
+
 	if (!f) {
 		return;
 	}
@@ -45,7 +53,7 @@ Config::Config()
 		size_t const space = line.find(" ");
 		if (space != string::npos && line.length() > 1) {
 			string const key = line.substr(0, space);
-			string const value = line.substr(space + 1, line.length() - space - 1);
+			string const value = line.substr(space + 1, line.length() - space - 2);
 			if (key == "sensor_port") {
 				_sensor_port = atoi(value.c_str());
 			} else if (key == "broadcast_port") {
@@ -72,6 +80,8 @@ Config::Config()
 				_humidity_falling_threshold = atof(value.c_str());
 			} else if (key == "log_types") {
 				_log_types = atoi(value.c_str());
+			} else if (key == "hidden_zone") {
+				_hidden_zones.push_back(value);
 			} else {
 				throw runtime_error(String::compose("Unknown key %1 in configuration", key));
 			}

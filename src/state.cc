@@ -125,6 +125,10 @@ State::get(bool all_values, uint8_t types) const
 		zones.insert(i.first->zone());
 	}
 
+	for (auto i: Config::instance()->hidden_zones()) {
+		zones.erase(i);
+	}
+
 	*p++ = zones.size();
 
 	for (auto i: zones) {
