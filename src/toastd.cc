@@ -190,6 +190,7 @@ main()
 	auto_off_hours.push_back(10);
 	shared_ptr<Node> hall(new JSONNode(boost::asio::ip::address::from_string("127.0.0.1"), "hall"));
 	hall->add_sensor(shared_ptr<Sensor>(new Sensor(hall, "", "temperature", "Sitting room")));
+	hall->add_actuator(shared_ptr<Actuator>(new Actuator(hall, "radiator", "Sitting room")));
 	Node::add(hall);
 
 #ifdef TOAST_HAVE_WIRINGPI

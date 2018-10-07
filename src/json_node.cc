@@ -1,21 +1,28 @@
 #include "json_node.h"
 #include "toast_socket.h"
 #include "config.h"
+#include "util.h"
 
 using std::string;
+using std::pair;
 using std::runtime_error;
+using std::shared_ptr;
 
 Datum
 JSONNode::get(string) const
 {
 	Config* config = Config::instance();
-	Socket socket(config->sensor_timeout());
-	socket.connect(boost::asio::ip::tcp::endpoint(_ip, config->sensor_port()));
+	shared_ptr<Socket> socket(new Socket(config->sensor_timeout()));
+	socket->connect(boost::asio::ip::tcp::endpoint(_ip, config->sensor_port()));
 	char buffer[64];
 	snprintf(buffer, sizeof(buffer), "{\"type\": \"get\"}");
-	socket.write(reinterpret_cast<uint8_t*>(buffer), strlen(buffer));
-	int const N = socket.read(reinterpret_cast<uint8_t*>(buffer), sizeof(buffer) - 1);
-	buffer[N] = '\0';
+	write_with_length(socket, reinterpret_cast<uint8_t*>(buffer), strlen(buffer));
+	pair<shared_ptr<uint8_t[]>, uint32_t> reply = read_with_length(socket);
+	if (reply.second > 63) {
+		throw runtime_error("unexpectedly long reply from JSON node");
+	}
+	memcpy(buffer, reply.first.get(), reply.second);
+	buffer[reply.second] = '\0';
 	return Datum(parse_reply(buffer));
 }
 
