@@ -10,7 +10,7 @@ public:
 	{}
 
 	Datum get(std::string id) const;
-	void set(bool s) {
+	void set(bool) {
 		/* JSON nodes don't have actuators at the moment */
 	}
 
