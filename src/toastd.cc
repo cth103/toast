@@ -22,7 +22,6 @@ using std::dynamic_pointer_cast;
 using std::runtime_error;
 
 State state;
-list<int> auto_off_hours;
 
 void
 node_broadcast_received(string mac, boost::asio::ip::address ip)
@@ -104,7 +103,8 @@ control()
 		/* Auto off */
 		time_t const t = time(0);
 		struct tm tm = *localtime(&t);
-		if (tm.tm_min == 0 && find(auto_off_hours.begin(), auto_off_hours.end(), tm.tm_hour) != auto_off_hours.end() && state.heating_enabled()) {
+		auto aoh = Config::instance()->auto_off_hours();
+		if (tm.tm_min == 0 && find(aoh.begin(), aoh.end(), tm.tm_hour) != aoh.end() && state.heating_enabled()) {
 			LOG_DECISION_NC("Doing auto-off");
 			state.set_heating_enabled(false);
 		}
@@ -180,15 +180,6 @@ control()
 int
 main()
 {
-	/* XXX */
-	auto_off_hours.push_back(0);
-	auto_off_hours.push_back(1);
-	auto_off_hours.push_back(2);
-	auto_off_hours.push_back(3);
-	auto_off_hours.push_back(4);
-	auto_off_hours.push_back(5);
-	auto_off_hours.push_back(6);
-	auto_off_hours.push_back(10);
 	shared_ptr<Node> hall(new JSONNode(boost::asio::ip::address::from_string("127.0.0.1"), "hall"));
 	hall->add_sensor(shared_ptr<Sensor>(new Sensor(hall, "", "temperature", "Sitting room")));
 	hall->add_actuator(shared_ptr<Actuator>(new Actuator(hall, "radiator", "Sitting room")));

@@ -49,6 +49,9 @@ public:
 	std::list<std::string> hidden_zones() const {
 		return _hidden_zones;
 	}
+	std::list<int> auto_off_hours() const {
+		return _auto_off_hours;
+	}
 
 	static Config* instance();
 
@@ -71,6 +74,7 @@ private:
 	float _humidity_falling_threshold;
 	int _log_types;
 	std::list<std::string> _hidden_zones;
+	std::list<int> _auto_off_hours;
 
 	static Config* _instance;
 };
