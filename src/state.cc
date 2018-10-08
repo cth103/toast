@@ -174,14 +174,18 @@ State::get(bool all_values, uint8_t types) const
 			int N = 0;
 			for (auto j: Node::all()) {
 				for (auto k: j->actuators()) {
-					++N;
+					if (k->zone() == i) {
+						++N;
+					}
 				}
 			}
 			*p++ = N;
 			for (auto j: Node::all()) {
 				for (auto k: j->actuators()) {
-					put_string(p, k->name());
-					*p++ = k->get().value_or(false) ? 1 : 0;
+					if (k->zone() == i) {
+						put_string(p, k->name());
+						*p++ = k->get().value_or(false) ? 1 : 0;
+					}
 				}
 			}
 		}
