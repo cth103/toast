@@ -50,7 +50,6 @@ State::set_boiler_on(bool s)
 	scoped_lock lm(_mutex);
 	_boiler_on = s;
 #ifdef TOAST_HAVE_WIRINGPI
-	LOG_DECISION("GPIO %1 -> %2", Config::instance()->boiler_gpio(), s);
 	digitalWrite(Config::instance()->boiler_gpio(), s ? HIGH : LOW);
 #endif
 }
