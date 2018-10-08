@@ -304,7 +304,9 @@ public class State {
             if (all || op == (OP_CHANGE | HUMIDITIES)) {
                 ArrayList<Datum> t = new ArrayList<>();
                 o = getDatumArray(data, o, t);
-                setHumidities(name, t);
+                if (t.size() > 0) {
+                    setHumidities(name, t);
+                }
             }
             if (all || op == (OP_CHANGE | ACTUATORS)) {
                 HashMap<String, Boolean> act = new HashMap<>();

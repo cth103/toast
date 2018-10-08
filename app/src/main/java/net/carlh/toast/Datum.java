@@ -15,10 +15,6 @@ public class Datum {
     public Date time;
     public double value;
 
-    public static final int TYPE_TEMPERATURE = 0;
-    public static final int TYPE_HUMIDITY = 1;
-    public static final int TYPE_COUNT = 2;
-
     public static final int BINARY_LENGTH = 10;
 
     public Datum(byte[] data, int offset) {

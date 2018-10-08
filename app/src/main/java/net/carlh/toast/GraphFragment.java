@@ -27,10 +27,12 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.Map;
 
 /** Fragment to plot graphs of temperature */
@@ -49,19 +51,6 @@ public class GraphFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_graph, container, false);
 
         startTime = new Date(endTime.getTime() - 60 * 60 * 1000);
-
-        zone = (Spinner) view.findViewById(R.id.graphZone);
-        checkZones();
-        zone.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
-                update();
-            }
-
-            public void onNothingSelected(AdapterView<?> parentView) {
-
-            }
-        });
 
         period = (Spinner) view.findViewById(R.id.graphPeriod);
         String periods[] = {"Last hour", "Today", "This week"};
@@ -139,19 +128,6 @@ public class GraphFragment extends Fragment {
         return view;
     }
 
-    private void checkZones() {
-        if (zone.getAdapter() != null && zone.getAdapter().getCount() > 0) {
-            /* Already set up */
-            return;
-        }
-
-        Map<String, ArrayList<Datum>> temps = getState().getTemperatures();
-        ArrayAdapter zoneAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, temps.keySet().toArray(new String[0]));
-        zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        zone.setAdapter(zoneAdapter);
-    }
-
-
     private ArrayList<Graph.Point> getSmoothedGraphData(ArrayList<Datum> data) {
         if (data == null) {
             return null;
@@ -228,14 +204,14 @@ public class GraphFragment extends Fragment {
             return;
         }
 
-        checkZones();
-
         period.setEnabled(true);
 
-        ArrayList<Datum> temps = state.getTemperatures().get(zone.getSelectedItem());
-        graph.setData(Datum.TYPE_TEMPERATURE, getSmoothedGraphData(temps));
-        ArrayList<Datum> hums = state.getHumidities().get(zone.getSelectedItem());
-        graph.setData(Datum.TYPE_HUMIDITY, getSmoothedGraphData(hums));
+        for (Map.Entry<String, ArrayList<Datum>> i: state.getTemperatures().entrySet()) {
+            graph.setData(i.getKey(), DataType.TEMPERATURE, getSmoothedGraphData(i.getValue()));
+        }
+        for (Map.Entry<String, ArrayList<Datum>> i: state.getHumidities().entrySet()) {
+            graph.setData(i.getKey(), DataType.HUMIDITY, getSmoothedGraphData(i.getValue()));
+        }
 
         graph.setTimeRange(endTime.getTime() - startTime.getTime());
     }
