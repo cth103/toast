@@ -66,7 +66,7 @@ gather()
 		time_t t = time(0);
 		struct tm tm = *localtime(&t);
 		char log_file[256];
-		snprintf(log_file, 256, "%s/%02d-%02d-%d.log", Config::instance()->log_directory().c_str(), tm.tm_mday, tm.tm_mon, tm.tm_year + 1900);
+		snprintf(log_file, 256, "%s/%02d-%02d-%d.log", Config::instance()->log_directory().c_str(), tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 		FILE* log = fopen(log_file, "a+");
 
 		for (auto i: Node::all()) {
@@ -164,7 +164,7 @@ control()
 			if (current && ref) {
 				Config* config = Config::instance();
 				float diff = current->value() - ref->value();
-				if (fan->get().value_or(false) && diff > config->humidity_rising_threshold()) {
+				if (!fan->get().value_or(false) && diff > config->humidity_rising_threshold()) {
 					fan->set(true);
 				} else if (fan->get().value_or(false) && diff < config->humidity_falling_threshold()) {
 					fan->set(false);
