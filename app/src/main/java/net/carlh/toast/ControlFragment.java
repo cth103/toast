@@ -53,6 +53,7 @@ public class ControlFragment extends Fragment {
         private Button warmer;
         private Button colder;
         private ImageView fan;
+        private ImageView radiator;
 
         /** Controls for a zone */
         public Zone(final String name, boolean first) {
@@ -76,15 +77,25 @@ public class ControlFragment extends Fragment {
                 fan.setImageResource(R.drawable.ic_fan);
                 fan.setScaleType(ImageView.ScaleType.FIT_CENTER);
 
+                radiator = new ImageView(a);
+                radiator.setImageResource(R.drawable.ic_radiator);
+                radiator.setScaleType(ImageView.ScaleType.FIT_CENTER);
+
                 LinearLayout state = new LinearLayout(a);
                 state.addView(l);
                 state.addView(fan);
+                state.addView(radiator);
                 state.setGravity(Gravity.BOTTOM);
                 fan.setVisibility(View.GONE);
+                radiator.setVisibility(View.GONE);
 
-                LinearLayout.LayoutParams linear_params = (LinearLayout.LayoutParams) fan.getLayoutParams();
-                linear_params.height = 64;
-                fan.setLayoutParams(linear_params);
+                LinearLayout.LayoutParams fan_lp = (LinearLayout.LayoutParams) fan.getLayoutParams();
+                fan_lp.height = 64;
+                fan.setLayoutParams(fan_lp);
+
+                LinearLayout.LayoutParams radiator_lp = (LinearLayout.LayoutParams) radiator.getLayoutParams();
+                radiator_lp.height = 44;
+                radiator.setLayoutParams(radiator_lp);
 
                 r.addView(state);
 
@@ -193,6 +204,12 @@ public class ControlFragment extends Fragment {
                     fan.setVisibility(View.VISIBLE);
                 } else {
                     fan.setVisibility(View.GONE);
+                }
+            } else if (name.equals("radiator")) {
+                if (state) {
+                    radiator.setVisibility(View.VISIBLE);
+                } else {
+                    radiator.setVisibility(View.GONE);
                 }
             }
         }

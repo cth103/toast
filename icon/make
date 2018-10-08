@@ -5,3 +5,10 @@ for f in launcher fan; do
 	inkscape -y 0 -z -f $f.svg --export-png ../app/src/main/res/drawable-xhdpi/ic_$f.png --export-width=96 --export-height=96 --export-area-page
 	inkscape -y 0 -z -f $f.svg --export-png ../app/src/main/res/drawable-xxhdpi/ic_$f.png --export-width=144 --export-height=144 --export-area-page
 done
+
+for f in radiator; do
+        inkscape -y 0 -z -f $f.svg --export-png ../app/src/main/res/drawable-mdpi/ic_$f.png --export-width=48 --export-height=33 --export-area-page
+	inkscape -y 0 -z -f $f.svg --export-png ../app/src/main/res/drawable-hdpi/ic_$f.png --export-width=72 --export-height=50 --export-area-page
+	inkscape -y 0 -z -f $f.svg --export-png ../app/src/main/res/drawable-xhdpi/ic_$f.png --export-width=96 --export-height=66 --export-area-page
+	inkscape -y 0 -z -f $f.svg --export-png ../app/src/main/res/drawable-xxhdpi/ic_$f.png --export-width=144 --export-height=100 --export-area-page
+done

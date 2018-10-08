@@ -63,6 +63,7 @@ public class State {
     private boolean boilerOn = false;
     private HashMap<String, ArrayList<Datum>> temperatures = new HashMap<>();
     private HashMap<String, ArrayList<Datum>> humidities = new HashMap<>();
+    /** zone name -> map of actuator name to actuator state */
     private HashMap<String, HashMap<String, Boolean>> actuators = new HashMap<>();
     private ArrayList<Rule> rules = new ArrayList<>();
     private String explanation;
