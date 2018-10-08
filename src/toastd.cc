@@ -167,7 +167,7 @@ control()
 				LOG_DECISION("Humidity %1 vs %2 (%3) state %4", current->value(), ref->value(), diff, fan->get().value_or(false));
 				if (!fan->get().value_or(false) && diff > config->humidity_rising_threshold()) {
 					fan->set(true);
-				} else if (fan->get().value_or(false) && diff < config->humidity_falling_threshold()) {
+				} else if (!fan->get() || (*fan->get() && diff < config->humidity_falling_threshold())) {
 					fan->set(false);
 				}
 			}
