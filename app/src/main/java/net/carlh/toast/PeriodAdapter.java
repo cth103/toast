@@ -6,16 +6,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
-
-/**
- * Created by carl on 26/01/18.
- */
 
 public class PeriodAdapter extends ArrayAdapter<Period> {
     private final Context context;
@@ -27,12 +25,12 @@ public class PeriodAdapter extends ArrayAdapter<Period> {
         this.values = values;
     }
 
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(final int position, View convertView, ViewGroup parent) {
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View row = inflater.inflate(R.layout.period_layout, parent, false);
-        TextView target = (TextView) row.findViewById(R.id.target);
-        TextView time = (TextView) row.findViewById(R.id.time);
-        ProgressBar progress = (ProgressBar) row.findViewById(R.id.progress);
+        TextView target = row.findViewById(R.id.target);
+        TextView time = row.findViewById(R.id.time);
+        ProgressBar progress = row.findViewById(R.id.progress);
 
         final Period period = values.get(position);
 

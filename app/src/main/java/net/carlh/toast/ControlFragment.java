@@ -21,39 +21,43 @@ package net.carlh.toast;
 
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.text.Layout;
-import android.util.ArraySet;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.GridLayout;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
-import android.widget.ToggleButton;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Calendar;
-import java.util.Set;
+
+class Temperature {
+    private double t;
+
+    public Temperature(double t) {
+        this.t = t;
+    }
+
+    public String toString() {
+        return String.format("%.0f°C", t);
+    }
+
+    public double get() {
+        return t;
+    }
+}
 
 public class ControlFragment extends Fragment {
 
@@ -105,8 +109,8 @@ public class ControlFragment extends Fragment {
                         public void onClick(View view) {
                             Calendar to = Calendar.getInstance();
                             to.add(Calendar.MINUTE, 30);
-                            double targetTemp = ((Double) Zone.this.target.getSelectedItem());
-                            addPeriod(new Period(Zone.this.name, targetTemp, Calendar.getInstance().getTime(), to.getTime()));
+                            Temperature targetTemp = ((Temperature) Zone.this.target.getSelectedItem());
+                            addPeriod(new Period(Zone.this.name, targetTemp.get(), Calendar.getInstance().getTime(), to.getTime()));
                         }
                     }
             );
@@ -117,8 +121,15 @@ public class ControlFragment extends Fragment {
 
             /* Target spinner */
             target = new Spinner(a);
-            Double[] targets = { 5.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0 };
-            ArrayAdapter<Double> targetAdapter = new ArrayAdapter<>(a, android.R.layout.simple_spinner_item, targets);
+            Temperature[] targets = new Temperature[] {
+                new Temperature(17.0),
+                new Temperature(18.0),
+                new Temperature(19.0),
+                new Temperature(20.0),
+                new Temperature(21.0),
+                new Temperature(22.0)
+            };
+            ArrayAdapter<Temperature> targetAdapter = new ArrayAdapter<>(a, android.R.layout.simple_spinner_item, targets);
             target.setAdapter(targetAdapter);
 
             lp = new TableRow.LayoutParams();
