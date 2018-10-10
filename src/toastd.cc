@@ -32,6 +32,7 @@ node_broadcast_received(string mac, boost::asio::ip::address ip)
 	for (auto i: Node::all()) {
 		auto e = dynamic_pointer_cast<ESP8266Node>(i);
 		if (e && e->mac() == mac) {
+			e->set_ip(ip);
 			got = true;
 		}
 	}
