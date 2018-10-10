@@ -17,10 +17,12 @@ import java.util.Random;
 
 public class PeriodAdapter extends ArrayAdapter<Period> {
     private final Context context;
+    private final ControlFragment control;
 
-    public PeriodAdapter(Context context) {
+    public PeriodAdapter(Context context, ControlFragment control) {
         super(context, R.layout.period_layout);
         this.context = context;
+        this.control = control;
     }
 
     public View getView(final int position, View convertView, ViewGroup parent) {
@@ -29,6 +31,7 @@ public class PeriodAdapter extends ArrayAdapter<Period> {
         TextView target = row.findViewById(R.id.target);
         TextView time = row.findViewById(R.id.time);
         ProgressBar progress = row.findViewById(R.id.progress);
+        ImageButton delete = row.findViewById(R.id.delete);
 
         final Period period = getItem(position);
 
@@ -48,6 +51,12 @@ public class PeriodAdapter extends ArrayAdapter<Period> {
         /* the progress bar shows how much of the last hour is left */
         progress.setMax(60);
         progress.setProgress((int) (Math.max(0L, period.to.getTime() - now.getTime()) / 60000));
+
+        delete.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                control.removePeriod(position);
+            }
+        });
 
         return row;
     }

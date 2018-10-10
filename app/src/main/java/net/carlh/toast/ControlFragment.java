@@ -24,15 +24,12 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TableLayout;
@@ -116,7 +113,7 @@ public class ControlFragment extends Fragment {
                     }
             );
 
-            lp = new TableRow.LayoutParams(32, 96);
+            lp = new TableRow.LayoutParams(128, 96);
             lp.gravity = Gravity.CENTER_VERTICAL;
             r.addView(heat, lp);
 
@@ -185,7 +182,7 @@ public class ControlFragment extends Fragment {
         periodList = view.findViewById(R.id.periodList);
         table = view.findViewById(R.id.zoneTable);
 
-        periodAdapter = new PeriodAdapter(getActivity());
+        periodAdapter = new PeriodAdapter(getActivity(), this);
         periodList.setAdapter(periodAdapter);
 
         /* On second and subsequent calls we will have stuff in zones
@@ -221,6 +218,12 @@ public class ControlFragment extends Fragment {
         }
 
         getState().setPeriods(periods);
+    }
+
+    public void removePeriod(int pos) {
+        List<Period> p = getState().getPeriods();
+        p.remove(pos);
+        getState().setPeriods(p);
     }
 
     /**
