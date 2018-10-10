@@ -26,6 +26,7 @@ import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.text.Layout;
+import android.util.ArraySet;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -37,6 +38,7 @@ import android.widget.CheckBox;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -45,13 +47,19 @@ import android.widget.ToggleButton;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Calendar;
+import java.util.Set;
 
 public class ControlFragment extends Fragment {
 
     private class Zone {
 
+        private String name;
         private TextView tempHum;
         private Spinner target;
         private Button heat;
@@ -61,6 +69,8 @@ public class ControlFragment extends Fragment {
 
         /** Controls for a zone */
         public Zone(final String name, boolean first) {
+
+            this.name = name;
 
             /* Text size */
             int size = 20;
@@ -90,6 +100,16 @@ public class ControlFragment extends Fragment {
             /* Heat button */
             heat = new Button(a);
             heat.setBackgroundResource(R.drawable.ic_launcher);
+            heat.setOnClickListener(
+                    new View.OnClickListener() {
+                        public void onClick(View view) {
+                            Calendar to = Calendar.getInstance();
+                            to.add(Calendar.MINUTE, 30);
+                            double targetTemp = ((Double) Zone.this.target.getSelectedItem());
+                            addPeriod(new Period(Zone.this.name, targetTemp, Calendar.getInstance().getTime(), to.getTime()));
+                        }
+                    }
+            );
 
             lp = new TableRow.LayoutParams(48, 96);
             lp.gravity = Gravity.CENTER_VERTICAL;
@@ -97,8 +117,8 @@ public class ControlFragment extends Fragment {
 
             /* Target spinner */
             target = new Spinner(a);
-            String[] targets = { "5°C", "17°C", "18°C", "19°C", "20°C", "21°C", "22°C" };
-            ArrayAdapter<String> targetAdapter = new ArrayAdapter<String>(a, android.R.layout.simple_spinner_item, targets);
+            Double[] targets = { 5.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0 };
+            ArrayAdapter<Double> targetAdapter = new ArrayAdapter<>(a, android.R.layout.simple_spinner_item, targets);
             target.setAdapter(targetAdapter);
 
             lp = new TableRow.LayoutParams();
@@ -142,13 +162,20 @@ public class ControlFragment extends Fragment {
         }
     }
 
+    private ListView periodList;
+    private PeriodAdapter periodAdapter;
+    private List<Period> periods = new ArrayList<>();
     private TableLayout table;
     private HashMap<String, Zone> zones = new HashMap<String, Zone>();
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_control, container, false);
 
-        table = (TableLayout) view.findViewById(R.id.mainTable);
+        periodList = view.findViewById(R.id.periodList);
+        table = view.findViewById(R.id.zoneTable);
+
+        periodAdapter = new PeriodAdapter(getActivity(), periods);
+        periodList.setAdapter(periodAdapter);
 
         /* On second and subsequent calls we will have stuff in zones
            but no UI, so force the UI to be recreated.
@@ -157,6 +184,31 @@ public class ControlFragment extends Fragment {
 
         update();
         return view;
+    }
+
+    public void addPeriod(Period a) {
+
+        boolean done = false;
+
+        for (Period p: periods) {
+            if (p.zone.equals(a.zone)) {
+                if (p.target == a.target) {
+                    /* Same target: extend by the length of the newly-added period */
+                    p.extend(a.length());
+                } else {
+                    /* Different target: just update target */
+                    p.target = a.target;
+                }
+                done = true;
+            }
+        }
+
+        if (!done) {
+            /* No existing period for this zone: add one */
+            periods.add(a);
+        }
+
+        periodAdapter.notifyDataSetChanged();
     }
 
     /**

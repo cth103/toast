@@ -10,6 +10,14 @@ public class Period {
         this.to = to;
     }
 
+    public long length() {
+        return to.getTime() - from.getTime();
+    }
+
+    public void extend(long by) {
+        to.setTime(to.getTime() + by);
+    }
+
     public String zone;
     public double target;
     public Date from;

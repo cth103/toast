@@ -1,6 +1,7 @@
 package net.carlh.toast;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,6 +10,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -17,9 +19,9 @@ import java.util.Random;
 
 public class PeriodAdapter extends ArrayAdapter<Period> {
     private final Context context;
-    private final Period[] values;
+    private final List<Period>values;
 
-    public PeriodAdapter(Context context, Period[] values) {
+    public PeriodAdapter(Context context, List<Period> values) {
         super(context, R.layout.period_layout, values);
         this.context = context;
         this.values = values;
@@ -32,7 +34,7 @@ public class PeriodAdapter extends ArrayAdapter<Period> {
         TextView time = (TextView) row.findViewById(R.id.time);
         ProgressBar progress = (ProgressBar) row.findViewById(R.id.progress);
 
-        final Period period = values[position];
+        final Period period = values.get(position);
 
         target.setText(String.format("%s to %.1f°C", period.zone, period.target));
 
@@ -47,8 +49,9 @@ public class PeriodAdapter extends ArrayAdapter<Period> {
         }
 
         progress.setRotation(180);
-        progress.setMax(100);
-        progress.setProgress((int) (100 * (Math.max(0L, now.getTime() - period.from.getTime())) / (period.to.getTime() / period.from.getTime())));
+        /* the progress bar shows how much of the last hour is left */
+        progress.setMax(60);
+        progress.setProgress((int) (Math.max(0L, period.to.getTime() - now.getTime()) / 60000));
 
         return row;
     }
