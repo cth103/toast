@@ -25,20 +25,25 @@ import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.text.Layout;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,13 +52,12 @@ public class ControlFragment extends Fragment {
 
     private class Zone {
 
-        private TextView temperature;
-        private TextView humidity;
-        private CheckBox target;
-        private Button warmer;
-        private Button colder;
-        private ImageView fan;
-        private ImageView radiator;
+        private TextView tempHum;
+        private Spinner target;
+        private Button heat;
+        private ImageView heatIcon;
+        private double temperature;
+        private double humidity;
 
         /** Controls for a zone */
         public Zone(final String name, boolean first) {
@@ -62,180 +66,89 @@ public class ControlFragment extends Fragment {
             int size = 20;
 
             Activity a = ControlFragment.this.getActivity();
+            TableRow r = new TableRow(a);
 
-            /* Zone name and current temperature / humidity */
-            {
-                TableRow r = new TableRow(a);
+            /* Zone name */
+            TextView l = new TextView(a);
+            l.setText(name);
+            l.setTextSize(size);
 
-                TextView l = new TextView(a);
-                l.setText(name);
-                l.setTextSize(size);
-                l.setPadding(24, first ? 64 : 0, 0, 0);
-                l.setTypeface(null, Typeface.BOLD);
+            TableRow.LayoutParams lp = new TableRow.LayoutParams();
+            lp.gravity = Gravity.CENTER_VERTICAL;
+            r.addView(l, lp);
 
-                fan = new ImageView(a);
-                fan.setImageResource(R.drawable.ic_fan);
-                fan.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            /* Current temperature and humidity */
+            tempHum = new TextView(a);
+            tempHum.setTextSize(size);
+            tempHum.setGravity(Gravity.BOTTOM);
+            tempHum.setPadding(24, 0, 0, 0);
 
-                radiator = new ImageView(a);
-                radiator.setImageResource(R.drawable.ic_radiator);
-                radiator.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            lp = new TableRow.LayoutParams();
+            lp.gravity = Gravity.CENTER_VERTICAL;
+            r.addView(tempHum, lp);
 
-                LinearLayout state = new LinearLayout(a);
-                state.addView(l);
-                state.addView(fan);
-                state.addView(radiator);
-                state.setGravity(Gravity.BOTTOM);
-                fan.setVisibility(View.GONE);
-                radiator.setVisibility(View.GONE);
+            /* Heat button */
+            heat = new Button(a);
+            heat.setBackgroundResource(R.drawable.ic_launcher);
 
-                LinearLayout.LayoutParams fan_lp = (LinearLayout.LayoutParams) fan.getLayoutParams();
-                fan_lp.height = 64;
-                fan.setLayoutParams(fan_lp);
+            lp = new TableRow.LayoutParams(48, 96);
+            lp.gravity = Gravity.CENTER_VERTICAL;
+            r.addView(heat, lp);
 
-                LinearLayout.LayoutParams radiator_lp = (LinearLayout.LayoutParams) radiator.getLayoutParams();
-                radiator_lp.height = 44;
-                radiator.setLayoutParams(radiator_lp);
+            /* Target spinner */
+            target = new Spinner(a);
+            String[] targets = { "5°C", "17°C", "18°C", "19°C", "20°C", "21°C", "22°C" };
+            ArrayAdapter<String> targetAdapter = new ArrayAdapter<String>(a, android.R.layout.simple_spinner_item, targets);
+            target.setAdapter(targetAdapter);
 
-                r.addView(state);
+            lp = new TableRow.LayoutParams();
+            lp.gravity = Gravity.CENTER_VERTICAL;
+            r.addView(target, lp);
 
-                TableRow.LayoutParams table_params = (TableRow.LayoutParams) state.getLayoutParams();
-                table_params.span = 2;
-                state.setLayoutParams(table_params);
+            r.setGravity(Gravity.BOTTOM);
+            r.setPadding(0, 64, 0, 0);
 
-                temperature = new TextView(a);
-                temperature.setTextSize(size);
-                temperature.setTypeface(null, Typeface.BOLD);
-                r.addView(temperature);
-
-                humidity = new TextView(a);
-                humidity.setTextSize(size - 4);
-                r.addView(humidity);
-
-                r.setGravity(Gravity.BOTTOM);
-
-                ControlFragment.this.table.addView(r);
-            }
-
-            /* Target (with enable) / warmer / colder */
-            {
-                TableRow r = new TableRow(a);
-
-                target = new CheckBox(a);
-                target.setPadding(32, 0, 0, 0);
-                r.addView(target);
-
-                warmer = new Button(a);
-                warmer.setText("Warmer");
-                r.addView(warmer);
-
-                colder = new Button(a);
-                colder.setText("Colder");
-                r.addView(colder);
-
-                TableRow.LayoutParams params = (TableRow.LayoutParams) colder.getLayoutParams();
-                params.span = 2;
-                colder.setLayoutParams(params);
-
-                ControlFragment.this.table.addView(r);
-            }
-
-            target.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    ControlFragment.this.getState().setZoneHeatingEnabled(name, target.isChecked());
-                }
-            });
-
-            colder.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    ControlFragment.this.getState().colder(name);
-                }
-            });
-
-            warmer.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    ControlFragment.this.getState().warmer(name);
-                }
-            });
+            ControlFragment.this.table.addView(r);
         }
 
         /** Set up the sensitivity of our controls */
         public void setSensitivity() {
             boolean c = ControlFragment.this.getConnected();
-            boolean e = ControlFragment.this.getHeatingEnabled();
-            temperature.setEnabled(c);
-            humidity.setEnabled(c);
-            target.setEnabled(c && e);
-            warmer.setEnabled(c && e && target.isChecked());
-            colder.setEnabled(c && e && target.isChecked());
-        }
-
-        public void setZoneEnabled(boolean e) {
-            target.setChecked(e);
-        }
-
-        public void setTarget(double t) {
-            target.setText(String.format("%.1f°", t));
-        }
-
-        public void clearTarget() {
-            target.setText("");
+            tempHum.setEnabled(c);
+            target.setEnabled(c);
+            heat.setEnabled(c);
         }
 
         public void setTemperature(double t) {
-            temperature.setText(String.format("%.1f°", t));
+            temperature = t;
+            updateTempHum();
         }
 
-        public void clearTemperature() {
-            temperature.setText("");
+        private void updateTempHum() {
+            if (humidity > 0) {
+                tempHum.setText(String.format("%.1f°\n%.0f%%", temperature, humidity));
+            } else {
+                tempHum.setText(String.format("%.1f°", temperature));
+            }
+        }
+
+        public void clearTempHum() {
+            tempHum.setText("");
         }
 
         public void setHumidity(double h) {
-            humidity.setText(String.format("%.0f%%", h));
-        }
-
-        public void clearHumidity() {
-            humidity.setText("");
-        }
-
-        public void setActuator(String name, boolean state) {
-            if (name.equals("fan")) {
-                if (state) {
-                    fan.setVisibility(View.VISIBLE);
-                } else {
-                    fan.setVisibility(View.GONE);
-                }
-            } else if (name.equals("radiator")) {
-                if (state) {
-                    radiator.setVisibility(View.VISIBLE);
-                } else {
-                    radiator.setVisibility(View.GONE);
-                }
-            }
+            humidity = h;
+            updateTempHum();
         }
     }
 
-    private ToggleButton heatingEnabled;
-    private TextView boilerOn;
-    private TextView explanation;
     private TableLayout table;
     private HashMap<String, Zone> zones = new HashMap<String, Zone>();
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_control, container, false);
 
-        heatingEnabled = (ToggleButton) view.findViewById(R.id.enabled);
-        boilerOn = (TextView) view.findViewById(R.id.on);
-        explanation = (TextView) view.findViewById(R.id.explanation);
         table = (TableLayout) view.findViewById(R.id.mainTable);
-
-        final State state = getState();
-
-        heatingEnabled.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                state.setHeatingEnabled(!getState().getHeatingEnabled());
-            }
-        });
 
         /* On second and subsequent calls we will have stuff in zones
            but no UI, so force the UI to be recreated.
@@ -250,11 +163,8 @@ public class ControlFragment extends Fragment {
      * Update the UI from state
      */
     public void update() {
-        if (heatingEnabled == null) {
-            /* heatingEnabled is the first variable to be set in onCreateView
-               so if it's null we'll assume onCreateView hasn't been called
-               yet.
-             */
+        if (table == null) {
+            /* If table is null we'll assume onCreateView hasn't been called yet */
             return;
         }
 
@@ -269,21 +179,12 @@ public class ControlFragment extends Fragment {
             }
         }
 
-        heatingEnabled.setEnabled(getConnected());
         for (Map.Entry<String, Zone> i: zones.entrySet()) {
             Zone z = i.getValue();
             i.getValue().setSensitivity();
         }
 
         if (getConnected()) {
-
-            heatingEnabled.setChecked(getHeatingEnabled());
-
-            for (Map.Entry<String, Boolean> i: state.getZoneHeatingEnabled().entrySet()) {
-                if (zones.get(i.getKey()) != null) {
-                    zones.get(i.getKey()).setZoneEnabled(i.getValue());
-                }
-            }
 
             for (Map.Entry<String, ArrayList<Datum>> i: state.getTemperatures().entrySet()) {
                 Zone z = zones.get(i.getKey());
@@ -301,37 +202,11 @@ public class ControlFragment extends Fragment {
                 }
             }
 
-            for (Map.Entry<String, Double> i: state.getTarget().entrySet()) {
-                Zone z = zones.get(i.getKey());
-                if (z != null) {
-                    z.setTarget(i.getValue());
-                }
-            }
-
-            for (Map.Entry<String, HashMap<String, Boolean>> i: state.getActuators().entrySet()) {
-                Zone z = zones.get(i.getKey());
-                if (z != null) {
-                    for (Map.Entry<String, Boolean> j: i.getValue().entrySet()) {
-                        z.setActuator(j.getKey(), j.getValue());
-                    }
-                }
-            }
-
-            if (state.getBoilerOn()) {
-                boilerOn.setText("Boiler is on");
-            } else {
-                boilerOn.setText("Boiler is off");
-            }
-
-            explanation.setText(state.getExplanation());
         } else {
             for (Map.Entry<String, Zone> i : zones.entrySet()) {
                 Zone z = i.getValue();
-                z.clearTemperature();
-                z.clearHumidity();
-                z.clearTarget();
+                z.clearTempHum();
             }
-            heatingEnabled.setText("");
 
             if (getActivity() != null) {
                 ConnectivityManager cm = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -340,13 +215,6 @@ public class ControlFragment extends Fragment {
                     wm.setWifiEnabled(true);
                 }
             }
-
-            boilerOn.setText("Connecting...");
-            explanation.setText("");
         }
-    }
-
-    private boolean getHeatingEnabled() {
-        return getState() != null && getState().getHeatingEnabled();
     }
 };
