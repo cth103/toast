@@ -26,16 +26,13 @@ import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBarActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import java.io.IOException;
 import java.util.List;
 
     public class MainActivity extends ActionBarActivity {
@@ -66,13 +63,13 @@ import java.util.List;
         */
 
         state = new State(this);
-        state.addHandler(new Handler() {
+        state.setHandler(new Handler() {
             public void handleMessage(Message message) {
                 /* Send the change to the server (unless it's something
                    that only goes server -> client).
                 */
                 int property = message.getData().getInt("property");
-                if (property != State.TEMPERATURES && property != State.HUMIDITIES && property != State.ACTUATORS && client != null) {
+                if (client != null && ((property & State.RULES) != 0 || (property & State.PERIODS) != 0)) {
                     client.sendImmediate(state.getBinary(property));
                 }
 

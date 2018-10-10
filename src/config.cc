@@ -84,12 +84,6 @@ Config::Config(optional<boost::filesystem::path> file)
 				_log_types = atoi(value.c_str());
 			} else if (key == "hidden_zone") {
 				_hidden_zones.push_back(value);
-			} else if (key == "auto_off_hours") {
-				vector<string> hours;
-				boost::split(hours, value, [](char c) { return c == ' ';});
-				for (auto i: hours) {
-					_auto_off_hours.push_back(atoi(i.c_str()));
-				}
 			} else {
 				throw runtime_error(String::compose("Unknown key %1 in configuration", key));
 			}

@@ -29,198 +29,100 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 public class State {
 
-    public static final int OP_SEND_BASIC = 0x0;
-    public static final int OP_SEND_ALL = 0x1;
-    private static final int OP_CHANGE = 0x10;
-
-    /** Whether or not heating is `enabled' (i.e. switched on) */
-    public static final int HEATING_ENABLED = 0;
-    /** Whether or not the heating in each zone is enabled */
-    public static final int ZONE_HEATING_ENABLED = 1;
-    /** Target for each zone */
-    public static final int TARGET = 2;
-    /** Whether or not the boiler is on */
-    public static final int BOILER_ON = 3;
-    /* Temperatures (current and historic) in each zone */
-    public static final int TEMPERATURES = 4;
+    public static final int  OP_SEND_BASIC = 0x00;
+    public static final int  OP_SEND_ALL   = 0x01;
+    private static final int OP_CHANGE     = 0x80;
+    /** Temperatures (current and historic) in each zone */
+    public static final int  TEMPERATURES  = 0x02;
     /** Humidities (current and historic) in each zone */
-    public static final int HUMIDITIES = 5;
+    public static final int  HUMIDITIES    = 0x04;
     /** Rules (programmed targets at particular times) */
-    public static final int RULES = 6;
-    public static final int ACTUATORS = 7;
-    public static final int ALL = 0xf;
+    public static final int  RULES         = 0x08;
+    public static final int  ACTUATORS     = 0x10;
+    public static final int  PERIODS       = 0x20;
+    public static final int  ALL           = 0x3C;
 
     private Context context;
-    /** Handlers that will be notified when there is a change in state */
-    private ArrayList<Handler> handlers;
+    /** Handler that will be notified when there is a change in state */
+    private Handler handler;
 
-    private boolean heatingEnabled = false;
-    private HashMap<String, Boolean> zoneHeatingEnabled = new HashMap<String, Boolean>();
-    private HashMap<String, Double> target = new HashMap<String, Double>();
-    private boolean boilerOn = false;
-    private HashMap<String, ArrayList<Datum>> temperatures = new HashMap<>();
-    private HashMap<String, ArrayList<Datum>> humidities = new HashMap<>();
+    private Map<String, ArrayList<Datum>> temperatures = new HashMap<>();
+    private Map<String, ArrayList<Datum>> humidities = new HashMap<>();
     /** zone name -> map of actuator name to actuator state */
-    private HashMap<String, HashMap<String, Boolean>> actuators = new HashMap<>();
-    private ArrayList<Rule> rules = new ArrayList<>();
-    private String explanation;
-    private ArrayList<String> zones = new ArrayList<>();
+    private HashMap<String, Map<String, Boolean>> actuators = new HashMap<>();
+    private List<Rule> rules = new ArrayList<>();
+    private List<String> zones = new ArrayList<>();
+    private List<Period> periods = new ArrayList<>();
 
     public State(Context context) {
         this.context = context;
-        this.handlers = new ArrayList<Handler>();
     }
 
-    public void addHandler(Handler h) {
-        handlers.add(h);
+    public void setHandler(Handler h) {
+        handler = h;
     }
 
     private void changed(int p) {
-        for (Handler h : handlers) {
-            Message m = Message.obtain();
-            Bundle b = new Bundle();
-            b.putInt("property", p);
-            m.setData(b);
-            h.sendMessage(m);
-        }
+        Message m = Message.obtain();
+        Bundle b = new Bundle();
+        b.putInt("property", p);
+        m.setData(b);
+        handler.sendMessage(m);
     }
 
     /* Get */
 
-    public synchronized boolean getHeatingEnabled() {
-        return heatingEnabled;
-    }
+    public synchronized List<Period> getPeriods() { return periods; }
 
-    public synchronized HashMap<String, Boolean> getZoneHeatingEnabled() {
-        return zoneHeatingEnabled;
-    }
-
-    public synchronized HashMap<String, Double> getTarget() {
-        return target;
-    }
-
-    public synchronized boolean getBoilerOn() {
-        return boilerOn;
-    }
-
-    public synchronized HashMap<String, ArrayList<Datum>> getTemperatures() {
+    public synchronized Map<String, ArrayList<Datum>> getTemperatures() {
         return temperatures;
     }
 
-    public synchronized HashMap<String, ArrayList<Datum>> getHumidities() {
+    public synchronized Map<String, ArrayList<Datum>> getHumidities() {
         return humidities;
     }
 
-    public synchronized ArrayList<Rule> getRules() {
+    public synchronized List<Rule> getRules() {
         return rules;
     }
 
-    public synchronized String getExplanation() {
-        return explanation;
-    }
-
     public synchronized byte[] getBinary(int id) {
-        ByteArrayOutputStream s = new ByteArrayOutputStream();
+        /* XXX: check this is long enough */
+        byte[] data = new byte[32*1024];
+        int off = 0;
 
-        if (id == HEATING_ENABLED) {
-            s.write(OP_CHANGE | HEATING_ENABLED);
-            s.write(heatingEnabled ? 1 : 0);
-        } else if (id == ZONE_HEATING_ENABLED) {
-            s.write(OP_CHANGE | ZONE_HEATING_ENABLED);
-        } else if (id == TARGET) {
-            s.write(OP_CHANGE | TARGET);
-        } else if (id == BOILER_ON) {
-            s.write(OP_CHANGE | BOILER_ON);
-            s.write(boilerOn ? 1 : 0);
-        }
+        data[off++] = (byte) (OP_CHANGE | id);
 
-        s.write(zones.size());
-        for (String name: zones) {
-            Util.putString(s, name);
-        }
-
-        if (id == ZONE_HEATING_ENABLED) {
-            for (int i = 0; i < zones.size(); ++i) {
-                if (zoneHeatingEnabled.containsKey(zones.get(i))) {
-                    s.write(zoneHeatingEnabled.get(zones.get(i)) ? 1 : 0);
-                } else {
-                    s.write(0);
-                }
+        switch (id) {
+        case PERIODS:
+            data[off++] = (byte) periods.size();
+            for (Period p: periods) {
+                off = p.getBinary(data, off);
             }
-        } else if (id == TARGET) {
-            for (int i = 0; i < zones.size(); ++i) {
-                if (target.containsKey(zones.get(i))) {
-                    Util.putFloat(s, target.get(zones.get(i)));
-                } else {
-                    Util.putFloat(s, 0);
-                }
-            }
-        } else if (id == RULES) {
+            break;
+        case RULES:
             /* XXX */
+            break;
         }
 
-        return s.toByteArray();
+        return data;
     }
 
-    public HashMap<String, HashMap<String, Boolean>> getActuators () { return actuators; }
+    public synchronized Map<String, Map<String, Boolean>> getActuators () { return actuators; }
+
+    public synchronized List<String> getZones() { return zones; }
 
 
     /* Set */
 
-    public synchronized void setHeatingEnabled(boolean e) {
-        if (heatingEnabled != e) {
-            heatingEnabled = e;
-            changed(HEATING_ENABLED);
-        }
-    }
-
-    public synchronized void setZoneHeatingEnabled(String zone, boolean e) {
-        if (!zoneHeatingEnabled.containsKey(zone) || zoneHeatingEnabled.get(zone) != e) {
-            zoneHeatingEnabled.put(zone, e);
-            changed(ZONE_HEATING_ENABLED);
-        }
-    }
-
-    public synchronized void setTarget(String zone, double t) {
-        if (!target.containsKey(zone) || Math.abs(target.get(zone) - t) > 1e-6) {
-            target.put(zone, t);
-            changed(TARGET);
-        }
-    }
-
-    public synchronized void colder(String zone) {
-        target.put(zone, target.get(zone) - 0.5);
-        changed(TARGET);
-    }
-
-    public synchronized void warmer(String zone) {
-        target.put(zone, target.get(zone) + 0.5);
-        changed(TARGET);
-    }
-
-    public synchronized void setBoilerOn(boolean o) {
-        if (boilerOn != o) {
-            boilerOn = o;
-            changed(BOILER_ON);
-        }
-    }
-
-    public synchronized void setTemperatures(String zone, ArrayList<Datum> t) {
-        temperatures.put(zone, t);
-        changed(TEMPERATURES);
-    }
-
-    public synchronized void setHumidities(String zone, ArrayList<Datum> t) {
-        humidities.put(zone, t);
-        changed(HUMIDITIES);
-    }
-
-    public synchronized void setActuators(String zone, HashMap<String, Boolean> v) {
-        actuators.put(zone, v);
-        changed(ACTUATORS);
+    public synchronized void setPeriods(List<Period> p) {
+        periods = p;
+        changed(PERIODS);
     }
 
     public synchronized void addOrReplace(Rule rule) {
@@ -271,14 +173,7 @@ public class State {
         int o = 0;
         final int op = data[o++];
         boolean all = op == (OP_CHANGE | ALL);
-
-        if (all || op == (OP_CHANGE | HEATING_ENABLED)) {
-            setHeatingEnabled(data[o++] == 1);
-        }
-
-        if (all || op == (OP_CHANGE | BOILER_ON)) {
-            setBoilerOn(data[o++] == 1);
-        }
+        int changes = 0;
 
         int numZones = data[o++];
         zones.clear();
@@ -289,23 +184,18 @@ public class State {
         }
 
         for (String name : zones) {
-            if (all || op == (OP_CHANGE | ZONE_HEATING_ENABLED)) {
-                setZoneHeatingEnabled(name, data[o++] == 1);
-            }
-            if (all || op == (OP_CHANGE | TARGET)) {
-                setTarget(name, Util.getFloat(data, o));
-                o += 2;
-            }
-            if (all || op == (OP_CHANGE | TEMPERATURES)) {
+             if (all || op == (OP_CHANGE | TEMPERATURES)) {
                 ArrayList<Datum> t = new ArrayList<>();
                 o = getDatumArray(data, o, t);
-                setTemperatures(name, t);
+                temperatures.put(name, t);
+                changes |= TEMPERATURES;
             }
             if (all || op == (OP_CHANGE | HUMIDITIES)) {
                 ArrayList<Datum> t = new ArrayList<>();
                 o = getDatumArray(data, o, t);
                 if (t.size() > 0) {
-                    setHumidities(name, t);
+                    humidities.put(name, t);
+                    changes |= HUMIDITIES;
                 }
             }
             if (all || op == (OP_CHANGE | ACTUATORS)) {
@@ -316,8 +206,21 @@ public class State {
                     o += actName.length() + 1;
                     act.put(actName, data[o++] > 0);
                 }
-                setActuators(name, act);
+                actuators.put(name, act);
+                changes |= ACTUATORS;
             }
+        }
+
+        if (all || op == (OP_CHANGE | PERIODS)) {
+            int num = data[o++];
+            periods.clear();
+            for (int i = 0; i < num; ++i) {
+                Period p = new Period(data, o);
+                periods.add(p);
+                o += p.binaryLength();
+            }
+            Log.e("test", "got " + periods.size() + " periods.");
+            changes |= PERIODS;
         }
 
         if (all || op == (OP_CHANGE | RULES)) {
@@ -328,11 +231,9 @@ public class State {
                 rules.add(r);
                 o += r.binaryLength();
             }
+            changes |= RULES;
         }
 
-        if (all) {
-            explanation = Util.getString(data, o);
-            o += explanation.length() + 1;
-        }
+        changed(changes);
     }
 }

@@ -24,6 +24,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,6 +32,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TableLayout;
@@ -44,9 +46,9 @@ import java.util.Map;
 import java.util.Calendar;
 
 class Temperature {
-    private double t;
+    private float t;
 
-    public Temperature(double t) {
+    public Temperature(float t) {
         this.t = t;
     }
 
@@ -54,7 +56,7 @@ class Temperature {
         return String.format("%.0f°C", t);
     }
 
-    public double get() {
+    public float get() {
         return t;
     }
 }
@@ -67,7 +69,6 @@ public class ControlFragment extends Fragment {
         private TextView tempHum;
         private Spinner target;
         private Button heat;
-        private ImageView heatIcon;
         private double temperature;
         private double humidity;
 
@@ -115,19 +116,19 @@ public class ControlFragment extends Fragment {
                     }
             );
 
-            lp = new TableRow.LayoutParams(48, 96);
+            lp = new TableRow.LayoutParams(32, 96);
             lp.gravity = Gravity.CENTER_VERTICAL;
             r.addView(heat, lp);
 
             /* Target spinner */
             target = new Spinner(a);
             Temperature[] targets = new Temperature[] {
-                new Temperature(17.0),
-                new Temperature(18.0),
-                new Temperature(19.0),
-                new Temperature(20.0),
-                new Temperature(21.0),
-                new Temperature(22.0)
+                new Temperature(17.0f),
+                new Temperature(18.0f),
+                new Temperature(19.0f),
+                new Temperature(20.0f),
+                new Temperature(21.0f),
+                new Temperature(22.0f)
             };
             ArrayAdapter<Temperature> targetAdapter = new ArrayAdapter<>(a, android.R.layout.simple_spinner_item, targets);
             target.setAdapter(targetAdapter);
@@ -175,7 +176,6 @@ public class ControlFragment extends Fragment {
 
     private ListView periodList;
     private PeriodAdapter periodAdapter;
-    private List<Period> periods = new ArrayList<>();
     private TableLayout table;
     private HashMap<String, Zone> zones = new HashMap<String, Zone>();
 
@@ -185,7 +185,7 @@ public class ControlFragment extends Fragment {
         periodList = view.findViewById(R.id.periodList);
         table = view.findViewById(R.id.zoneTable);
 
-        periodAdapter = new PeriodAdapter(getActivity(), periods);
+        periodAdapter = new PeriodAdapter(getActivity());
         periodList.setAdapter(periodAdapter);
 
         /* On second and subsequent calls we will have stuff in zones
@@ -199,8 +199,9 @@ public class ControlFragment extends Fragment {
 
     public void addPeriod(Period a) {
 
-        boolean done = false;
+        List<Period> periods = getState().getPeriods();
 
+        boolean done = false;
         for (Period p: periods) {
             if (p.zone.equals(a.zone)) {
                 if (p.target == a.target) {
@@ -219,7 +220,7 @@ public class ControlFragment extends Fragment {
             periods.add(a);
         }
 
-        periodAdapter.notifyDataSetChanged();
+        getState().setPeriods(periods);
     }
 
     /**
@@ -233,9 +234,9 @@ public class ControlFragment extends Fragment {
 
         State state = getState();
 
-        /* Check we have all zones that state.getTarget() mentions */
+        /* Check we have all the zones state knows about */
         boolean first = true;
-        for (String i: state.getTarget().keySet()) {
+        for (String i: state.getZones()) {
             if (!zones.containsKey(i)) {
                 zones.put(i, new Zone(i, first));
                 first = false;
@@ -246,6 +247,9 @@ public class ControlFragment extends Fragment {
             Zone z = i.getValue();
             i.getValue().setSensitivity();
         }
+
+        periodAdapter.clear();
+        periodAdapter.addAll(state.getPeriods());
 
         if (getConnected()) {
 

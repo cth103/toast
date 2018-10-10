@@ -17,12 +17,10 @@ import java.util.Random;
 
 public class PeriodAdapter extends ArrayAdapter<Period> {
     private final Context context;
-    private final List<Period>values;
 
-    public PeriodAdapter(Context context, List<Period> values) {
-        super(context, R.layout.period_layout, values);
+    public PeriodAdapter(Context context) {
+        super(context, R.layout.period_layout);
         this.context = context;
-        this.values = values;
     }
 
     public View getView(final int position, View convertView, ViewGroup parent) {
@@ -32,7 +30,7 @@ public class PeriodAdapter extends ArrayAdapter<Period> {
         TextView time = row.findViewById(R.id.time);
         ProgressBar progress = row.findViewById(R.id.progress);
 
-        final Period period = values.get(position);
+        final Period period = getItem(position);
 
         target.setText(String.format("%s to %.1f°C", period.zone, period.target));
 

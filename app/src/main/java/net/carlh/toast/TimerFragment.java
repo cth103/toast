@@ -72,7 +72,7 @@ public class TimerFragment extends Fragment {
                 Rule rule = (Rule) parent.getItemAtPosition(position);
                 Intent intent = new Intent(getActivity(), RuleActivity.class);
                 intent.putExtra("rule", rule);
-                Set<String> zones = getState().getZoneHeatingEnabled().keySet();
+                List<String> zones = getState().getZones();
                 intent.putExtra("zones", zones.toArray(new String[zones.size()]));
                 getActivity().startActivityForResult(intent, ADD_OR_UPDATE_RULE);
             }
@@ -89,7 +89,7 @@ public class TimerFragment extends Fragment {
         addRule = (Button) view.findViewById(R.id.addRule);
         addRule.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Set<String> zones = getState().getZoneHeatingEnabled().keySet();
+                List<String> zones = getState().getZones();
                 String zone = "";
                 if (!zones.isEmpty()) {
                     zone = zones.iterator().toString();
@@ -121,7 +121,7 @@ public class TimerFragment extends Fragment {
         /* State.rules is modified by other threads, so we can't use it in an ArrayAdapter */
         rules.clear();
         if (getState() != null) {
-            ArrayList<Rule> stateRules = getState().getRules();
+            List<Rule> stateRules = getState().getRules();
             for (Rule r: stateRules) {
                 rules.add(new Rule(r));
             }

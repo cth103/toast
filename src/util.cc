@@ -1,5 +1,8 @@
 #include "util.h"
 #include "toast_socket.h"
+#ifdef TOAST_HAVE_WIRINGPI
+#include <wiringPi.h>
+#endif
 #include <cstring>
 
 using std::string;
@@ -13,10 +16,24 @@ put_int16(uint8_t*& p, int16_t v)
 	*p++ = (v & 0xff00) >> 8;
 }
 
+int16_t
+get_int16(uint8_t*& p)
+{
+	int16_t v = *p++;
+	v |= (*p++) << 8;
+	return v;
+}
+
 void
 put_float(uint8_t*& p, float f)
 {
 	put_int16(p, static_cast<int16_t>(f * 16));
+}
+
+float
+get_float(uint8_t*& p)
+{
+	return get_int16(p) / 16.0;
 }
 
 void
@@ -27,17 +44,48 @@ put_string(uint8_t*& p, string s)
 	p += s.length();
 }
 
+string
+get_string(uint8_t*& p)
+{
+	int const N = *p++;
+	string s;
+	for (int i = 0; i < N; ++i) {
+		s += *p++;
+	}
+	return s;
+}
+
+int64_t
+get_int64(uint8_t*& p)
+{
+	int64_t o = *p++;
+	o |= (*p++ << 8);
+	o |= (*p++ << 16);
+	o |= (*p++ << 24);
+	o |= ((int64_t) *p++) << 32;
+	o |= ((int64_t) *p++) << 40;
+	o |= ((int64_t) *p++) << 48;
+	o |= ((int64_t) *p++) << 56;
+	return o;
+}
+
+void
+put_int64(uint8_t*& p, int64_t v)
+{
+	*p++ = v & 0xff;
+	*p++ = (v & 0xff00) >> 8;
+	*p++ = (v & 0xff0000) >> 16;
+	*p++ = (v & 0xff000000) >> 24;
+	*p++ = (v & 0xff00000000) >> 32;
+	*p++ = (v & 0xff0000000000) >> 40;
+	*p++ = (v & 0xff000000000000) >> 48;
+	*p++ = (v & 0xff00000000000000) >> 56;
+}
+
 void
 put_datum(uint8_t*& p, Datum d)
 {
-	*p++ = d.time() & 0xff;
-	*p++ = (d.time() & 0xff00) >> 8;
-	*p++ = (d.time() & 0xff0000) >> 16;
-	*p++ = (d.time() & 0xff000000) >> 24;
-	*p++ = (d.time() & 0xff00000000) >> 32;
-	*p++ = (d.time() & 0xff0000000000) >> 40;
-	*p++ = (d.time() & 0xff000000000000) >> 48;
-	*p++ = (d.time() & 0xff00000000000000) >> 56;
+	put_int64(p, d.time());
 	put_float(p, d.value());
 }
 
@@ -69,3 +117,17 @@ read_with_length(shared_ptr<Socket> socket)
 
 	return make_pair(data, length);
 }
+
+#ifdef TOAST_HAVE_WIRINGPI
+void
+set_boiler_on(bool s)
+{
+	digitalWrite(Config::instance()->boiler_gpio(), s ? HIGH : LOW);
+}
+#else
+void
+set_boiler_on(bool)
+{
+
+}
+#endif

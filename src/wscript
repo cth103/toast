@@ -8,6 +8,7 @@ sources = """
           json_node.cc
           log.cc
           node.cc
+          period.cc
           rule.cc
           sensor.cc
           server.cc

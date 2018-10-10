@@ -6,6 +6,8 @@
 #include "esp8266_node.h"
 #include "json_node.h"
 #include "log.h"
+#include "period.h"
+#include "util.h"
 #ifdef TOAST_HAVE_WIRINGPI
 #include <wiringPi.h>
 #endif
@@ -18,6 +20,7 @@ using std::thread;
 using std::shared_ptr;
 using std::optional;
 using std::list;
+using std::map;
 using std::dynamic_pointer_cast;
 using std::runtime_error;
 
@@ -101,25 +104,16 @@ control()
 {
 	while (true) {
 
-		/* Auto off */
-		time_t const t = time(0);
-		struct tm tm = *localtime(&t);
-		auto aoh = Config::instance()->auto_off_hours();
-		if (tm.tm_min == 0 && find(aoh.begin(), aoh.end(), tm.tm_hour) != aoh.end() && state.heating_enabled()) {
-			LOG_DECISION_NC("Doing auto-off");
-			state.set_heating_enabled(false);
-		}
-
 		/* Copy our current state */
 		State active_state = state.thin_clone();
 
-		/* Override interactive settings with active rules */
-		for (auto i: state.rules()) {
-			if (i.active()) {
-				LOG_DECISION_NC("Have an active rule");
-				active_state.set_heating_enabled(true);
-				active_state.set_zone_heating_enabled(i.zone(), true);
-				active_state.set_target(i.zone(), i.target());
+		/* XXX: rules */
+
+		time_t const now = time(0);
+		map<string, float> zone_targets;
+		for (auto i: active_state.periods()) {
+			if (i.from() <= now && now <= i.to()) {
+				zone_targets[i.zone()] = i.target();
 			}
 		}
 
@@ -129,13 +123,13 @@ control()
 			if (!rad) {
 				continue;
 			}
-			if (active_state.zone_heating_enabled(rad->zone())) {
-				string zone = i->sensor("temperature")->zone();
+			string zone = rad->zone();
+			if (zone_targets.find(zone) != zone_targets.end()) {
 				optional<Datum> const t = active_state.get(zone, "temperature");
 				float const hysteresis = Config::instance()->hysteresis();
-				if (t && t->value() > active_state.target(zone) + hysteresis) {
+				if (t && t->value() > zone_targets[zone] + hysteresis) {
 					rad->set(false);
-				} else if (t && t->value() < active_state.target(zone) - hysteresis) {
+				} else if (t && t->value() < zone_targets[zone] - hysteresis) {
 					rad->set(true);
 				}
 			} else {
@@ -151,8 +145,8 @@ control()
 			}
 		}
 
-		LOG_DECISION("heating_enabled=%1 heat_required=%2", active_state.heating_enabled(), heat_required);
-		state.set_boiler_on(active_state.heating_enabled() && heat_required);
+		LOG_DECISION("heat_required=%1", heat_required);
+		set_boiler_on(heat_required);
 
 		for (auto i: Node::all()) {
 			shared_ptr<Actuator> fan = i->actuator("fan");

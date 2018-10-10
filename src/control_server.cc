@@ -4,6 +4,7 @@
 #include "types.h"
 #include "log.h"
 #include "util.h"
+#include "period.h"
 #include <iostream>
 
 using std::list;
@@ -47,31 +48,26 @@ try
 	uint8_t* p = data.first.get();
 	LOG_CLIENT("Opcode is %1", static_cast<int>(p[0]));
 	if (p[0] == OP_SEND_BASIC) {
+		/* Controller requests basic state */
 		auto s = _state->get(false, OP_ALL);
 		write_with_length(socket, s.first.get(), s.second);
 	} else if (p[0] == OP_SEND_ALL) {
+		/* Controller requests full state */
 		auto s = _state->get(true, OP_ALL);
 		write_with_length(socket, s.first.get(), s.second);
-	} else if (p[0] == OP_HEATING_ENABLED) {
-		_state->set_heating_enabled(p[1]);
-		auto s = _state->get(false, OP_HEATING_ENABLED);
-		write_with_length(socket, s.first.get(), s.second);
-	} else if (p[0] == OP_ZONE_HEATING_ENABLED) {
-		p++;
-		for (auto i: zones_from_message(p)) {
-			_state->set_zone_heating_enabled(i, *p++);
+	} else if (p[0] == OP_PERIODS) {
+		/* Controller is sending a new set of periods */
+		++p;
+		int const N = *p++;
+		list<Period> periods;
+		for (int i = 0; i < N; ++i) {
+			periods.push_back(Period(p));
 		}
-		auto s = _state->get(false, OP_ZONE_HEATING_ENABLED);
-		write_with_length(socket, s.first.get(), s.second);
-	} else if (p[0] == OP_TARGET) {
-		p++;
-		for (auto i: zones_from_message(p)) {
-			_state->set_target(i, static_cast<float>(p[0] | (p[1] << 8)) / 16);
-			p += 2;
-		}
-		auto s = _state->get(false, OP_TARGET);
+		_state->set_periods(periods);
+		auto s = _state->get(true, OP_PERIODS);
 		write_with_length(socket, s.first.get(), s.second);
 	}
+
 }
 catch (runtime_error& e)
 {
