@@ -42,6 +42,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Calendar;
 
@@ -53,7 +54,7 @@ class Temperature {
     }
 
     public String toString() {
-        return String.format("%.0f°C", t);
+        return String.format(Locale.UK, "%.0f°C", t);
     }
 
     public float get() {
