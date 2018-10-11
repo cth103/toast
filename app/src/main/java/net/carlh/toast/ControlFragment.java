@@ -21,6 +21,7 @@ package net.carlh.toast;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
@@ -30,6 +31,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TableLayout;
@@ -65,7 +68,7 @@ public class ControlFragment extends Fragment {
         private String name;
         private TextView tempHum;
         private Spinner target;
-        private Button heat;
+        private ImageButton heat;
         private double temperature;
         private double humidity;
 
@@ -84,6 +87,7 @@ public class ControlFragment extends Fragment {
             TextView l = new TextView(a);
             l.setText(name);
             l.setTextSize(size);
+            l.setTypeface(null, Typeface.BOLD);
 
             TableRow.LayoutParams lp = new TableRow.LayoutParams();
             lp.gravity = Gravity.CENTER_VERTICAL;
@@ -100,8 +104,9 @@ public class ControlFragment extends Fragment {
             r.addView(tempHum, lp);
 
             /* Heat button */
-            heat = new Button(a);
-            heat.setBackgroundResource(R.drawable.ic_launcher);
+            heat = new ImageButton(a);
+            heat.setImageResource(R.drawable.ic_launcher);
+            heat.setScaleType(ImageView.ScaleType.FIT_XY);
             heat.setOnClickListener(
                     new View.OnClickListener() {
                         public void onClick(View view) {
@@ -113,7 +118,7 @@ public class ControlFragment extends Fragment {
                     }
             );
 
-            lp = new TableRow.LayoutParams(128, 96);
+            lp = new TableRow.LayoutParams(64, ViewGroup.LayoutParams.MATCH_PARENT);
             lp.gravity = Gravity.CENTER_VERTICAL;
             r.addView(heat, lp);
 
@@ -157,7 +162,7 @@ public class ControlFragment extends Fragment {
             if (humidity > 0) {
                 tempHum.setText(String.format("%.1f°\n%.0f%%", temperature, humidity));
             } else {
-                tempHum.setText(String.format("%.1f°", temperature));
+                tempHum.setText(String.format("%.1f°\n", temperature));
             }
         }
 

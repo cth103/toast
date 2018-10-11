@@ -16,9 +16,9 @@ public class Period {
         off += zone.length() + 1;
         target = Util.getFloat(data, off);
         off += 2;
-        from = new Date(Util.getInt64(data, off));
+        from = new Date(Util.getInt64(data, off) * 1000);
         off += 8;
-        to = new Date(Util.getInt64(data, off));
+        to = new Date(Util.getInt64(data, off) * 1000);
         off += 8;
     }
 
@@ -39,6 +39,14 @@ public class Period {
 
     public long length() {
         return to.getTime() - from.getTime();
+    }
+
+    public boolean equals(Object o) {
+        Period other = (Period) o;
+        if (o == null) {
+            return false;
+        }
+        return zone.equals(other.zone) && target == other.target && from.equals(other.from) && to.equals(other.to);
     }
 
     public String zone;

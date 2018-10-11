@@ -1,5 +1,8 @@
 #include "period.h"
 #include "util.h"
+#include <iostream>
+
+using std::cout;
 
 Period::Period(uint8_t*& p)
 {

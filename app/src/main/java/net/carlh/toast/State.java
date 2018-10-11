@@ -122,6 +122,7 @@ public class State {
 
     public synchronized void setPeriods(List<Period> p) {
         periods = p;
+        /* Update the UI and send the changes to the server */
         changed(PERIODS);
     }
 
@@ -171,7 +172,7 @@ public class State {
 
     public synchronized void setFromBinary(byte[] data) {
         int o = 0;
-        final int op = data[o++];
+        final int op = data[o++] & 0xff;
         boolean all = op == (OP_CHANGE | ALL);
         int changes = 0;
 
@@ -213,14 +214,18 @@ public class State {
 
         if (all || op == (OP_CHANGE | PERIODS)) {
             int num = data[o++];
-            periods.clear();
+            List<Period> newPeriods = new ArrayList<>();
             for (int i = 0; i < num; ++i) {
                 Period p = new Period(data, o);
-                periods.add(p);
+                newPeriods.add(p);
                 o += p.binaryLength();
             }
-            Log.e("test", "got " + periods.size() + " periods.");
-            changes |= PERIODS;
+            if (!periods.equals(newPeriods)) {
+                /* There are some changes from the server that we didn't initiate */
+                periods = newPeriods;
+                changes |= PERIODS;
+            }
+
         }
 
         if (all || op == (OP_CHANGE | RULES)) {
@@ -231,7 +236,7 @@ public class State {
                 rules.add(r);
                 o += r.binaryLength();
             }
-            changes |= RULES;
+            /* XXX: maybe should do the same as periods does */
         }
 
         changed(changes);
