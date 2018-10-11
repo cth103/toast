@@ -1,5 +1,6 @@
 #include "util.h"
 #include "toast_socket.h"
+#include "config.h"
 #ifdef TOAST_HAVE_WIRINGPI
 #include <wiringPi.h>
 #endif
