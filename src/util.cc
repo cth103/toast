@@ -132,3 +132,10 @@ set_boiler_on(bool)
 
 }
 #endif
+
+struct tm
+now()
+{
+	time_t const t = time(0);
+	return *localtime(&t);
+}

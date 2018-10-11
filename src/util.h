@@ -17,3 +17,4 @@ void write_with_length(std::shared_ptr<Socket> socket, uint8_t const * data, int
 std::pair<std::shared_ptr<uint8_t[]>, uint32_t> read_with_length(std::shared_ptr<Socket> socket);
 
 void set_boiler_on(bool s);
+struct tm now();
