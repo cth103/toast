@@ -132,7 +132,9 @@ public class ControlFragment extends Fragment {
                 new Temperature(21.0f),
                 new Temperature(22.0f)
             };
-            ArrayAdapter<Temperature> targetAdapter = new ArrayAdapter<>(a, android.R.layout.simple_spinner_item, targets);
+            target.setPadding(16, 0, 0, 0);
+            ArrayAdapter<Temperature> targetAdapter = new ArrayAdapter<>(a, R.layout.spinner_layout, targets);
+            targetAdapter.setDropDownViewResource(R.layout.spinner_layout);
             target.setAdapter(targetAdapter);
 
             lp = new TableRow.LayoutParams();
