@@ -28,6 +28,7 @@ Config::Config(optional<boost::filesystem::path> file)
 	, _humidity_rising_threshold(8)
 	, _humidity_falling_threshold(5)
 	, _log_types(Log::STARTUP)
+	, _fan_off_delay(300)
 {
 	FILE* f = 0;
 
@@ -84,6 +85,8 @@ Config::Config(optional<boost::filesystem::path> file)
 				_log_types = atoi(value.c_str());
 			} else if (key == "hidden_zone") {
 				_hidden_zones.push_back(value);
+			} else if (key == "fan_off_delay") {
+				_fan_off_delay = atoi(value.c_str());
 			} else {
 				throw runtime_error(String::compose("Unknown key %1 in configuration", key));
 			}

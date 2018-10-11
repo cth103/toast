@@ -17,18 +17,14 @@ def moving_average(a, n=3):
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
 
-with open('01-10-2018.log', 'r') as f:
+with open('11-10-2018.log', 'r') as f:
     for line in f:
         s = line.strip().split()
-        if s[1] == 'Bathroom':
-            if s[2] == 'hum':
-                hum.append((calendar.timegm(time.strptime(s[0], '%H:%M:%S')), float(s[3])))
-            elif s[2] == 'ref_hum':
-                ref_hum.append((calendar.timegm(time.strptime(s[0], '%H:%M:%S')), float(s[3])))
-            elif s[2] == 'temp' and s[4] == 'X':
-                temp.append((calendar.timegm(time.strptime(s[0], '%H:%M:%S')), float(s[3])))
-            elif s[2] == 'ref_temp':
-                ref_temp.append((calendar.timegm(time.strptime(s[0], '%H:%M:%S')), float(s[3])))
+        if s[1] == 'loft' and s[2] == 'humidity':
+            if s[3] == 'Bathroom':
+                hum.append((calendar.timegm(time.strptime(s[0], '%H:%M:%S')), float(s[4])))
+            elif s[3] == 'Landing':
+                ref_hum.append((calendar.timegm(time.strptime(s[0], '%H:%M:%S')), float(s[4])))
 
 def convert_relative_humidity(from_hum, from_temp, to_temp):
     """Taken from https://www.vaisala.com/sites/default/files/documents/Humidity_Conversion_Formulas_B210973EN-F.pdf"""
@@ -51,12 +47,14 @@ def convert_relative_humidity(from_hum, from_temp, to_temp):
 
 pred_hum = []
 for x in range(0, len(temp)):
-    print len(ref_hum), len(ref_temp), len(temp)    
+    print len(ref_hum), len(ref_temp), len(temp)
     pred_hum.append(convert_relative_humidity(ref_hum[x][1], ref_temp[x][1], temp[x][1]))
 
 hum_diff = []
-for x in range(0, len(temp)):
+for x in range(0, len(ref_hum)):
     hum_diff.append(hum[x][1] - ref_hum[x][1])
+
+print len(hum_diff)
 
 on = []
 curr = False
@@ -69,12 +67,12 @@ for x in hum_diff:
         curr = False
     on.append(curr * 25)
 
-plt.plot([i[0] for i in hum], [i[1] for i in hum], label='room_hum')
-plt.plot([i[0] for i in ref_hum], [i[1] for i in ref_hum], label='ref hum')
+#plt.plot([i[0] for i in hum], [i[1] for i in hum], label='room_hum')
+#plt.plot([i[0] for i in ref_hum], [i[1] for i in ref_hum], label='ref hum')
 #plt.plot([i[0] for i in temp], [i[1] for i in temp], label='room temp')
 #plt.plot([i[0] for i in ref_temp], [i[1] for i in ref_temp], label='ref temp')
 #plt.plot([i[0] for i in temp], pred_hum, label='pred room')
-plt.plot([i[0] for i in temp], hum_diff, label='humidity diff')
-plt.plot([i[0] for i in temp], on, label='fan on')
+plt.plot([i[0] for i in hum], hum_diff, label='humidity diff')
+#plt.plot([i[0] for i in temp], on, label='fan on')
 plt.legend()
 plt.show()

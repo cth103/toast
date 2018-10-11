@@ -102,6 +102,8 @@ gather()
 void
 control()
 {
+	optional<time_t> fan_delay;
+
 	while (true) {
 
 		/* Copy our current state */
@@ -160,10 +162,18 @@ control()
 				Config* config = Config::instance();
 				float diff = current->value() - ref->value();
 				LOG_DECISION("Humidity %1 vs %2 (%3) state %4", current->value(), ref->value(), diff, fan->get().value_or(false));
+				if (fan_delay) {
+					LOG_DECISION("Fan delay %1 ago", time(0) - *fan_delay);
+				}
 				if (!fan->get().value_or(false) && diff > config->humidity_rising_threshold()) {
 					fan->set(true);
 				} else if (!fan->get() || (*fan->get() && diff < config->humidity_falling_threshold())) {
-					fan->set(false);
+					if (!fan_delay) {
+						fan_delay = time(0);
+					} else if ((time(0) - *fan_delay) > Config::instance()->fan_off_delay()) {
+						fan->set(false);
+						fan_delay.reset();
+					}
 				}
 			}
 		}
