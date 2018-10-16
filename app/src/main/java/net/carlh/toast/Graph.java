@@ -251,7 +251,9 @@ public class Graph extends View {
             }
         }
         if (!done) {
-            plots.add(new Plot(zone, type, d, color[type][nextColor[type]]));
+            Plot p = new Plot(zone, type, d, color[type][nextColor[type]]);
+            p.labelPaint.setTextSize(getHeight() / textSizeDivisor);
+            plots.add(p);
             ++nextColor[type];
         }
         invalidate();
