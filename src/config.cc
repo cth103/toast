@@ -29,6 +29,7 @@ Config::Config(optional<boost::filesystem::path> file)
 	, _humidity_falling_threshold(5)
 	, _log_types(Log::STARTUP)
 	, _fan_off_delay(300)
+	, _max_datum_age(60*60*24*7)
 {
 	FILE* f = 0;
 
@@ -87,6 +88,8 @@ Config::Config(optional<boost::filesystem::path> file)
 				_hidden_zones.push_back(value);
 			} else if (key == "fan_off_delay") {
 				_fan_off_delay = atoi(value.c_str());
+			} else if (key == "max_datum_age") {
+				_max_datum_age = atoi(value.c_str());
 			} else {
 				throw runtime_error(String::compose("Unknown key %1 in configuration", key));
 			}

@@ -52,6 +52,9 @@ public:
 	int fan_off_delay() const {
 		return _fan_off_delay;
 	}
+	int max_datum_age() const {
+		return _max_datum_age;
+	}
 
 	static Config* instance();
 
@@ -75,6 +78,7 @@ private:
 	int _log_types;
 	std::list<std::string> _hidden_zones;
 	int _fan_off_delay;
+	int _max_datum_age;
 
 	static Config* _instance;
 };

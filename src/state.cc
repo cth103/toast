@@ -26,6 +26,12 @@ State::add(shared_ptr<Sensor> sensor, Datum datum)
 		_data[sensor] = list<Datum>();
 	}
 	_data[sensor].push_back(datum);
+
+	time_t const early = time(0) - Config::instance()->max_datum_age();
+	list<Datum>& dl = _data[sensor];
+	while (!dl.empty() && dl.front().time() < early) {
+		dl.pop_front();
+	}
 }
 
 static bool
@@ -51,7 +57,7 @@ put_data(uint8_t*& p, bool all_values, list<Datum> const & data)
 }
 
 pair<shared_ptr<uint8_t[]>, int>
-State::get(bool all_values, uint8_t types) const
+State::get(bool all_values, uint8_t types)
 {
 	scoped_lock lm(_mutex);
 
@@ -124,8 +130,9 @@ State::get(bool all_values, uint8_t types) const
 	}
 
 	if (all_or(types, OP_PERIODS)) {
-		*p++ = _periods.size();
-		for (auto i: _periods) {
+		list<Period> per = periods_unlocked();
+		*p++ = per.size();
+		for (auto i: per) {
 			i.get(p);
 		}
 	}
@@ -166,18 +173,32 @@ State::rules() const
 }
 
 list<Period>
-State::periods() const
+State::periods()
 {
 	scoped_lock lm(_mutex);
+	return periods_unlocked();
+}
+
+list<Period>
+State::periods_unlocked()
+{
+	time_t const now = time(0);
+	list<Period> old = _periods;
+	_periods.clear();
+	for (auto i: old) {
+		if (i.to() >= now) {
+			_periods.push_back(i);
+		}
+	}
 	return _periods;
 }
 
 /** @return A copy of this object with only the most recent sensor reading for each sensor */
 State
-State::thin_clone() const
+State::thin_clone()
 {
 	State s;
-	s._periods = _periods;
+	s._periods = periods();
 	s._rules = _rules;
 	for (auto i: _data) {
 		list<Datum> d;
@@ -194,9 +215,9 @@ State::State()
 
 }
 
-State::State(State const& other)
+State::State(State& other)
 {
-	_periods = other._periods;
+	_periods = other.periods();
 	_rules = other._rules;
 	_data = other._data;
 }
