@@ -167,6 +167,7 @@ control()
 				}
 				if (!fan->get().value_or(false) && diff > config->humidity_rising_threshold()) {
 					fan->set(true);
+					fan_delay.reset();
 				} else if (!fan->get() || (*fan->get() && diff < config->humidity_falling_threshold())) {
 					if (!fan_delay) {
 						fan_delay = time(0);
