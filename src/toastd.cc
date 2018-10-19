@@ -126,16 +126,20 @@ control()
 				continue;
 			}
 			string zone = rad->zone();
-			if (zone_targets.find(zone) != zone_targets.end()) {
-				optional<Datum> const t = active_state.get(zone, "temperature");
-				float const hysteresis = Config::instance()->hysteresis();
-				if (t && t->value() > zone_targets[zone] + hysteresis) {
+			try {
+				if (zone_targets.find(zone) != zone_targets.end()) {
+					optional<Datum> const t = active_state.get(zone, "temperature");
+					float const hysteresis = Config::instance()->hysteresis();
+					if (t && t->value() > zone_targets[zone] + hysteresis) {
+						rad->set(false);
+					} else if (t && t->value() < zone_targets[zone] - hysteresis) {
+						rad->set(true);
+					}
+				} else {
 					rad->set(false);
-				} else if (t && t->value() < zone_targets[zone] - hysteresis) {
-					rad->set(true);
 				}
-			} else {
-				rad->set(false);
+			} catch (runtime_error& e) {
+				LOG_ERROR("Could not set radiator for %1: %2", zone, e.what());
 			}
 		}
 
@@ -165,16 +169,20 @@ control()
 				if (fan_delay) {
 					LOG_DECISION("Fan delay %1 ago", time(0) - *fan_delay);
 				}
-				if (!fan->get().value_or(false) && diff > config->humidity_rising_threshold()) {
-					fan->set(true);
-					fan_delay.reset();
-				} else if (!fan->get() || (*fan->get() && diff < config->humidity_falling_threshold())) {
-					if (!fan_delay) {
-						fan_delay = time(0);
-					} else if ((time(0) - *fan_delay) > Config::instance()->fan_off_delay()) {
-						fan->set(false);
+				try {
+					if (!fan->get().value_or(false) && diff > config->humidity_rising_threshold()) {
+						fan->set(true);
 						fan_delay.reset();
+					} else if (!fan->get() || (*fan->get() && diff < config->humidity_falling_threshold())) {
+						if (!fan_delay) {
+							fan_delay = time(0);
+						} else if ((time(0) - *fan_delay) > Config::instance()->fan_off_delay()) {
+							fan->set(false);
+							fan_delay.reset();
+						}
 					}
+				} catch (runtime_error& e) {
+					LOG_ERROR("Could not set fan for %1: %2", fan->zone(), e.what());
 				}
 			}
 		}
