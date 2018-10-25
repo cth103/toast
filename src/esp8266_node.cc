@@ -1,6 +1,7 @@
 #include "esp8266_node.h"
 #include "config.h"
 #include "toast_socket.h"
+#include "compose.hpp"
 #include <iostream>
 
 using std::string;
@@ -32,4 +33,10 @@ ESP8266Node::set(bool s)
 	char buffer[64];
 	snprintf(buffer, sizeof(buffer), "%s\r\n", s ? "on" : "off");
 	socket.write(reinterpret_cast<uint8_t*>(buffer), strlen(buffer));
+}
+
+string
+ESP8266Node::description() const
+{
+	return String::compose("%1 (%2) %3", ip().to_string(), mac(), name());
 }

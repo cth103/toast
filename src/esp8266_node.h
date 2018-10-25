@@ -14,6 +14,7 @@ public:
 
 	Datum get(std::string id) const;
 	void set(bool s);
+	std::string description() const;
 
 private:
 	std::string _mac;

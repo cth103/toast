@@ -29,8 +29,6 @@ State state;
 void
 node_broadcast_received(string mac, boost::asio::ip::address ip)
 {
-	LOG_NODE("Received broadcast from %1 %2", mac, ip.to_string());
-
 	bool got = false;
 	for (auto i: Node::all()) {
 		auto e = dynamic_pointer_cast<ESP8266Node>(i);
@@ -57,6 +55,10 @@ node_broadcast_received(string mac, boost::asio::ip::address ip)
 			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "temp2", "temperature", "Landing")));
 			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "humidity2", "humidity", "Landing")));
 			node->add_actuator(shared_ptr<Actuator>(new Actuator(node, "fan", "Bathroom")));
+			Node::add(node);
+		} else if (mac == "5ccf7f3ce462") {
+			shared_ptr<Node> node(new ESP8266Node(ip, "sitting-room", mac));
+			node->add_actuator(shared_ptr<Actuator>(new Actuator(node, "radiator", "Sitting room")));
 			Node::add(node);
 		}
 	}
@@ -196,7 +198,6 @@ main()
 {
 	shared_ptr<Node> hall(new JSONNode(boost::asio::ip::address::from_string("127.0.0.1"), "hall"));
 	hall->add_sensor(shared_ptr<Sensor>(new Sensor(hall, "", "temperature", "Sitting room")));
-	hall->add_actuator(shared_ptr<Actuator>(new Actuator(hall, "radiator", "Sitting room")));
 	Node::add(hall);
 
 #ifdef TOAST_HAVE_WIRINGPI

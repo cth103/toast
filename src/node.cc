@@ -1,4 +1,5 @@
 #include "node.h"
+#include "log.h"
 #include <iostream>
 
 using std::list;
@@ -23,6 +24,7 @@ Node::add(shared_ptr<Node> node)
 {
 	scoped_lock lm(_all_mutex);
 	_all.push_back(node);
+	LOG_NODE("Added node %1", node->description());
 }
 
 shared_ptr<Sensor>
@@ -47,4 +49,10 @@ Node::actuator(string name) const
 	}
 
 	return shared_ptr<Actuator>();
+}
+
+string
+Node::description() const
+{
+	return String::compose("%1 %2", ip(), name());
 }
