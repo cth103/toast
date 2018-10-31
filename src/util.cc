@@ -13,7 +13,7 @@ using std::pair;
 void
 put_int16(uint8_t*& p, uint8_t* e, int16_t v)
 {
-	assert(p > (e + 2));
+	assert(e > (p + 2));
 	*p++ = v & 0xff;
 	*p++ = (v & 0xff00) >> 8;
 }
