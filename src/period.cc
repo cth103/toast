@@ -13,10 +13,10 @@ Period::Period(uint8_t*& p)
 }
 
 void
-Period::get(uint8_t*& p) const
+Period::get(uint8_t*& p, uint8_t* e) const
 {
-	put_string(p, _zone);
-	put_float(p, _target);
-	put_int64(p, _from);
-	put_int64(p, _to);
+	put_string(p, e, _zone);
+	put_float(p, e, _target);
+	put_int64(p, e, _from);
+	put_int64(p, e, _to);
 }

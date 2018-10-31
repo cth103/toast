@@ -11,8 +11,9 @@ using std::shared_ptr;
 using std::pair;
 
 void
-put_int16(uint8_t*& p, int16_t v)
+put_int16(uint8_t*& p, uint8_t* e, int16_t v)
 {
+	assert(p > (e + 2));
 	*p++ = v & 0xff;
 	*p++ = (v & 0xff00) >> 8;
 }
@@ -26,9 +27,9 @@ get_int16(uint8_t*& p)
 }
 
 void
-put_float(uint8_t*& p, float f)
+put_float(uint8_t*& p, uint8_t* e, float f)
 {
-	put_int16(p, static_cast<int16_t>(f * 16));
+	put_int16(p, e, static_cast<int16_t>(f * 16));
 }
 
 float
@@ -38,8 +39,9 @@ get_float(uint8_t*& p)
 }
 
 void
-put_string(uint8_t*& p, string s)
+put_string(uint8_t*& p, uint8_t* e, string s)
 {
+	assert(e > (p + 1 + s.length()));
 	*p++ = s.length();
 	strncpy(reinterpret_cast<char *>(p), s.c_str(), s.length());
 	p += s.length();
@@ -71,8 +73,9 @@ get_int64(uint8_t*& p)
 }
 
 void
-put_int64(uint8_t*& p, int64_t v)
+put_int64(uint8_t*& p, uint8_t* e, int64_t v)
 {
+	assert(e > (p + 8));
 	*p++ = v & 0xff;
 	*p++ = (v & 0xff00) >> 8;
 	*p++ = (v & 0xff0000) >> 16;
@@ -84,10 +87,10 @@ put_int64(uint8_t*& p, int64_t v)
 }
 
 void
-put_datum(uint8_t*& p, Datum d)
+put_datum(uint8_t*& p, uint8_t* e, Datum d)
 {
-	put_int64(p, d.time());
-	put_float(p, d.value());
+	put_int64(p, e, d.time());
+	put_float(p, e, d.value());
 }
 
 void

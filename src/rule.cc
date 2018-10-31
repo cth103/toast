@@ -23,7 +23,7 @@ Rule::Rule(int days, int on_hour, int on_minute, int off_hour, int off_minute, f
 }
 
 void
-Rule::get(uint8_t*& p) const
+Rule::get(uint8_t*& p, uint8_t* e) const
 {
 	*p++ = _id;
 	*p++ = _days;
@@ -31,8 +31,8 @@ Rule::get(uint8_t*& p) const
 	*p++ = _on_minute;
 	*p++ = _off_hour;
 	*p++ = _off_minute;
-	put_float(p, _target);
-	put_string(p, _zone);
+	put_float(p, e, _target);
+	put_string(p, e, _zone);
 }
 
 bool

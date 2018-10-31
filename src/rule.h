@@ -15,7 +15,7 @@ public:
 	Rule(int days, int on_hour, int on_minute, int off_hour, int off_minute, float target, std::string zone);
 
 	bool active(std::optional<struct tm> at = std::optional<struct tm>()) const;
-	void get(uint8_t*& p) const;
+	void get(uint8_t*& p, uint8_t* e) const;
 
 	std::string zone() const {
 		return _zone;

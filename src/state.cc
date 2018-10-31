@@ -41,18 +41,18 @@ all_or(uint8_t types, uint8_t t)
 }
 
 static void
-put_data(uint8_t*& p, bool all_values, list<Datum> const & data)
+put_data(uint8_t*& p, uint8_t* e, bool all_values, list<Datum> const & data)
 {
 	if (all_values) {
-		put_int16(p, data.size());
+		put_int16(p, e, data.size());
 		for (auto k: data) {
-			put_datum(p, k);
+			put_datum(p, e, k);
 		}
 	} else if (data.size() == 1) {
-		put_int16(p, 1);
-		put_datum(p, data.back());
+		put_int16(p, e, 1);
+		put_datum(p, e, data.back());
 	} else {
-		put_int16(p, 0);
+		put_int16(p, e, 0);
 	}
 }
 
@@ -80,12 +80,13 @@ State::get(bool all_values, uint8_t types)
 	required += 16384;
 	shared_ptr<uint8_t[]> data(new uint8_t[required]);
 	uint8_t* p = data.get();
+	uint8_t* e = p + required;
 
 	*p++ = types;
 	*p++ = zones.size();
 
 	for (auto i: zones) {
-		put_string(p, i);
+		put_string(p, e, i);
 	}
 
 	for (auto i: zones) {
@@ -93,24 +94,24 @@ State::get(bool all_values, uint8_t types)
 			bool done = false;
 			for (auto j: _data) {
 				if (j.first->zone() == i && j.first->name() == "temperature") {
-					put_data(p, all_values, j.second);
+					put_data(p, e, all_values, j.second);
 					done = true;
 				}
 			}
 			if (!done) {
-				put_int16(p, 0);
+				put_int16(p, e, 0);
 			}
 		}
                 if (all_or(types, OP_HUMIDITIES)) {
 			bool done = false;
 			for (auto j: _data) {
 				if (j.first->zone() == i && j.first->name() == "humidity") {
-					put_data(p, all_values, j.second);
+					put_data(p, e, all_values, j.second);
 					done = true;
 				}
 			}
 			if (!done) {
-				put_int16(p, 0);
+				put_int16(p, e, 0);
 			}
 		}
 		if (all_or(types, OP_ACTUATORS)) {
@@ -126,7 +127,7 @@ State::get(bool all_values, uint8_t types)
 			for (auto j: Node::all()) {
 				for (auto k: j->actuators()) {
 					if (k->zone() == i) {
-						put_string(p, k->name());
+						put_string(p, e, k->name());
 						*p++ = k->get().value_or(false) ? 1 : 0;
 					}
 				}
@@ -138,14 +139,14 @@ State::get(bool all_values, uint8_t types)
 		list<Period> per = periods_unlocked();
 		*p++ = per.size();
 		for (auto i: per) {
-			i.get(p);
+			i.get(p, e);
 		}
 	}
 
 	if (all_or(types, OP_RULES)) {
 		*p++ = _rules.size();
 		for (auto i: _rules) {
-			i.get(p);
+			i.get(p, e);
 		}
 	}
 
