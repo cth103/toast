@@ -61,12 +61,6 @@ State::get(bool all_values, uint8_t types)
 {
 	scoped_lock lm(_mutex);
 
-	/* XXX: check this is big enough */
-	shared_ptr<uint8_t[]> data(new uint8_t[256 * 1024]);
-	uint8_t* p = data.get();
-
-	*p++ = types;
-
 	/* Find all our zones */
 	set<string> zones;
 	for (auto i: _data) {
@@ -77,6 +71,17 @@ State::get(bool all_values, uint8_t types)
 		zones.erase(i);
 	}
 
+	Config* config = Config::instance();
+
+	/* Space required for readings assuming 2 sensors per zone */
+	/* XXX: check this is big enough */
+	size_t required = (config->max_datum_age() * zones.size() * 2 * Datum::size) / config->gather_interval();
+	/* Add some for everything else */
+	required += 16384;
+	shared_ptr<uint8_t[]> data(new uint8_t[required]);
+	uint8_t* p = data.get();
+
+	*p++ = types;
 	*p++ = zones.size();
 
 	for (auto i: zones) {

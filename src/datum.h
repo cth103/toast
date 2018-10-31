@@ -16,6 +16,8 @@ public:
 		return _value;
 	}
 
+	static int const size;
+
 private:
 	time_t _time;
 	float _value;
