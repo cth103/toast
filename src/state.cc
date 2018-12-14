@@ -151,6 +151,7 @@ State::get(bool all_values, uint8_t types)
 	}
 
 	ptrdiff_t length = p - data.get();
+	assert (length <= required);
 	shared_ptr<uint8_t[]> out(new uint8_t[length]);
 	memcpy(out.get(), data.get(), length);
 	return make_pair(out, length);
@@ -206,6 +207,7 @@ State::thin_clone()
 	State s;
 	s._periods = periods();
 	s._rules = _rules;
+	cout << "Cloning " << _data.size() << "\n";
 	for (auto i: _data) {
 		list<Datum> d;
 		if (!i.second.empty()) {
