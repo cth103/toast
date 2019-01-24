@@ -204,8 +204,9 @@ State::periods_unlocked()
 State
 State::thin_clone()
 {
+	boost::mutex::scoped_lock lm(_mutex);
 	State s;
-	s._periods = periods();
+	s._periods = periods_unlocked();
 	s._rules = _rules;
 	cout << "Cloning " << _data.size() << "\n";
 	for (auto i: _data) {
