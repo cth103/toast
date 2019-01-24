@@ -160,6 +160,7 @@ State::get(bool all_values, uint8_t types)
 optional<Datum>
 State::get(string zone, string sensor_name)
 {
+	scoped_lock lm(_mutex);
 	for (auto i: _data) {
 		if (i.first->zone() == zone && i.first->name() == sensor_name) {
 			if (i.second.empty()) {
@@ -204,7 +205,7 @@ State::periods_unlocked()
 State
 State::thin_clone()
 {
-	boost::mutex::scoped_lock lm(_mutex);
+	scoped_lock lm(_mutex);
 	State s;
 	s._periods = periods_unlocked();
 	s._rules = _rules;
@@ -227,8 +228,8 @@ State::State()
 State::State(State& other)
 {
 	_periods = other.periods();
-	_rules = other._rules;
-	_data = other._data;
+	_rules = other.rules();
+	_data = other.data();
 }
 
 
@@ -237,4 +238,11 @@ State::set_periods(list<Period> periods)
 {
 	scoped_lock lm(_mutex);
 	_periods = periods;
+}
+
+map<shared_ptr<Sensor>, list<Datum>>
+Sstate::data() const
+{
+	scoped_lock lm(_mutex);
+	return _data;
 }

@@ -19,6 +19,7 @@ public:
 
 	std::list<Rule> rules() const;
 	std::list<Period> periods();
+	std::map<std::shared_ptr<Sensor>, std::list<Datum>> data() const;
 
 	std::pair<std::shared_ptr<uint8_t[]>, int> get(bool all_values, uint8_t types);
 	std::optional<Datum> get(std::string zone, std::string sensor_name);
