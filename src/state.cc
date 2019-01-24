@@ -15,6 +15,7 @@ using std::list;
 using std::string;
 using std::scoped_lock;
 using std::set;
+using std::map;
 using std::pair;
 using std::optional;
 
@@ -241,7 +242,7 @@ State::set_periods(list<Period> periods)
 }
 
 map<shared_ptr<Sensor>, list<Datum>>
-Sstate::data() const
+State::data() const
 {
 	scoped_lock lm(_mutex);
 	return _data;
