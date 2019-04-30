@@ -20,7 +20,7 @@
             android:name="net.carlh.toast.SettingsActivity"
             android:label="Settings"
             android:theme="@android:style/Theme.Black">
-        </activity>`
+        </activity>
         <activity
             android:name="net.carlh.toast.RuleActivity"
             android:label="Timer">
