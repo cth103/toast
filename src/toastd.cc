@@ -43,12 +43,14 @@ node_broadcast_received(string mac, boost::asio::ip::address ip)
 		/* "temperature"/"humidity" here are special values which dictate what the state class will send
 		   to clients requesting those types.
 		*/
+
+
 		if (mac == "600194189ed3") {
 			shared_ptr<Node> node(new ESP8266Node(ip, "spare-room", mac));
 			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "temp", "temperature", "Bathroom")));
 			node->add_actuator(shared_ptr<Actuator>(new Actuator(node, "radiator", "Bathroom")));
 			Node::add(node);
-		} else if (mac == "68c63ac4a3b3") {
+		} else if (mac == "5ccf7f3cd919") {
 			shared_ptr<Node> node(new ESP8266Node(ip, "loft", mac));
 			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "temp", "temperature-high", "Bathroom")));
 			node->add_sensor(shared_ptr<Sensor>(new Sensor(node, "humidity", "humidity", "Bathroom")));
@@ -60,6 +62,8 @@ node_broadcast_received(string mac, boost::asio::ip::address ip)
 			shared_ptr<Node> node(new ESP8266Node(ip, "sitting-room", mac));
 			node->add_actuator(shared_ptr<Actuator>(new Actuator(node, "radiator", "Sitting room")));
 			Node::add(node);
+		} else {
+			LOG_NODE("Broadcast received from unrecognised new node %1", mac);
 		}
 	}
 }
