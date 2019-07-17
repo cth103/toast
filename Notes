@@ -1,3 +1,9 @@
+To cross build
+
+startenv pi-cross
+source ./env
+bash waf-configure
+./waf
 
 Data transfers:
 
