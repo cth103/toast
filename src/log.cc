@@ -52,7 +52,26 @@ Log::log(int type, string s)
 		return;
 	}
 
+	string type_name = "unknown";
+	switch (type) {
+	case Log::CLIENT:
+		type_name = "client";
+		break;
+	case Log::ERROR:
+		type_name = "error";
+		break;
+	case Log::DECISION:
+		type_name = "decision";
+		break;
+	case Log::STARTUP:
+		type_name = "startup";
+		break;
+	case Log::NODE:
+		type_name = "node";
+		break;
+	}
+
 	struct tm tm = now();
-	fprintf(f, "%02d/%02d/%02d %02d:%02d:%02d %s\n", tm.tm_mday, tm.tm_mon, tm.tm_year + 1900, tm.tm_hour, tm.tm_min, tm.tm_sec, s.c_str());
+	fprintf(f, "%02d/%02d/%02d %02d:%02d:%02d [%s] %s\n", tm.tm_mday, tm.tm_mon, tm.tm_year + 1900, tm.tm_hour, tm.tm_min, tm.tm_sec, type_name.c_str(), s.c_str());
 	fclose(f);
 }
