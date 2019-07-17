@@ -210,7 +210,6 @@ State::thin_clone()
 	State s;
 	s._periods = periods_unlocked();
 	s._rules = _rules;
-	cout << "Cloning " << _data.size() << "\n";
 	for (auto i: _data) {
 		list<Datum> d;
 		if (!i.second.empty()) {
